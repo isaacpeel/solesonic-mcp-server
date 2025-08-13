@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class SimpleService {
 
+    @SuppressWarnings("unused")
     @Tool(description = "Return a simple message", name = "message_me")
     public String message(String message) {
         return "Your message: "+message;
