@@ -60,11 +60,11 @@
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         </dependency>
 
-        <!-- Load .env files at runtime for local development -->
+        <!-- Load .env files at runtime via spring-dotenv -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
             <artifactId>spring-dotenv</artifactId>
-            <version>2.2.0</version>
+            <version>4.0.0</version>
             <scope>runtime</scope>
         </dependency>
 
