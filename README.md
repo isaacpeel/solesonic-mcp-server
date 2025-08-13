@@ -154,3 +154,8 @@ With a connected client, invoke the `message_me` tool by passing a message argum
 ## Notes
 - `.env` is intended for local development only. Real OS environment variables override values from `.env`.
 - The `.env` file is gitignored to prevent committing secrets.
+
+## Work in progress
+For ongoing enhancements, current status, and the roadmap, see the living document:
+
+- [IN_PROGRESS.md](IN_PROGRES.md)
