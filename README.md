@@ -8,7 +8,6 @@ This project is configured to load environment variables from a local `.env` fil
 
 ```
 COGNITO_ISSUER_URI=https://example.auth.<region>.amazoncognito.com
-SOME_API_KEY=<your-api-key-here>
 # Optionally, if you configure the JWK set URI explicitly
 # COGNITO_JWK_SET_URI=https://cognito-idp.<region>.amazonaws.com/<userPoolId>/.well-known/jwks.json
 ```
@@ -16,7 +15,6 @@ SOME_API_KEY=<your-api-key-here>
 The application references these via Spring placeholders in `application.properties`:
 ```
 spring.security.oauth2.resourceserver.jwt.issuer-uri=${COGNITO_ISSUER_URI}
-custom.api.key=${SOME_API_KEY}
 ```
 
 No extra flags are needed; `.env` is picked up automatically at startup.
@@ -24,17 +22,10 @@ No extra flags are needed; `.env` is picked up automatically at startup.
 ## Build and Run
 ```
 # Build
-mvn -q -DskipTests package
+mvn package
 
 # Run (adjust the jar name if needed)
 java -jar target/solesonic-mcp-server-0.0.1-SNAPSHOT.jar
-```
-
-## Verify .env loading
-On startup, the application logs the resolved value for `COGNITO_ISSUER_URI` and whether `SOME_API_KEY` is present, e.g.:
-```
-[dotenv] COGNITO_ISSUER_URI resolved to: https://example.auth.us-east-1.amazoncognito.com
-[dotenv] SOME_API_KEY present: true
 ```
 
 Alternatively, you can query actuator endpoints (health/info) which are publicly accessible:
