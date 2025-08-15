@@ -49,9 +49,17 @@ public class FileTokenStore implements TokenStore {
     public Optional<StoredToken> get(String userProfileId, String cloudId) {
         String compositeKey = key(userProfileId, cloudId);
         StoredToken cachedToken = cache.get(compositeKey);
-        if (cachedToken != null) return Optional.of(cachedToken);
+
+        if (cachedToken != null) {
+            return Optional.of(cachedToken);
+        }
+
         Path filePath = fileFor(compositeKey);
-        if (!Files.exists(filePath)) return Optional.empty();
+
+        if (!Files.exists(filePath)) {
+            return Optional.empty();
+        }
+
         try {
             byte[] encryptedBytes = Files.readAllBytes(filePath);
             StoredToken storedToken = decrypt(encryptedBytes);
@@ -82,8 +90,7 @@ public class FileTokenStore implements TokenStore {
         Path filePath = fileFor(compositeKey);
         try {
             Files.deleteIfExists(filePath);
-        } catch (IOException ignoredException) {
-        }
+        } catch (IOException ignoredException) {}
     }
 
     private Path fileFor(String compositeKey) {
