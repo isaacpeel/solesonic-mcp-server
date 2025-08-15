@@ -66,8 +66,8 @@ public class OAuthService {
     }
 
     public List<String> completeAuth(String userProfileId, String state, String code) {
-        var verifierOpt = pendingAuthStore.consumeAndGetVerifier(userProfileId, state);
-        if (verifierOpt.isEmpty()) {
+        var verifierOptional = pendingAuthStore.consumeAndGetVerifier(userProfileId, state);
+        if (verifierOptional.isEmpty()) {
             throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "Invalid or expired OAuth state");
         }
 
@@ -78,63 +78,63 @@ public class OAuthService {
         body.put("grant_type", "authorization_code");
         body.put("client_id", clientId);
         body.put("code", code);
-        body.put("code_verifier", verifierOpt.get());
+        body.put("code_verifier", verifierOptional.get());
         body.put("redirect_uri", redirectUri);
 
-        TokenResponse tr = http.post()
+        TokenResponse tokenResponse = http.post()
                 .uri(TOKEN_URL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
                 .body(TokenResponse.class);
-        if (tr == null || tr.accessToken == null) {
+        if (tokenResponse == null || tokenResponse.accessToken == null) {
             throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "Failed to exchange authorization code");
         }
-        List<String> scopes = parseScopes(tr.scope);
-        StoredToken token = new StoredToken(tr.tokenType, tr.accessToken, tr.refreshToken, Instant.now().plusSeconds(tr.expiresIn), scopes);
+        List<String> scopes = parseScopes(tokenResponse.scope);
+        StoredToken token = new StoredToken(tokenResponse.tokenType, tokenResponse.accessToken, tokenResponse.refreshToken, Instant.now().plusSeconds(tokenResponse.expiresIn), scopes);
         tokenStore.save(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"), token);
         return scopes;
     }
 
     public Optional<String> getValidAccessToken(String userProfileId) {
-        var opt = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
-        if (opt.isEmpty()) return Optional.empty();
-        StoredToken t = opt.get();
-        if (t.expiresAt() == null || t.expiresAt().isAfter(Instant.now().plusSeconds(30))) {
-            return Optional.ofNullable(t.accessToken());
+        var tokenOptional = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
+        if (tokenOptional.isEmpty()) return Optional.empty();
+        StoredToken storedToken = tokenOptional.get();
+        if (storedToken.expiresAt() == null || storedToken.expiresAt().isAfter(Instant.now().plusSeconds(30))) {
+            return Optional.ofNullable(storedToken.accessToken());
         }
         try {
-            var refreshed = refresh(userProfileId);
-            return refreshed.map(StoredToken::accessToken);
+            var refreshedTokenOptional = refresh(userProfileId);
+            return refreshedTokenOptional.map(StoredToken::accessToken);
         } catch (ToolException ex) {
             return Optional.empty();
         }
     }
 
     public Optional<StoredToken> refresh(String userProfileId) {
-        var opt = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
-        if (opt.isEmpty()) throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "No stored credentials");
-        StoredToken st = opt.get();
-        if (st.refreshToken() == null || st.refreshToken().isBlank()) {
+        var tokenOptional = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
+        if (tokenOptional.isEmpty()) throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "No stored credentials");
+        StoredToken existingToken = tokenOptional.get();
+        if (existingToken.refreshToken() == null || existingToken.refreshToken().isBlank()) {
             throw new ToolException(ToolErrorCode.AUTH_EXPIRED, "Missing refresh token; re-auth required");
         }
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("grant_type", "refresh_token");
         body.put("client_id", required(props.getClientId(), "atlassian.client-id"));
-        body.put("refresh_token", st.refreshToken());
+        body.put("refresh_token", existingToken.refreshToken());
 
-        TokenResponse tr = http.post().uri(TOKEN_URL)
+        TokenResponse tokenResponse = http.post().uri(TOKEN_URL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve().body(TokenResponse.class);
-        if (tr == null || tr.accessToken == null) {
+        if (tokenResponse == null || tokenResponse.accessToken == null) {
             tokenStore.delete(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
             throw new ToolException(ToolErrorCode.AUTH_EXPIRED, "Failed to refresh token");
         }
-        List<String> scopes = parseScopes(tr.scope);
-        StoredToken nt = new StoredToken(tr.tokenType, tr.accessToken, tr.refreshToken != null ? tr.refreshToken : st.refreshToken(), Instant.now().plusSeconds(tr.expiresIn), scopes);
-        tokenStore.save(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"), nt);
-        return Optional.of(nt);
+        List<String> scopes = parseScopes(tokenResponse.scope);
+        StoredToken newToken = new StoredToken(tokenResponse.tokenType, tokenResponse.accessToken, tokenResponse.refreshToken != null ? tokenResponse.refreshToken : existingToken.refreshToken(), Instant.now().plusSeconds(tokenResponse.expiresIn), scopes);
+        tokenStore.save(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"), newToken);
+        return Optional.of(newToken);
     }
 
     private static List<String> parseScopes(String scope) {
@@ -143,9 +143,9 @@ public class OAuthService {
         return Arrays.asList(parts);
     }
 
-    private static String required(String v, String name) {
-        Assert.hasText(v, "Missing property: " + name);
-        return v;
+    private static String required(String value, String name) {
+        Assert.hasText(value, "Missing property: " + name);
+        return value;
     }
 
     private static String generateCodeVerifier() {
@@ -156,16 +156,16 @@ public class OAuthService {
 
     private static String codeChallengeS256(String verifier) {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(verifier.getBytes(StandardCharsets.US_ASCII));
-            return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = messageDigest.digest(verifier.getBytes(StandardCharsets.US_ASCII));
+            return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hashBytes);
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
         }
     }
 
-    private static String urlEncode(String s) {
-        return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
+    private static String urlEncode(String value) {
+        return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     // Token response mapping

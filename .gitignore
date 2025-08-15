@@ -35,3 +35,4 @@ build/
 
 # Local environment variables file
 .env
+.junie

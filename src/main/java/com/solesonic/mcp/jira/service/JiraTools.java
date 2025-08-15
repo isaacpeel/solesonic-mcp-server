@@ -42,18 +42,18 @@ public class JiraTools {
         String user = resolver.currentProfileId();
         enforceRate("get_jira_auth_url", user);
         registry.counter("mcp.tools.invocations", "tool", "get_jira_auth_url").increment();
-        OAuthService.AuthUrl au = oauth.getAuthUrl(user);
-        return new GetJiraAuthUrlResponse(au.url(), au.state(), au.expiresAt());
+        OAuthService.AuthUrl authUrl = oauth.getAuthUrl(user);
+        return new GetJiraAuthUrlResponse(authUrl.url(), authUrl.state(), authUrl.expiresAt());
     }
 
     @SuppressWarnings( "unused")
     @Tool(name = "complete_jira_auth", description = "Completes OAuth2 flow using the code and state returned by Atlassian and persists tokens")
-    public CompleteJiraAuthResponse completeJiraAuth(CompleteJiraAuthRequest req) {
+    public CompleteJiraAuthResponse completeJiraAuth(CompleteJiraAuthRequest request) {
         String user = resolver.currentProfileId();
         enforceRate("complete_jira_auth", user);
-        validateText("state", req.state());
-        validateText("code", req.code());
-        List<String> scopes = oauth.completeAuth(user, req.state(), req.code());
+        validateText("state", request.state());
+        validateText("code", request.code());
+        List<String> scopes = oauth.completeAuth(user, request.state(), request.code());
         return new CompleteJiraAuthResponse(true, scopes);
     }
 
@@ -63,9 +63,9 @@ public class JiraTools {
         String user = resolver.currentProfileId();
         enforceRate("test_jira_auth", user);
         try {
-            JiraClient.Myself me = jira.getMyself();
-            if (me == null) return new TestJiraAuthResponse(false, null, null);
-            return new TestJiraAuthResponse(true, me.accountId(), me.emailAddress());
+            JiraClient.Myself myself = jira.getMyself();
+            if (myself == null) return new TestJiraAuthResponse(false, null, null);
+            return new TestJiraAuthResponse(true, myself.accountId(), myself.emailAddress());
         } catch (ToolException ex) {
             if (ex.getCode() == ToolErrorCode.AUTH_REQUIRED || ex.getCode() == ToolErrorCode.AUTH_EXPIRED) {
                 return new TestJiraAuthResponse(false, null, null);
@@ -76,17 +76,17 @@ public class JiraTools {
 
     @SuppressWarnings( "unused")
     @Tool(name = "search_assignable_users", description = "Search Jira assignable users for the configured project")
-    public SearchAssignableUsersResponse searchAssignableUsers(SearchAssignableUsersRequest req) {
+    public SearchAssignableUsersResponse searchAssignableUsers(SearchAssignableUsersRequest request) {
         String user = resolver.currentProfileId();
         enforceRate("search_assignable_users", user);
-        String q = req.query() == null ? "" : req.query().trim();
-        if (q.isEmpty()) throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "query must not be empty");
-        var users = jira.searchAssignableUsers(q, required(props.getProjectId(), "atlassian.project-id"));
-        List<SearchAssignableUsersResponse.User> out = new ArrayList<>();
-        for (JiraClient.AssignableUser u : users) {
-            out.add(new SearchAssignableUsersResponse.User(u.accountId(), u.displayName(), u.emailAddress()));
+        String queryString = request.query() == null ? "" : request.query().trim();
+        if (queryString.isEmpty()) throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "query must not be empty");
+        var users = jira.searchAssignableUsers(queryString, required(props.getProjectId(), "atlassian.project-id"));
+        List<SearchAssignableUsersResponse.User> usersOut = new ArrayList<>();
+        for (JiraClient.AssignableUser assignableUser : users) {
+            usersOut.add(new SearchAssignableUsersResponse.User(assignableUser.accountId(), assignableUser.displayName(), assignableUser.emailAddress()));
         }
-        return new SearchAssignableUsersResponse(out);
+        return new SearchAssignableUsersResponse(usersOut);
     }
 
     @SuppressWarnings( "unused")
@@ -155,16 +155,16 @@ public class JiraTools {
 
     private static List<String> normalizeAC(List<String> list) {
         if (list == null) return List.of();
-        List<String> out = new ArrayList<>();
-        for (Object o : list) {
-            if (o == null) continue;
-            String s = o.toString().trim();
-            if (!s.isEmpty()) out.add(s);
+        List<String> trimmedList = new ArrayList<>();
+        for (Object element : list) {
+            if (element == null) continue;
+            String trimmed = element.toString().trim();
+            if (!trimmed.isEmpty()) trimmedList.add(trimmed);
         }
-        return out;
+        return trimmedList;
     }
 
-    private static Map<String, Object> buildDescriptionDoc(String description, List<String> ac) {
+    private static Map<String, Object> buildDescriptionDoc(String description, List<String> acceptanceCriteria) {
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("type", "doc");
         doc.put("version", 1);
