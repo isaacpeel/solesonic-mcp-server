@@ -80,7 +80,9 @@ public class JiraTools {
         String user = resolver.currentProfileId();
         enforceRate("search_assignable_users", user);
         String queryString = request.query() == null ? "" : request.query().trim();
-        if (queryString.isEmpty()) throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "query must not be empty");
+        if (queryString.isEmpty()) {
+            throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "query must not be empty");
+        }
         var users = jira.searchAssignableUsers(queryString, required(props.getProjectId(), "atlassian.project-id"));
         List<SearchAssignableUsersResponse.User> usersOut = new ArrayList<>();
         for (JiraClient.AssignableUser assignableUser : users) {
@@ -136,9 +138,11 @@ public class JiraTools {
         Map<String, Object> issueType = Map.of("id", required(props.getIssueTypeId(), "atlassian.issue-type-id"));
         fields.put("issuetype", issueType);
         fields.put("description", descriptionDoc);
+
         if (!assigneeId.isEmpty()) {
             fields.put("assignee", Map.of("accountId", assigneeId));
         }
+
         Map<String, Object> body = Map.of("fields", fields);
 
         JiraClient.CreateIssueResult result = jira.createIssue(body);
@@ -154,20 +158,27 @@ public class JiraTools {
     }
 
     private static List<String> normalizeAC(List<String> list) {
-        if (list == null) return List.of();
+        if (list == null) {
+            return List.of();
+        }
+
         List<String> trimmedList = new ArrayList<>();
         for (Object element : list) {
-            if (element == null) continue;
+            if (element == null) {
+                continue;
+            }
             String trimmed = element.toString().trim();
-            if (!trimmed.isEmpty()) trimmedList.add(trimmed);
+            if (!trimmed.isEmpty()) {
+                trimmedList.add(trimmed);
+            }
         }
         return trimmedList;
     }
 
     private static Map<String, Object> buildDescriptionDoc(String description, List<String> acceptanceCriteria) {
-        Map<String, Object> doc = new LinkedHashMap<>();
-        doc.put("type", "doc");
-        doc.put("version", 1);
+        Map<String, Object> document = new LinkedHashMap<>();
+        document.put("type", "doc");
+        document.put("version", 1);
         List<Object> content = new ArrayList<>();
         // description paragraph
         content.add(paragraph(description));
@@ -177,40 +188,49 @@ public class JiraTools {
         Map<String, Object> bulletList = new LinkedHashMap<>();
         bulletList.put("type", "bulletList");
         List<Object> blContent = new ArrayList<>();
-        for (String item : ac) {
+
+        for (String item : acceptanceCriteria) {
             Map<String, Object> listItem = new LinkedHashMap<>();
             listItem.put("type", "listItem");
             listItem.put("content", List.of(paragraph(item)));
             blContent.add(listItem);
         }
+
         bulletList.put("content", blContent);
         content.add(bulletList);
-        doc.put("content", content);
-        return doc;
+        document.put("content", content);
+        return document;
     }
 
     private static Map<String, Object> paragraph(String text) {
-        Map<String, Object> p = new LinkedHashMap<>();
-        p.put("type", "paragraph");
-        p.put("content", List.of(textNode(text)));
-        return p;
+        Map<String, Object> contentMap = new LinkedHashMap<>();
+        contentMap.put("type", "paragraph");
+        contentMap.put("content", List.of(textNode(text)));
+        return contentMap;
     }
 
     private static Map<String, Object> textNode(String t) {
-        Map<String, Object> tn = new LinkedHashMap<>();
-        tn.put("type", "text");
-        tn.put("text", t);
-        return tn;
+        Map<String, Object> textNode = new LinkedHashMap<>();
+        textNode.put("type", "text");
+        textNode.put("text", t);
+        return textNode;
     }
 
-    private static String required(String v, String name) {
-        if (v == null || v.isBlank()) throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "Missing property: " + name);
-        return v;
+    private static String required(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "Missing property: " + name);
+        }
+
+        return value;
     }
 
     private void enforceRate(String tool, String userProfileId) {
-        if (rateLimiter == null) return; // safety
+        if (rateLimiter == null) {
+            return;
+        }
+
         String key = userProfileId + ":" + tool;
+
         if (!rateLimiter.allow(key)) {
             throw new ToolException(ToolErrorCode.VALIDATION_ERROR, "Rate limit exceeded for tool: " + tool + "; try again later");
         }
