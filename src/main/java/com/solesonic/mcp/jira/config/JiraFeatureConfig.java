@@ -29,6 +29,7 @@ import java.time.Duration;
 public class JiraFeatureConfig {
 
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean(TokenStore.class)
     public TokenStore tokenStore() {
         String base64Key = System.getenv("ENCRYPTION_KEY");
         String dir = System.getenv().getOrDefault("TOKEN_STORE_PATH", "tokens");
