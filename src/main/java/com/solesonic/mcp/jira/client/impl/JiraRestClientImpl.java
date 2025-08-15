@@ -42,7 +42,10 @@ public class JiraRestClientImpl implements JiraClient {
     private <T> T withAuthRetry(String endpoint, Invoker<T> invoker) {
         String user = profileResolver.currentProfileId();
         String token = oauth.getValidAccessToken(user).orElse(null);
-        if (token == null) throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "Authorization required");
+        if (token == null) {
+            throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "Authorization required");
+        }
+
         try {
             T res = invoker.invoke(client(), token);
             registry.counter("mcp.jira.http", "endpoint", endpoint, "status", "success").increment();
@@ -82,7 +85,10 @@ public class JiraRestClientImpl implements JiraClient {
     }
 
     private static String truncate(String string) {
-        if (string == null) return null;
+        if (string == null) {
+            return null;
+        }
+        
         return string.length() <= 300 ? string : string.substring(0, 300);
     }
 
@@ -96,7 +102,11 @@ public class JiraRestClientImpl implements JiraClient {
                     .body(requestBody)
                     .retrieve()
                     .body(CreateIssueResponse.class);
-            if (resp == null) throw new ToolException(ToolErrorCode.JIRA_ERROR, "Empty response from Jira create issue");
+
+            if (resp == null) {
+                throw new ToolException(ToolErrorCode.JIRA_ERROR, "Empty response from Jira create issue");
+            }
+
             String issueUri = props.getJiraBaseUrl() + "/browse/" + resp.key;
             return new CreateIssueResult(resp.id, resp.key, issueUri);
         });
@@ -126,7 +136,11 @@ public class JiraRestClientImpl implements JiraClient {
             var me = client.get().uri("/myself")
                     .header("Authorization", "Bearer " + token)
                     .retrieve().body(MyselfResponse.class);
-            if (me == null) return null;
+
+            if (me == null) {
+                return null;
+            }
+
             return new Myself(me.accountId, me.emailAddress);
         });
     }

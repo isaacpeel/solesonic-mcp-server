@@ -64,7 +64,11 @@ public class JiraTools {
         enforceRate("test_jira_auth", user);
         try {
             JiraClient.Myself myself = jira.getMyself();
-            if (myself == null) return new TestJiraAuthResponse(false, null, null);
+
+            if (myself == null) {
+                return new TestJiraAuthResponse(false, null, null);
+            }
+
             return new TestJiraAuthResponse(true, myself.accountId(), myself.emailAddress());
         } catch (ToolException ex) {
             if (ex.getCode() == ToolErrorCode.AUTH_REQUIRED || ex.getCode() == ToolErrorCode.AUTH_EXPIRED) {

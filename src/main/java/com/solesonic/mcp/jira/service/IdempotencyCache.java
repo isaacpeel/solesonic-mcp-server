@@ -31,11 +31,16 @@ public class IdempotencyCache {
     public Optional<CreateJiraIssueResponse> get(String userProfileId, String requestHash) {
         String key = userProfileId + ":" + requestHash;
         Entry e = map.get(key);
-        if (e == null) return Optional.empty();
+
+        if (e == null) {
+            return Optional.empty();
+        }
+
         if (Instant.now().isAfter(e.expiresAt)) {
             map.remove(key);
             return Optional.empty();
         }
+
         return Optional.of(e.response);
     }
 

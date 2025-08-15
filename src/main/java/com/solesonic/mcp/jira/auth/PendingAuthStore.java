@@ -29,11 +29,16 @@ public class PendingAuthStore {
 
     public Optional<Pending> get(String userProfileId) {
         Pending p = map.get(userProfileId);
-        if (p == null) return Optional.empty();
+
+        if (p == null) {
+            return Optional.empty();
+        }
+
         if (Instant.now().isAfter(p.expiresAt())) {
             map.remove(userProfileId);
             return Optional.empty();
         }
+
         return Optional.of(p);
     }
 
@@ -42,12 +47,20 @@ public class PendingAuthStore {
      */
     public Optional<String> consumeAndGetVerifier(String userProfileId, String state) {
         Pending p = map.get(userProfileId);
-        if (p == null) return Optional.empty();
-        if (!p.state().equals(state)) return Optional.empty();
+
+        if (p == null) {
+            return Optional.empty();
+        }
+
+        if (!p.state().equals(state)) {
+            return Optional.empty();
+        }
+
         if (Instant.now().isAfter(p.expiresAt())) {
             map.remove(userProfileId);
             return Optional.empty();
         }
+
         map.remove(userProfileId);
         return Optional.ofNullable(p.codeVerifier());
     }

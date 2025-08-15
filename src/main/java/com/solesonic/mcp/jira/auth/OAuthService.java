@@ -98,7 +98,11 @@ public class OAuthService {
 
     public Optional<String> getValidAccessToken(String userProfileId) {
         var tokenOptional = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
-        if (tokenOptional.isEmpty()) return Optional.empty();
+
+        if (tokenOptional.isEmpty()) {
+            return Optional.empty();
+        }
+
         StoredToken storedToken = tokenOptional.get();
         if (storedToken.expiresAt() == null || storedToken.expiresAt().isAfter(Instant.now().plusSeconds(30))) {
             return Optional.ofNullable(storedToken.accessToken());
@@ -113,7 +117,11 @@ public class OAuthService {
 
     public Optional<StoredToken> refresh(String userProfileId) {
         var tokenOptional = tokenStore.get(userProfileId, required(props.getCloudId(), "atlassian.cloud-id"));
-        if (tokenOptional.isEmpty()) throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "No stored credentials");
+
+        if (tokenOptional.isEmpty()) {
+            throw new ToolException(ToolErrorCode.AUTH_REQUIRED, "No stored credentials");
+        }
+
         StoredToken existingToken = tokenOptional.get();
         if (existingToken.refreshToken() == null || existingToken.refreshToken().isBlank()) {
             throw new ToolException(ToolErrorCode.AUTH_EXPIRED, "Missing refresh token; re-auth required");
@@ -138,7 +146,9 @@ public class OAuthService {
     }
 
     private static List<String> parseScopes(String scope) {
-        if (scope == null) return Collections.emptyList();
+        if (scope == null) {
+            return Collections.emptyList();
+        }
         String[] parts = scope.split(" ");
         return Arrays.asList(parts);
     }
