@@ -1,7 +1,6 @@
 package com.solesonic.mcp.jira.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.jira.config.AtlassianProperties;
 import com.solesonic.mcp.jira.error.ToolErrorCode;
 import com.solesonic.mcp.jira.error.ToolException;

@@ -1,6 +1,5 @@
 package com.solesonic.mcp.jira.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.jira.auth.OAuthService;
 import com.solesonic.mcp.jira.auth.PendingAuthStore;
 import com.solesonic.mcp.jira.auth.UserProfileResolver;

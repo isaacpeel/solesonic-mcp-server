@@ -7,6 +7,7 @@ import java.util.List;
  * No-op Jira client used for Phase 0 scaffolding.
  * This does not perform any network calls and simply returns placeholders.
  */
+@SuppressWarnings("unused")
 public class NoopJiraClient implements JiraClient {
     @Override
     public CreateIssueResult createIssue(Object requestBody) {
