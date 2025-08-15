@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "mcp.jira.enabled",
+      "type": "java.lang.String",
+      "description": "Enables or disables the Jira integration."
+  }
+] }
