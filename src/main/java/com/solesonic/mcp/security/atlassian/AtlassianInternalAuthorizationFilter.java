@@ -24,13 +24,13 @@ public class AtlassianInternalAuthorizationFilter implements ExchangeFilterFunct
     private static final Logger log = LoggerFactory.getLogger(AtlassianInternalAuthorizationFilter.class);
     private final AtlassianAccessTokenRepository atlassianAccessTokenRepository;
 
-    @Value("${jira.api.auth.uri}")
+    @Value("${jira.api.auth.uri:na}")
     private String atlassianAuthUri;
 
-    @Value("${jira.api.client.id}")
+    @Value("${jira.api.client.id:na}")
     private String authClientId;
 
-    @Value("${jira.api.client.secret}")
+    @Value("${jira.api.client.secret:na}")
     private String authClientSecret;
 
     public AtlassianInternalAuthorizationFilter(AtlassianAccessTokenRepository atlassianAccessTokenRepository) {

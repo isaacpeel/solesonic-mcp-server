@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class SimpleTools {
 
     @Bean
-    public ToolCallbackProvider simpleTools(SimpleService simpleService) {
+    public ToolCallbackProvider simpleMcpTools(SimpleService simpleService) {
         return MethodToolCallbackProvider.builder()
                 .toolObjects(simpleService)
                 .build();

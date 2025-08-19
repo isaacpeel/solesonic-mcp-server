@@ -26,13 +26,13 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
     private final UserRequestContext userRequestContext;
     private final AtlassianAccessTokenRepository atlassianAccessTokenRepository;
 
-    @Value("${jira.api.auth.uri}")
+    @Value("${jira.api.auth.uri:na}")
     private String atlassianAuthUri;
 
-    @Value("${jira.api.client.id}")
+    @Value("${jira.api.client.id:na}")
     private String authClientId;
 
-    @Value("${jira.api.client.secret}")
+    @Value("${jira.api.client.secret:na}")
     private String authClientSecret;
 
     public AtlassianRequestAuthorizationFilter(UserRequestContext userRequestContext,

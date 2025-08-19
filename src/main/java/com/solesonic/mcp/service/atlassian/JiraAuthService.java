@@ -85,19 +85,19 @@ public class JiraAuthService {
     public static final String RESPONSE_TYPE_PARAM = "response_type";
     public static final String PROMPT_PARAM = "prompt";
 
-    @Value("${jira.api.auth.uri}")
+    @Value("${jira.api.auth.uri:na}")
     private String jiraAuthUri;
 
-    @Value("${jira.api.auth.callback.uri}")
+    @Value("${jira.api.auth.callback.uri:na}")
     private String authCallbackUri;
 
-    @Value("${jira.api.client.id}")
+    @Value("${jira.api.client.id:na}")
     private String authClientId;
 
-    @Value("${jira.api.client.secret}")
+    @Value("${jira.api.client.secret:na}")
     private String authClientSecret;
 
-    @Value("${jira.api.client.id}")
+    @Value("${jira.api.client.id:na}")
     private String clientId;
 
     private final UserRequestContext userRequestContext;

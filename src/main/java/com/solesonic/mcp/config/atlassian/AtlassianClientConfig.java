@@ -22,10 +22,10 @@ import static com.solesonic.mcp.config.atlassian.AtlassianConstants.*;
 @SuppressWarnings("DuplicatedCode")
 @Configuration
 public class AtlassianClientConfig {
-    @Value("${jira.api.uri}")
+    @Value("${jira.api.uri:na}")
     private String jiraApiUri;
 
-    @Value("${jira.api.auth.uri}")
+    @Value("${jira.api.auth.uri:na}")
     private String jiraApiAuthUri;
 
     private final AtlassianRequestAuthorizationFilter atlassianRequestAuthorizationFilter;
