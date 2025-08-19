@@ -50,11 +50,13 @@ java -jar target/solesonic-mcp-server-0.0.1-SNAPSHOT.jar
 Default base URL: `http://localhost:8080`
 
 ## Authentication and authorization
-This server is protected as an OAuth2 Resource Server (JWT) and requires a valid bearer token on all requests.
+Ingress security: The /mcp HTTP endpoint is protected with basic OAuth at the resource-server layer (JWT bearer token). A valid token is required on all requests.
 
 - Expected audience: `api://solesonic-mcp` (see `application.properties`)
 - Required scope: `MCP_INVOKE`
   - Spring Security maps OAuth scopes to authorities with a `SCOPE_` prefix. The code checks for `SCOPE_MCP_INVOKE`.
+
+Tool-level auth: Atlassian tools currently use stubbed authentication; a full per-tool authentication/authorization solution is coming soon. Until then, tool access is governed by the ingress token only.
 
 Important: The current `SecurityConfig` secures all endpoints. If you expect `/actuator/health` to be public, adjust the security config accordingly. As-is, you must provide a valid token for everything.
 
@@ -159,3 +161,28 @@ With a connected client, invoke the `message_me` tool by passing a message argum
 For ongoing enhancements, current status, and the roadmap, see the living document:
 
 - [IN_PROGRESS.md](IN_PROGRES.md)
+
+
+
+## MCP Jira Tools (Phase 0 scaffolding)
+This project includes initial scaffolding for Jira MCP tools as per the migration plan (Phase 0). The feature is disabled by default and does not affect existing behavior.
+
+Feature flag:
+- mcp.jira.enabled=false (default)
+- Set to true to enable Jira-related bean wiring (still using a Noop client until later phases).
+
+Configuration properties (placeholders; configure via environment or application.properties as needed):
+- atlassian.client-id
+- atlassian.client-secret (optional with PKCE)
+- atlassian.redirect-uri (e.g., http://127.0.0.1:8765/oauth/callback/atlassian)
+- atlassian.cloud-id
+- atlassian.project-id
+- atlassian.issue-type-id
+- atlassian.scopes (space-separated, e.g., "read:jira-user read:jira-work write:jira-work offline_access")
+- atlassian.jira-base-url (e.g., https://your-domain.atlassian.net)
+
+Notes:
+- Tool-level authentication is currently stubbed; a full per-tool authentication/authorization solution is coming soon.
+- Minimal token persistence scaffolding exists (e.g., local DB via Flyway migration and a repository) for development purposes; a complete auth flow and secure storage will arrive in upcoming phases.
+- No OAuth or HTTP calls to Atlassian are active in Phase 0; a NoopJiraClient is wired when the feature flag is true.
+- Future phases will add OAuth2 PKCE, secure token storage, a real Jira client using RestClient, per-tool authorization, idempotency, metrics, and @Tool methods.

@@ -14,8 +14,12 @@ Planned additions (coming soon):
   - Multi-step/stateful tools, streaming responses, and external API integrations
   - Patterns for validation, error handling, and testing
 
+Current status:
+- Ingress (/mcp) is protected by basic OAuth (JWT bearer token) at the resource-server layer.
+- Atlassian tool authentication is stubbed; full per-tool authentication/authorization is coming soon.
+
 Status: In progress. Targeted updates will be pushed incrementally.
 
 If you have specific requirements or would like to prioritize a scenario, please open an issue or start a discussion.
 
-Last updated: 2025-08-13
+Last updated: 2025-08-19
