@@ -1,6 +1,6 @@
 # solesonic-mcp-server
 
-A Spring Boot application exposing an HTTP Model Context Protocol (MCP) server using Spring AI.
+A Spring Boot application exposing an HTTP (SSE) Model Context Protocol (MCP) server using Spring AI.
 
 This README explains how to run the server and how to set up an MCP client to connect to it.
 
