@@ -1,49 +1,57 @@
 package com.solesonic.mcp.security;
 
-import com.solesonic.mcp.scope.UserRequestContext;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.context.annotation.Profile;
+import jakarta.servlet.http.HttpSession;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
+import java.security.Principal;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @Order(1)
-@Profile({"prod"})
 public class JwtUserRequestFilter extends OncePerRequestFilter {
-
-    public static final String SUB = "sub";
-    private final UserRequestContext userRequestContext;
-
-    public JwtUserRequestFilter(UserRequestContext userRequestContext) {
-        this.userRequestContext = userRequestContext;
-    }
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(JwtUserRequestFilter.class);
 
     @Override
     protected void doFilterInternal(@Nonnull HttpServletRequest request,
                                     @Nonnull HttpServletResponse response,
                                     @Nonnull FilterChain filterChain) throws ServletException, IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Principal userPrincipal = request.getUserPrincipal();
 
-        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-            String userId = jwt.getClaimAsString(SUB);
+        String requestURI = request.getRequestURI();
 
-            if (userId != null) {
-                userRequestContext.setUserId(UUID.fromString(userId));
+        if(requestURI.contains("message")) {
+//            String body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
+//            log.info("Request body: {}", body);
+
+        }
+
+        if(userPrincipal instanceof JwtAuthenticationToken jwtAuth) {
+            Map<String, Object> tokenAttributes = jwtAuth.getTokenAttributes();
+            Object name = tokenAttributes.get("username");
+
+            if(name != null) {
+                log.info("Request to `{}` secured for user:  {}", requestURI, name);
+            } else {
+                String clientId = tokenAttributes.get("client_id").toString();
+                log.info("Request to `{}` secured for client id:  {}", requestURI, clientId);
             }
-        } else {
-            //If there is no authentication, always throw an exception
-            throw new IllegalStateException("Anonymous authentication is not allowed.");
         }
 
         filterChain.doFilter(request, response);

@@ -1,6 +1,5 @@
 package com.solesonic.mcp.security;
 
-import com.solesonic.mcp.config.RequestLoggingFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +10,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -32,16 +30,6 @@ public class MpcSecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
     private String jwkSetUri;
 
-    private final JwtUserRequestFilter jwtUserRequestFilter;
-    private final RequestLoggingFilter requestLoggingFilter;
-
-    public MpcSecurityConfig(JwtUserRequestFilter jwtUserRequestFilter,
-                             RequestLoggingFilter requestLoggingFilter) {
-        this.jwtUserRequestFilter = jwtUserRequestFilter;
-        this.requestLoggingFilter = requestLoggingFilter;
-    }
-
-
     @Bean
     @ConditionalOnProperty(name = "spring.security.oauth2.resourceserver.jwt.jwk-set-uri")
     public JwtDecoder jwtDecoder() {
@@ -61,9 +49,6 @@ public class MpcSecurityConfig {
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder())));
-
-        http.addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(jwtUserRequestFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }
