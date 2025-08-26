@@ -1,16 +1,8 @@
 package com.solesonic.mcp.exception;
 
-import org.springframework.web.reactive.function.client.ClientResponse;
-
+@SuppressWarnings("unused")
 public class JiraException extends RuntimeException {
-    private ClientResponse response;
     private String responseBody;
-
-    public JiraException(String responseBody, ClientResponse response) {
-        super(responseBody);
-        this.response = response;
-        this.responseBody = responseBody;
-    }
 
     public JiraException(String message) {
         super(message);
@@ -19,10 +11,6 @@ public class JiraException extends RuntimeException {
     @SuppressWarnings("unused")
     public JiraException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    public ClientResponse getResponse() {
-        return response;
     }
 
     @SuppressWarnings("unused")
