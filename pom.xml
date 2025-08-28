@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.4</version>
+        <version>4.0.0-M2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.solesonic</groupId>
@@ -15,10 +15,25 @@
     <description>solesonic-mcp-server</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <id>solesonic</id>
+            <name>Isaac Peel</name>
+            <email>isaac@solesonic.com</email>
+            <organization>Solesonic</organization>
+            <organizationUrl>https://solesonic.com</organizationUrl>
+            <roles>
+                <role>developer</role>
+                <role>maintainer</role>
+            </roles>
+            <timezone>America/Denver</timezone>
+        </developer>
     </developers>
     <scm>
         <connection/>
@@ -54,23 +69,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-        
-        <!-- Data + JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <!-- PostgreSQL driver -->
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- Spring Security Crypto -->
         <dependency>
@@ -85,6 +83,11 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.logaritex.mcp</groupId>
+            <artifactId>spring-ai-mcp-annotations</artifactId>
+            <version>0.1.0</version>
         </dependency>
 
         <!-- Load .env files at runtime via spring-dotenv -->

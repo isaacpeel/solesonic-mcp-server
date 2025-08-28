@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool;
 
-import com.solesonic.mcp.service.SimpleService;
+import com.solesonic.mcp.service.WeatherService;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 public class SimpleTools {
 
     @Bean
-    public ToolCallbackProvider simpleMcpTools(SimpleService simpleService) {
+    public ToolCallbackProvider weatherTools(WeatherService weatherService) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(simpleService)
+                .toolObjects(weatherService)
                 .build();
     }
 }
