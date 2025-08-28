@@ -16,7 +16,6 @@ public class WeatherService {
     public String weatherLookup(String city, ToolContext toolContext) {
         log.info("Received request for weather in {}", city);
 
-
         return "The weather in " + city + " is sunny.";
     }
 }
