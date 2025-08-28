@@ -2,16 +2,9 @@ package com.solesonic.mcp.service;
 
 import org.slf4j.Logger;
 import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.mcp.McpToolUtils;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 public class WeatherService {
@@ -19,32 +12,11 @@ public class WeatherService {
 
     @SuppressWarnings("unused")
     @Tool(description = "Returns the weather in the given city.", name = "weather_lookup")
-    @PreAuthorize("hasAuthority('SCOPE_get_weather')")
+    @PreAuthorize("hasAuthority('GROUP_MCP-GET-WEATHER')")
     public String weatherLookup(String city, ToolContext toolContext) {
         log.info("Received request for weather in {}", city);
 
-        log.info("toolContext: {}", toolContext);
 
-        Map<String, Object> context = toolContext.getContext();
-
-        McpToolUtils.getMcpExchange(toolContext).ifPresent(exchange ->
-                log.info("Exchange: {}", exchange)
-        );
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String caller = "unknown";
-
-        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            Jwt jwt = jwtAuth.getToken();
-            String preferredUsername = jwt.getClaimAsString("preferred_username");
-            String email = jwt.getClaimAsString("email");
-            String sub = jwt.getSubject();
-            caller = preferredUsername != null ? preferredUsername : (email != null ? email : sub);
-        }
-
-        log.info("Caller: {}", caller);
-
-        return "The weather in " + city + " is sunny. Requested by: " + caller;
+        return "The weather in " + city + " is sunny.";
     }
 }

@@ -8,12 +8,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
@@ -21,6 +32,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class MpcSecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(MpcSecurityConfig.class);
@@ -38,6 +50,43 @@ public class MpcSecurityConfig {
     }
 
     @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthorityPrefix("SCOPE_");
+        authoritiesConverter.setAuthoritiesClaimName("scope");
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            // Get scope-based authorities
+            Collection<GrantedAuthority> authorities = authoritiesConverter.convert(jwt);
+
+            // Get Cognito groups and convert to authorities
+            Collection<GrantedAuthority> groupAuthorities = extractGroupAuthorities(jwt);
+
+            // Combine both
+            return Stream.concat(authorities.stream(), groupAuthorities.stream())
+                    .toList();
+        });
+
+        return converter;
+    }
+
+    private Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
+        Object groupsClaim = jwt.getClaim("cognito:groups");
+
+        if (groupsClaim instanceof List<?> groups) {
+            return groups.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(group -> new SimpleGrantedAuthority("GROUP_" + group))
+                    .map(GrantedAuthority.class::cast)
+                    .toList();
+        }
+
+        return List.of();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.exceptionHandling(config -> config.accessDeniedHandler(accessDeniedHandler()));
         http.exceptionHandling(config -> config.authenticationEntryPoint(authenticationEntryPoint()));
@@ -49,10 +98,14 @@ public class MpcSecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.decoder(jwtDecoder())));
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder())
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter()))); // Add this line
+        SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
 
         return http.build();
     }
+
 
     private AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, _) -> {
