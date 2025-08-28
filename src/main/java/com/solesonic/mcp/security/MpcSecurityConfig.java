@@ -39,6 +39,10 @@ public class MpcSecurityConfig {
 
     @SuppressWarnings("unused")
     public static final String SCOPE_MCP_INVOKE = "SCOPE_MCP_INVOKE";
+    public static final String SCOPE_ = "SCOPE_";
+    public static final String SCOPE = "scope";
+    public static final String COGNITO_GROUPS = "cognito:groups";
+    public static final String GROUP = "GROUP_";
 
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
     private String jwkSetUri;
@@ -52,33 +56,28 @@ public class MpcSecurityConfig {
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix("SCOPE_");
-        authoritiesConverter.setAuthoritiesClaimName("scope");
+        authoritiesConverter.setAuthorityPrefix(SCOPE_);
+        authoritiesConverter.setAuthoritiesClaimName(SCOPE);
 
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            // Get scope-based authorities
-            Collection<GrantedAuthority> authorities = authoritiesConverter.convert(jwt);
-
-            // Get Cognito groups and convert to authorities
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> grantedAuthorities = authoritiesConverter.convert(jwt);
             Collection<GrantedAuthority> groupAuthorities = extractGroupAuthorities(jwt);
 
-            // Combine both
-            return Stream.concat(authorities.stream(), groupAuthorities.stream())
-                    .toList();
+            return Stream.concat(grantedAuthorities.stream(), groupAuthorities.stream()).toList();
         });
 
-        return converter;
+        return jwtAuthenticationConverter;
     }
 
     private Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
-        Object groupsClaim = jwt.getClaim("cognito:groups");
+        Object groupsClaim = jwt.getClaim(COGNITO_GROUPS);
 
         if (groupsClaim instanceof List<?> groups) {
             return groups.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
-                    .map(group -> new SimpleGrantedAuthority("GROUP_" + group))
+                    .map(group -> new SimpleGrantedAuthority(GROUP + group))
                     .map(GrantedAuthority.class::cast)
                     .toList();
         }
