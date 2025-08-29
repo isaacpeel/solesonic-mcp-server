@@ -1,0 +1,13 @@
+services:
+  solesonic-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solesonic-mcp-server
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - SERVER_PORT=8001
+    restart: unless-stopped
