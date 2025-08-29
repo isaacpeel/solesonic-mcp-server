@@ -57,14 +57,14 @@ Prerequisites for Docker:
 - `.env` file configured (see Configure environment section above)
 
 ```
-# Build and run with Docker Compose
-docker compose up --build
+# Build and run with Docker Compose (from project root)
+docker compose -f docker/docker-compose.yml up --build
 
 # Run in detached mode
-docker compose up -d --build
+docker compose -f docker/docker-compose.yml up -d --build
 
 # Stop the application
-docker compose down
+docker compose -f docker/docker-compose.yml down
 ```
 
 Docker base URL: `http://localhost:8001`
