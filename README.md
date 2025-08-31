@@ -31,7 +31,6 @@ spring.ai.mcp.server.capabilities.tool=true
 # OAuth2 Resource Server (AWS Cognito)
 spring.security.oauth2.resourceserver.jwt.issuer-uri=${COGNITO_ISSUER_URI}
 spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${COGNITO_JWK_SET_URI}
-spring.security.oauth2.resourceserver.jwt.audiences=api://solesonic-mcp
 ```
 
 Notes:
@@ -39,6 +38,8 @@ Notes:
 - No extra flags are needed; `.env` is loaded automatically at startup.
 
 ## Build and run
+
+### Option A: Local development (Maven)
 ```
 # Build
 mvn package
@@ -49,16 +50,76 @@ java -jar target/solesonic-mcp-server-0.0.1-SNAPSHOT.jar
 
 Default base URL: `http://localhost:8080`
 
+### Option B: Docker Compose (recommended)
+Prerequisites for Docker:
+- Docker and Docker Compose installed
+- `.env` file configured (see Configure environment section above)
+
+```
+# Build and run with Docker Compose (from project root)
+docker compose -f docker/docker-compose.yml up --build
+
+# Run in detached mode
+docker compose -f docker/docker-compose.yml up -d --build
+
+# Stop the application
+docker compose -f docker/docker-compose.yml down
+```
+
+Docker base URL: `http://localhost:8001`
+
+Notes:
+- The Docker setup exposes the application on port 8001 instead of 8080
+- All environment variables from `.env` are automatically loaded into the container
+- The application is built inside the Docker container using Maven and OpenJDK 24
+
 ## Authentication and authorization
-Ingress security: The /mcp HTTP endpoint is protected with basic OAuth at the resource-server layer (JWT bearer token). A valid token is required on all requests.
 
-- Expected audience: `api://solesonic-mcp` (see `application.properties`)
-- Required scope: `MCP_INVOKE`
-  - Spring Security maps OAuth scopes to authorities with a `SCOPE_` prefix. The code checks for `SCOPE_MCP_INVOKE`.
+### Ingress Security
+The `/mcp` HTTP endpoint is protected with OAuth2 resource server security using JWT bearer tokens. A valid token is required on all requests.
 
-Tool-level auth: Atlassian tools currently use stubbed authentication; a full per-tool authentication/authorization solution is coming soon. Until then, tool access is governed by the ingress token only.
 
-Important: The current `SecurityConfig` secures all endpoints. If you expect `/actuator/health` to be public, adjust the security config accordingly. As-is, you must provide a valid token for everything.
+### Group-based Authorization
+Individual tools can enforce additional authorization based on Cognito groups. The system extracts `cognito:groups` claims from JWT tokens and converts them to Spring Security authorities with a `GROUP_` prefix.
+
+Example: The `WeatherService` tool requires membership in the `MCP-GET-WEATHER` Cognito group:
+```java
+@Tool(description = "Returns the weather in the given city.", name = "weather_lookup")
+@PreAuthorize("hasAuthority('GROUP_MCP-GET-WEATHER')")
+public String weatherLookup(String city, ToolContext toolContext) {
+    // Implementation
+}
+```
+
+### Token Acquisition Methods
+
+#### PKCE Flow (UI Applications)
+For user-facing applications, grant and user information should be obtained via OAuth2 PKCE (Proof Key for Code Exchange) flow. This provides secure authentication for public clients without requiring a client secret. The resulting tokens include both user identity and group memberships from Cognito.
+
+#### Machine-to-Machine Tokens (API Access)
+For backend services and API integrations, use client credentials flow:
+
+```bash
+# Obtain M2M token with client credentials
+TOKEN=$(curl -s \
+  -u <clientId>:<clientSecret> \
+  -d "grant_type=client_credentials&scope=MCP_INVOKE" \
+  https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/token \
+  | jq -r .access_token)
+
+# Use token to call MCP endpoint
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -X POST http://localhost:8080/mcp \
+  --data '{"jsonrpc":"2.0","id":"1","method":"initialize","params":{"capabilities":{}}}'
+```
+
+Note: Machine-to-machine tokens may not include group claims depending on your Cognito configuration. Ensure your client is configured to receive necessary group information if tools require group-based authorization.
+
+### Legacy Tool Authentication
+Atlassian tools currently use stubbed authentication; a full per-tool authentication/authorization solution is coming soon. Until then, tool access is governed by the ingress token and group-based authorization only.
+
+**Important**: The current `SecurityConfig` secures all endpoints. If you expect `/actuator/health` to be public, adjust the security config accordingly. As-is, you must provide a valid token for everything.
 
 ## MCP endpoint
 This project uses the Spring AI MCP Server (WebMVC) starter, which exposes an HTTP MCP endpoint under `/mcp`.
@@ -160,7 +221,7 @@ With a connected client, invoke the `message_me` tool by passing a message argum
 ## Work in progress
 For ongoing enhancements, current status, and the roadmap, see the living document:
 
-- [IN_PROGRESS.md](IN_PROGRES.md)
+- [IN_PROGRESS.md](IN_PROGRESS.md)
 
 
 
