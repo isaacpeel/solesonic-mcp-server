@@ -31,7 +31,6 @@ spring.ai.mcp.server.capabilities.tool=true
 # OAuth2 Resource Server (AWS Cognito)
 spring.security.oauth2.resourceserver.jwt.issuer-uri=${COGNITO_ISSUER_URI}
 spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${COGNITO_JWK_SET_URI}
-spring.security.oauth2.resourceserver.jwt.audiences=api://solesonic-mcp
 ```
 
 Notes:

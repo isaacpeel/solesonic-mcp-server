@@ -5,9 +5,9 @@ services:
       dockerfile: docker/Dockerfile
     container_name: solesonic-mcp-server
     ports:
-      - "8001:8001"
+      - "8081:8081"
     env_file:
       - ../.env
     environment:
-      - SERVER_PORT=8001
+      - SERVER_PORT=8081
     restart: unless-stopped
