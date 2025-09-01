@@ -15,6 +15,6 @@ WORKDIR /app
 
 COPY --from=build /app/target/solesonic-mcp-server-0.0.1-SNAPSHOT.jar app.jar
 
-EXPOSE 8081
+EXPOSE 9443
 
-ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8081"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
