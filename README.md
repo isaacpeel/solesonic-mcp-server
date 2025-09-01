@@ -73,6 +73,91 @@ Notes:
 - All environment variables from `.env` are automatically loaded into the container
 - The application is built inside the Docker container using Maven and OpenJDK 24
 
+## Production Deployment with SSL
+
+For production environments, the application supports SSL/TLS encryption using PKCS12 keystores. The Docker configuration is pre-configured for SSL deployment on port 9443.
+
+### SSL Certificate Requirements
+
+You need a valid SSL certificate in PKCS12 format. You can generate a self-signed certificate for testing or use a certificate from a trusted Certificate Authority for production.
+
+To generate a self-signed certificate for testing:
+```bash
+# Generate a self-signed PKCS12 keystore (for testing only)
+keytool -genkeypair -alias tomcat -keyalg RSA -keysize 2048 \
+  -storetype PKCS12 -keystore solesonic-mcp-server.p12 \
+  -validity 365 -dname "CN=localhost,O=SoleSonic,C=US"
+```
+
+### Environment Configuration
+
+Add the following SSL-related variables to your `.env` file:
+
+```
+# Cognito configuration (required)
+COGNITO_ISSUER_URI=https://example.auth.<region>.amazoncognito.com
+
+# SSL Configuration
+SSL_CERT_FILE=solesonic-mcp-server.p12
+KEYSTORE_PASSWORD=your_keystore_password
+SYSTEM_SSL_CERT_LOCATION=/path/to/your/certificates
+SERVER_PORT=9443
+```
+
+### Production Deployment
+
+The production configuration uses the `application-prod.properties` profile with the following SSL settings:
+- Port: 9443 (HTTPS)
+- SSL Protocol: TLS 1.2 and TLS 1.3
+- Keystore Type: PKCS12
+- Cipher Suites: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384
+
+Deploy with Docker Compose:
+```bash
+# Set Spring profile for production
+echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+
+# Deploy with SSL
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Production base URL: `https://localhost:9443`
+
+### SSL Client Configuration
+
+When connecting MCP clients to the SSL-enabled server, use HTTPS URLs:
+
+#### MCP Inspector with SSL
+```bash
+npx @modelcontextprotocol/inspector \
+  --server http \
+  --url https://localhost:9443/mcp \
+  --header "Authorization: Bearer $TOKEN"
+```
+
+#### Claude Desktop with SSL
+Update your `mcp.json` configuration:
+```json
+{
+  "mcpServers": {
+    "solesonic-mcp-server": {
+      "transport": "http",
+      "url": "https://localhost:9443/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SOLESONIC_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### SSL Troubleshooting
+
+- **Certificate not trusted**: For self-signed certificates, you may need to add certificate exceptions in your client or use the `--insecure` flag for testing
+- **Connection refused**: Ensure port 9443 is accessible and not blocked by firewalls
+- **Keystore errors**: Verify the keystore password and file path are correct in your environment variables
+- **TLS handshake failures**: Check that your client supports TLS 1.2 or 1.3
+
 ## Authentication and authorization
 
 ### Ingress Security
