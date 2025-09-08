@@ -4,5 +4,10 @@
       "name": "mcp.jira.enabled",
       "type": "java.lang.String",
       "description": "Enables or disables the Jira integration."
-  }
-] }
+    },
+    {
+      "name": "atlassian.token.broker.uri",
+      "type": "java.lang.String",
+      "description": "URI of the Atlassian Token Broker."
+    }
+  ] }
