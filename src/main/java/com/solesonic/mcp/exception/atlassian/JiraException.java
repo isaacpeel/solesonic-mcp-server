@@ -1,4 +1,4 @@
-package com.solesonic.mcp.exception;
+package com.solesonic.mcp.exception.atlassian;
 
 @SuppressWarnings("unused")
 public class JiraException extends RuntimeException {

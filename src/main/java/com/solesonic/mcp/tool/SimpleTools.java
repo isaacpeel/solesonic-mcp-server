@@ -15,4 +15,20 @@ public class SimpleTools {
                 .toolObjects(weatherService)
                 .build();
     }
+
+    @Bean
+    public ToolCallbackProvider createJiraToolsRegistration(CreateJiraTools createJiraTools) {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(createJiraTools)
+                .build();
+    }
+
+    @Bean
+    public ToolCallbackProvider assignJiraToolsRegistration(AssigneeJiraTools assigneeJiraTools) {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(assigneeJiraTools)
+                .build();
+    }
+
+
 }
