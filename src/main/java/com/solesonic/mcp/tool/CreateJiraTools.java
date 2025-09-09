@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +23,6 @@ import static com.solesonic.mcp.tool.AssigneeJiraTools.ASSIGN_JIRA;
  * Provides assignee lookup and issue creation functionality.
  */
 @Service
-@ConditionalOnProperty(name = "mcp.jira.enabled", havingValue = "true")
 public class CreateJiraTools {
     private static final Logger log = LoggerFactory.getLogger(CreateJiraTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
