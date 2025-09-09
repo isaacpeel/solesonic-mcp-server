@@ -27,14 +27,10 @@ public class AtlassianTokenBrokerService {
 
         TokenExchange tokenExchange = new TokenExchange(userId, ATLASSIAN);
 
-        TokenResponse tokenResponse = tokenBrokerWebClient.post()
+        return tokenBrokerWebClient.post()
                 .bodyValue(tokenExchange)
                 .retrieve()
                 .bodyToMono(TokenResponse.class)
                 .block();
-
-        assert tokenResponse != null;
-        log.info("Token Response retrieved: {}", tokenResponse.accessToken());
-        return tokenResponse;
     }
 }
