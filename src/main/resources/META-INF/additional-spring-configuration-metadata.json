@@ -9,5 +9,10 @@
       "name": "atlassian.token.broker.uri",
       "type": "java.lang.String",
       "description": "URI of the Atlassian Token Broker."
+    },
+    {
+      "name": "jira.url.template",
+      "type": "java.lang.String",
+      "description": "Template for returning a user clickable Jira Issue URL."
     }
   ] }

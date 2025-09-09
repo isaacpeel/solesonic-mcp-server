@@ -29,7 +29,7 @@ public class CreateJiraTools {
 
     private final JiraService jiraService;
 
-    @Value("${JIRA_URL_TEMPLATE}")
+    @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
     public CreateJiraTools(JiraService jiraService) {
