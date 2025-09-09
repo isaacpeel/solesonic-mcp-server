@@ -11,10 +11,13 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientProvider;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientProviderBuilder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultReactiveOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.reactive.function.client.ServerOAuth2AuthorizedClientExchangeFilterFunction;
 import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.server.WebSessionServerOAuth2AuthorizedClientRepository;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
@@ -23,6 +26,8 @@ import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_TO
 
 @Configuration
 public class AtlassianTokenBrokerClientConfig {
+    public static final String ATLASSIAN_TOKEN_BROKER = "atlassian-token-broker";
+
     @Value("${atlassian.token.broker.uri}")
     private String atlassianTokenBrokerUrl;
 
@@ -32,7 +37,7 @@ public class AtlassianTokenBrokerClientConfig {
                                                    ReactiveOAuth2AuthorizedClientManager authorizedClientManager) {
 
         ServerOAuth2AuthorizedClientExchangeFilterFunction oauth2Filter = new ServerOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
-        oauth2Filter.setDefaultClientRegistrationId("atlassian-token-broker");
+        oauth2Filter.setDefaultClientRegistrationId(ATLASSIAN_TOKEN_BROKER);
 
         return WebClient.builder()
                 .baseUrl(atlassianTokenBrokerUrl)
@@ -49,6 +54,16 @@ public class AtlassianTokenBrokerClientConfig {
     }
 
     @Bean
+    public ReactiveClientRegistrationRepository reactiveClientRegistrationRepository(ClientRegistrationRepository clientRegistrationRepository) {
+        return new InMemoryReactiveClientRegistrationRepository(clientRegistrationRepository.findByRegistrationId(ATLASSIAN_TOKEN_BROKER));
+    }
+
+    @Bean
+    public ServerOAuth2AuthorizedClientRepository authorizedClientRepository() {
+        return new WebSessionServerOAuth2AuthorizedClientRepository();
+    }
+
+    @Bean
     public ReactiveOAuth2AuthorizedClientManager authorizedClientManager(
             ReactiveClientRegistrationRepository clientRegistrationRepository,
             ServerOAuth2AuthorizedClientRepository authorizedClientRepository) {
@@ -58,9 +73,7 @@ public class AtlassianTokenBrokerClientConfig {
                         .clientCredentials()
                         .build();
 
-        DefaultReactiveOAuth2AuthorizedClientManager authorizedClientManager =
-                new DefaultReactiveOAuth2AuthorizedClientManager(
-                        clientRegistrationRepository, authorizedClientRepository);
+        DefaultReactiveOAuth2AuthorizedClientManager authorizedClientManager = new DefaultReactiveOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
         authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
 
         return authorizedClientManager;
