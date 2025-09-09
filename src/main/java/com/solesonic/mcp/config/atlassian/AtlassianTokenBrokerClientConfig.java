@@ -27,6 +27,7 @@ import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_TO
 @Configuration
 public class AtlassianTokenBrokerClientConfig {
     public static final String ATLASSIAN_TOKEN_BROKER = "atlassian-token-broker";
+    public static final String CUSTOM_AUTHORIZED_CLIENT_REPOSITORY = "customAuthorizedClientRepository";
 
     @Value("${atlassian.token.broker.uri}")
     private String atlassianTokenBrokerUrl;
@@ -59,14 +60,15 @@ public class AtlassianTokenBrokerClientConfig {
     }
 
     @Bean
-    public ServerOAuth2AuthorizedClientRepository authorizedClientRepository() {
+    @Qualifier(CUSTOM_AUTHORIZED_CLIENT_REPOSITORY)
+    public ServerOAuth2AuthorizedClientRepository customAuthorizedClientRepository() {
         return new WebSessionServerOAuth2AuthorizedClientRepository();
     }
 
     @Bean
     public ReactiveOAuth2AuthorizedClientManager authorizedClientManager(
             ReactiveClientRegistrationRepository clientRegistrationRepository,
-            ServerOAuth2AuthorizedClientRepository authorizedClientRepository) {
+            @Qualifier(CUSTOM_AUTHORIZED_CLIENT_REPOSITORY) ServerOAuth2AuthorizedClientRepository authorizedClientRepository) {
 
         ReactiveOAuth2AuthorizedClientProvider authorizedClientProvider =
                 ReactiveOAuth2AuthorizedClientProviderBuilder.builder()
