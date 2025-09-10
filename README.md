@@ -3,7 +3,7 @@
 > A Spring Boot HTTP MCP (Model Context Protocol) server powered by Spring AI. Secured as an OAuth2 Resource Server (JWT) with group- and scope-based authorization, built-in Jira tooling, and an external Atlassian Token Broker integration.
 
 [![Java](https://img.shields.io/badge/Java-24-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
-+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](docs/license.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](docs/license.md)
 
 ## Features
 
@@ -22,7 +22,8 @@
 - Docker (optional, for production-like run)
 
 ### 1) Configure Environment
-Create a `.env` file with minimal variables (examples):
+> Note: OS environment variables take precedence over `.env`.
+
 
 ```bash
 # JWT verification (use one of the following depending on your IdP)
@@ -53,8 +54,11 @@ JIRA_CLOUD_ID_PATH=/path/to/your/cloud-id
 ./mvnw spring-boot:run
 ```
 
-- Base URL: http://localhost:9443
+- Base URL: https://localhost:9443 (when the `ssl` profile is active); otherwise http://localhost:9443
 - MCP endpoint: POST /mcp
+
+> Tip: To enable HTTPS locally, run with profiles `prod,ssl`:
+> ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod,ssl
 
 ### 3) Verify Setup
 Send an MCP initialize request (replace placeholders):
@@ -63,12 +67,12 @@ Send an MCP initialize request (replace placeholders):
 curl -k \
   -H "Authorization: Bearer <YOUR_JWT_ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
-  -X POST http://localhost:9443/mcp \
+  -X POST https://localhost:9443/mcp \
   -d '{
     "jsonrpc": "2.0",
     "id": "1",
     "method": "initialize",
-    "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "curl", "version": "1.0"}}
+    "params": {"protocolVersion": "2024-11-05", "client": {"name": "curl", "version": "1.0"}}
   }'
 ```
 

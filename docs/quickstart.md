@@ -10,7 +10,7 @@ Local run (no Docker)
 - Build: ./mvnw clean verify
 - Start:
   - Default: java -jar target/solesonic-mcp-server-0.0.1.jar
-  - With profiles: java -Dspring.profiles.active=prod -jar target/solesonic-mcp-server-0.0.1.jar
+  - With profiles (enable HTTPS): java -Dspring.profiles.active=prod,ssl -jar target/solesonic-mcp-server-0.0.1.jar
 - Defaults:
   - Base URL: https://localhost:9443
   - MCP endpoint: POST /mcp
@@ -33,6 +33,7 @@ Verify
 Notes
 - This server is an OAuth2 Resource Server; you must supply a valid JWT via Authorization: Bearer.
 - .env is loaded automatically (overridden by OS environment variables). See Configuration for details.
+- HTTPS requires running with the `ssl` profile (enabled in Docker Compose by default).
 
 See also
 - Configuration: ./configuration.md

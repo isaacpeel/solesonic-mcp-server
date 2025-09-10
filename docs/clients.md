@@ -27,3 +27,4 @@ Claude Desktop (example)
 Headers and tokens
 - Always pass Authorization: Bearer <JWT>
 - If using self-signed certs in dev, your client must trust the cert or skip verification
+- Ensure the server is running with the `ssl` profile for HTTPS (enabled by default in Docker Compose).

@@ -42,13 +42,14 @@ Examples
 - Local overrides
   - export COGNITO_ISSUER_URI=https://<your-domain>.auth.<region>.amazoncognito.com
   - export COGNITO_JWK_SET_URI=https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/jwks
-  - export SPRING_PROFILES_ACTIVE=prod
+  - export SPRING_PROFILES_ACTIVE=prod,ssl
+  - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
+  - export KEYSTORE_PASSWORD=<change-me>
   - java -jar target/solesonic-mcp-server-0.0.1.jar
 - Docker Compose (.env example)
   - COGNITO_ISSUER_URI=https://<your-domain>.auth.<region>.amazoncognito.com
   - COGNITO_JWK_SET_URI=https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/jwks
-  - SSL_CERT_FILE=<your-keystore.p12>
-  - SYSTEM_SSL_CERT_LOCATION=/absolute/path/to/keystores
+  - SSL_CERT_LOCATION=/run/secrets/server.p12
   - KEYSTORE_PASSWORD=<change-me>
 
 Notes
