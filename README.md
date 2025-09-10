@@ -8,7 +8,7 @@
 ## Features
 
 - 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
-- 🧰 Spring AI Tools — Example: `weather_lookup`; plus built-in Jira tools
+- 🧰 Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
 - 🔐 OAuth2 Resource Server (JWT) — Audience and scope validation; group claims mapped to authorities
 - 👥 Group & Scope AuthZ — `cognito:groups` → `GROUP_<name>` authorities; scopes → `SCOPE_<scope>`
 - ⚡ Atlassian Token Broker — Client-credentials integration for short-lived Atlassian access tokens
@@ -87,7 +87,7 @@ See:
 
 ## Documentation
 
-- Start here: [docs/README.md](docs/README.md)
+- Start here: [Documentation](docs/documentation.md)
 - Deep dives: [Configuration](docs/configuration.md), [Security](docs/security.md), [Endpoints](docs/endpoints.md), [Tools](docs/tools.md), [Deployment](docs/deployment.md), [Troubleshooting](docs/troubleshooting.md)
 
 ---
