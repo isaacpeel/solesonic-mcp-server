@@ -1,6 +1,6 @@
 # Solesonic MCP Server
 
-> A Spring Boot HTTP MCP (Model Context Protocol) server powered by Spring AI. Secured as an OAuth2 Resource Server (JWT) with group- and scope-based authorization, optional Jira tooling, and an external Atlassian Token Broker integration.
+> A Spring Boot HTTP MCP (Model Context Protocol) server powered by Spring AI. Secured as an OAuth2 Resource Server (JWT) with group- and scope-based authorization, built-in Jira tooling, and an external Atlassian Token Broker integration.
 
 [![Java](https://img.shields.io/badge/Java-24-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -8,7 +8,7 @@
 ## Features
 
 - 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
-- 🧰 Spring AI Tools — Example tool: `weather_lookup`; Jira tools available behind a feature flag
+- 🧰 Spring AI Tools — Example: `weather_lookup`; plus built-in Jira tools
 - 🔐 OAuth2 Resource Server (JWT) — Audience and scope validation; group claims mapped to authorities
 - 👥 Group & Scope AuthZ — `cognito:groups` → `GROUP_<name>` authorities; scopes → `SCOPE_<scope>`
 - ⚡ Atlassian Token Broker — Client-credentials integration for short-lived Atlassian access tokens
@@ -30,7 +30,7 @@ COGNITO_JWK_SET_URI=https://your-issuer/.well-known/jwks.json
 # or
 COGNITO_ISSUER_URI=https://your-domain.auth.your-region.amazoncognito.com
 
-# Jira tooling (optional; only if enabling Jira tools)
+# Jira tooling
 JIRA_URL_TEMPLATE=https://your-domain.atlassian.net/browse/{key}
 ATLASSIAN_TOKEN_BROKER_URL=https://your-token-broker.example.com/broker/atlassian/token
 ATLASSIAN_TOKEN_BROKER_ISSUER_URI=https://your-authz-server/oauth2/token
@@ -39,8 +39,6 @@ ATLASSIAN_TOKEN_BROKER_CLIENT_SECRET=your-client-secret
 ATLASSIAN_TOKEN_BROKER_SCOPES=your.scope.here
 JIRA_CLOUD_ID_PATH=/path/to/your/cloud-id
 
-# Feature flags
-MCP_JIRA_ENABLED=true
 ```
 
 > Note: OS environment variables take precedence over `.env`.
@@ -79,7 +77,7 @@ curl -k \
 ## MCP Server & Token Broker
 
 - The server exposes tools via the MCP protocol. Tool invocation is authorized using JWT scopes and/or group authorities.
-- Optional Jira tools can be enabled with `mcp.jira.enabled=true`. They rely on an external Atlassian Token Broker to mint short-lived access tokens from securely stored refresh tokens.
+- Jira tools are first-class features. They rely on an external Atlassian Token Broker to mint short-lived access tokens from securely stored refresh tokens.
 
 See:
 - [Endpoints](docs/endpoints.md)

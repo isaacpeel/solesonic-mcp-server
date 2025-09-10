@@ -18,7 +18,6 @@ Key properties (environment variables in parentheses)
   - spring.ai.mcp.server.version=1.0.0
   - spring.ai.mcp.server.type=sync
 - Jira tools
-  - mcp.jira.enabled=true
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
   - solesonic.llm.jira.cloud.id.path=(${JIRA_CLOUD_ID_PATH})

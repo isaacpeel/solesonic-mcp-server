@@ -15,7 +15,6 @@ Coding guidelines
 Security and configuration
 - Do not commit secrets
 - Use .env for local convenience; OS env vars override
-- Prefer feature flags for optional integrations (e.g., mcp.jira.enabled)
 
 Testing
 - Add tests for new behavior
