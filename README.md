@@ -115,7 +115,7 @@ The production configuration uses the `application-prod.properties` profile with
 Deploy with Docker Compose:
 ```bash
 # Set Spring profile for production
-echo "SPRING_PROFILES_ACTIVE=prod" >> temp.env
+echo "SPRING_PROFILES_ACTIVE=prod" >> .env
 
 # Deploy with SSL
 docker compose -f docker/docker-compose.yml up -d --build
