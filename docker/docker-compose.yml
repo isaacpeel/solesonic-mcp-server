@@ -9,7 +9,7 @@ services:
     env_file:
       - .env
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_PROFILES_ACTIVE=prod,ssl
       - SSL_CERT_LOCATION=/run/secrets/${SSL_CERT_FILE}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - ATLASSIAN_TOKEN_BROKER_ISSUER_URI=${ATLASSIAN_TOKEN_BROKER_ISSUER_URI}
