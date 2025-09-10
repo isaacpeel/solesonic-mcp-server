@@ -28,7 +28,7 @@ public class AtlassianClientConfig {
 
     @Bean
     @Qualifier(ATLASSIAN_API_WEB_CLIENT)
-    public WebClient aoiWebClient(ObjectMapper objectMapper) {
+    public WebClient atlassianApiWebClient(ObjectMapper objectMapper) {
 
         return WebClient.builder()
                 .baseUrl(atlassianApiUri)
