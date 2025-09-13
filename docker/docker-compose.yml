@@ -9,7 +9,6 @@ services:
     env_file:
       - .env
     environment:
-      - SPRING_PROFILES_ACTIVE=prod,ssl
       - SSL_CERT_LOCATION=/run/secrets/${SSL_CERT_FILE}
     volumes:
       - ${SYSTEM_SSL_CERT_LOCATION}/${SSL_CERT_FILE}:/run/secrets/${SSL_CERT_FILE}:ro

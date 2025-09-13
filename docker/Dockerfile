@@ -6,4 +6,4 @@ COPY target/solesonic-mcp-server-0.0.1.jar app.jar
 
 EXPOSE 9443
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=prod,ssl", "-jar", "app.jar"]
