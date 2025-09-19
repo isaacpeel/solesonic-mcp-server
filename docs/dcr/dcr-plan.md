@@ -1,8 +1,8 @@
 # Architecture Plan: MCP Dynamic Client Registration (OAuth 2.1 + AWS Cognito)
 
-This document is a complete architecture plan to implement Dynamic Client Registration (DCR) for this Spring Boot MCP server in alignment with the MCP Authorization specification (version 2025‑06‑18). It integrates OAuth 2.1 practices, RFC 7591/7592 (DCR), RFC 8414 (AS metadata), RFC 8707 (Resource Indicators), and RFC 9728 (Protected Resource Metadata). The Authorization Server is Amazon Cognito; DCR is provided by an AWS-hosted facade (API Gateway + Lambda) that translates RFC 7591/7592 requests to Cognito Admin API calls.
+This document is a complete architecture plan to implement Dynamic Client Registration (DCR) for this Spring Boot MCP server in alignment with the MCP Authorization specification (version 2025‑06‑18). It integrates OAuth 2.1 practices, RFC 7591/7592 (DCR), RFC 8414 (AS metadata), RFC 8707 (Resource Indicators), and RFC 9728 (Protected Resource Metadata). The Authorization Server is Amazon Cognito; DCR is provided directly by this Spring Boot application acting as the RFC 7591/7592 facade and invoking Cognito Admin APIs on behalf of registrants.
 
-The MCP server remains a pure resource server. Clients dynamically discover authorization requirements, register themselves, obtain targeted tokens, and invoke protected endpoints with least-privilege scopes.
+The MCP server remains a pure resource server for protected API access while also exposing DCR endpoints as a façade for client lifecycle operations.
 
 ---
 
@@ -21,7 +21,7 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - RFC 7591/7592: Provide DCR endpoints for client create/read/update/delete.
 
 - Constraints
-    - Cognito does not expose RFC 7591/7592 endpoints; a DCR facade will implement these endpoints and call Cognito Admin APIs.
+    - Cognito does not expose RFC 7591/7592 endpoints; this application will implement these endpoints and call Cognito Admin APIs.
     - Cognito does not natively honor RFC 8707’s resource parameter; the architecture enforces resource targeting using scopes and an optional Pre Token Generation Lambda that injects a “resource” claim.
 
 ---
@@ -34,25 +34,22 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - Returns 401 + WWW-Authenticate when tokens are missing/invalid.
     - Enforces scopes per endpoint and validates resource targeting.
     - Optionally validates a custom “resource” JWT claim when strict mode is enabled.
+    - Exposes RFC 7591/7592 Dynamic Client Registration endpoints and calls Cognito Admin APIs.
 
 - Authorization Server (AS)
     - Amazon Cognito User Pool (OIDC provider).
     - Hosts authorization and token endpoints.
     - Defines a Resource Server and scopes corresponding to this MCP API.
 
-- DCR Facade (AWS)
-    - API Gateway: Exposes RFC 7591/7592 endpoints:
+- In-App DCR Facade (this application)
+    - Endpoints:
         - POST /oauth2/register
         - GET /oauth2/register/{client_id}
         - PUT /oauth2/register/{client_id}
         - DELETE /oauth2/register/{client_id}
-    - Lambda: Implements RFC 7591/7592 behavior and calls Cognito Admin APIs (Create/Describe/Update/Delete User Pool Client).
-    - Security:
-        - Initial Access Token (IAT) required for POST /oauth2/register.
-        - Registration Access Token (RAT) required for GET/PUT/DELETE.
-
-- Optional Cognito Pre Token Generation Lambda
-    - Injects a custom “resource” claim into access tokens based on requested scopes or client attributes, enabling strict resource enforcement.
+    - Implementation:
+        - Translates RFC 7591/7592 requests to Cognito Admin API calls for User Pool Clients.
+        - Issues and validates Initial Access Token (IAT) and Registration Access Token (RAT) without API Gateway or Lambda.
 
 ---
 
@@ -82,7 +79,7 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
         - scopes_supported: array of strings
         - token_types_supported: ["Bearer"]
         - token_endpoint_auth_methods_supported: at least ["client_secret_basic"] (include others if supported)
-        - Optionally: a “registration_endpoint” pointing to the DCR facade (to improve developer experience)
+        - Optionally: a “registration_endpoint” pointing to this application’s /oauth2/register endpoint for DCR.
 
 - 401 Unauthorized with WWW-Authenticate
     - For requests without/invalid tokens, respond 401.
@@ -113,9 +110,9 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
 
 ---
 
-## 6. Dynamic Client Registration (RFC 7591/7592) via AWS Facade
+## 6. Dynamic Client Registration (RFC 7591/7592) via In‑App Facade
 
-- API Contracts (Facade)
+- API Contracts (Exposed by this application)
     - POST /oauth2/register
         - Auth: IAT in Authorization header.
         - Request: RFC 7591 client metadata (e.g., client_name, redirect_uris, grant_types, scope, token_endpoint_auth_method).
@@ -137,32 +134,38 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - post_logout_redirect_uris → logoutURLs
     - grant_types → allowedOAuthFlows (authorization_code → "code"; client_credentials → "client_credentials"); set allowedOAuthFlowsUserPoolClient=true
     - scope → allowedOAuthScopes (must match Cognito resource server scopes)
-    - token_endpoint_auth_method → generateSecret or advanced methods (Cognito generally uses client secrets; if private_key_jwt is required, manage keys out-of-band or via a proxy)
+    - token_endpoint_auth_method → generateSecret or advanced methods (Cognito generally uses client secrets; if private_key_jwt is required, manage keys out-of-band)
 
 - Security Model
-    - IAT:
+    - IAT (Initial Access Token):
         - Required for POST /oauth2/register.
         - Issuance options:
-            - KMS-signed, short-lived JWTs minted by an internal admin service.
-            - API keys with usage plans (simpler, less standard).
-    - RAT:
+            - Short‑lived JWT minted by an internal admin/ops service and verified by this application (preferred).
+            - mTLS or IP‑allowlist for the registration endpoint in tightly controlled environments.
+        - Validation: signature + audience + expiry + issuer; optionally bind to tenant/environment.
+    - RAT (Registration Access Token):
         - Returned on successful registration, bound to client_id.
-        - JWT signed with KMS, or a random token stored in DynamoDB with expiry.
+        - Options:
+            - Opaque, random token stored hashed in the application’s data store with expiry and client_id binding.
+            - JWT signed by this application with client_id, jti, exp; optionally rotatable.
         - Required for GET/PUT/DELETE.
         - Supports rotation and revocation.
 
-- IAM and Access Control
-    - Lambda execution role may perform:
+- AWS Access from Application
+    - The application requires permission to call:
         - cognito-idp:CreateUserPoolClient
         - cognito-idp:DescribeUserPoolClient
         - cognito-idp:UpdateUserPoolClient
         - cognito-idp:DeleteUserPoolClient
-    - Restrict to the specific User Pool ARNs.
+    - Possible approaches:
+        - If running on AWS (ECS/EKS/EC2/Lambda): use an execution role with the least privilege, scoped to the target User Pool ARN(s).
+        - If running off AWS: use STS AssumeRole with temporary credentials; avoid long‑lived access keys.
 
 - Observability and Safety
-    - Redact client_secret in logs.
-    - CloudWatch metrics and alarms (error rates, throttles, authorization failures).
-    - WAF and rate limits if publicly accessible.
+    - Redact client_secret and RAT/IAT in logs.
+    - Emit metrics: registration attempts, success/failure rates, RAT validations, Cognito Admin API errors/throttles.
+    - Apply application-level rate limiting and WAF (if fronted by an ingress) since no API Gateway is used.
+    - Implement idempotency keys for POST /oauth2/register to avoid duplicate clients on retries.
 
 ---
 
@@ -180,7 +183,7 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - Aligns tokens with RFC 8707 targeting and MCP Authorization enforcement.
 
 - App Clients
-    - Dynamic clients are created/updated/deleted exclusively by the DCR facade.
+    - Dynamic clients are created/updated/deleted exclusively by the in‑app DCR façade.
     - Maintain a separate static app client for admin/automation if necessary (not exposed by DCR).
 
 ---
@@ -191,8 +194,11 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - mcp.resource.id: the resource identifier (e.g., https://api.example.com/mcp).
     - mcp.oauth.authorizationServers: list of AS metadata URLs (Cognito OIDC discovery).
     - mcp.oauth.scopes: array of supported scopes.
-    - mcp.oauth.registrationEndpoint (optional): URL to the DCR facade register endpoint.
+    - mcp.oauth.registrationEndpoint (optional): URL to this app’s /oauth2/register endpoint.
     - mcp.auth.strictResourceBinding: boolean to enable/disable strict resource claim validation.
+    - dcr.security.iat: verification keys/issuers/audience and lifetime.
+    - dcr.security.rat: token format (opaque or JWT), lifetime, storage, and rotation settings.
+    - aws.cognito: userPoolId, region, and AWS credential/role configuration for Admin API access.
 
 - Endpoints
     - GET /.well-known/oauth-protected-resource:
@@ -258,12 +264,12 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
 
 ## 12. Observability
 
-- Structured logging for auth challenges, PRM requests, and authorization failures (without sensitive data).
+- Structured logging for auth challenges, PRM requests, DCR requests, and authorization failures (without sensitive data).
 - Metrics and alerts:
     - Unauthorized/Forbidden rates.
-    - DCR facade error rates and throttling.
+    - DCR error rates and throttling for Cognito Admin API calls.
     - Token validation failures due to scope or resource mismatch.
-- Tracing (if available) through API Gateway, Lambda, and the MCP server for end-to-end visibility.
+- Tracing (if available) through the MCP application layer for end‑to‑end visibility of DCR and protected API calls.
 
 ---
 
@@ -274,8 +280,9 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
     - Configure and enforce scopes.
     - Add optional resource claim validator (disabled in non-prod by default).
 
-- Phase 2 — DCR Facade & Cognito
-    - Deploy API Gateway + Lambda facade with IAT/RAT mechanisms and IAM roles.
+- Phase 2 — In‑App DCR & Cognito
+    - Implement and expose /oauth2/register endpoints in this application with IAT/RAT mechanisms.
+    - Grant the application IAM permissions (or STS role access) for Cognito Admin APIs.
     - Configure Cognito Resource Server and scopes.
     - Add Pre Token Generation Lambda if strict resource binding is required.
 
@@ -291,5 +298,5 @@ The MCP server remains a pure resource server. Clients dynamically discover auth
 - Unauthorized requests return 401 with WWW-Authenticate linking to PRM.
 - Scope enforcement is effective; insufficient scopes yield 403.
 - With strict mode enabled, tokens lacking the correct resource targeting are rejected with 403.
-- DCR facade supports RFC 7591/7592 CRUD with IAT (POST) and RAT (GET/PUT/DELETE); created clients appear in Cognito with configured flows and scopes.
-- A new MCP client can fully onboard: discover → register → obtain token → call protected endpoints → manage registration.
+- In‑app DCR supports RFC 7591/7592 CRUD with IAT (POST) and RAT (GET/PUT/DELETE); created clients appear in Cognito with configured flows and scopes.
+- A new MCP client can fully onboard: discover → register via this application → obtain token → call protected endpoints → manage registration.
