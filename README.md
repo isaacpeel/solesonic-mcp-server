@@ -5,6 +5,8 @@
 [![Java](https://img.shields.io/badge/Java-24-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](docs/license.md)
 
+> Temporary note: Dynamic Client Registration (DCR) implementation plan is tracked here: [dcr-plan.md](docs/dcr/dcr-plan.md). This is a working document and may change or be relocated once finalized.
+
 ## Features
 
 - 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
