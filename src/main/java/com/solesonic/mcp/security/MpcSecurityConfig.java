@@ -70,18 +70,35 @@ public class MpcSecurityConfig {
     }
 
     private Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
+        // Extract group authorities
         Object groupsClaim = jwt.getClaim(COGNITO_GROUPS);
-
+        Stream<GrantedAuthority> groupAuthorities = Stream.empty();
+    
         if (groupsClaim instanceof List<?> groups) {
-            return groups.stream()
+            groupAuthorities = groups.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
                     .map(group -> new SimpleGrantedAuthority(GROUP + group))
-                    .map(GrantedAuthority.class::cast)
-                    .toList();
+                    .map(GrantedAuthority.class::cast);
         }
 
-        return List.of();
+        // Extract scope authorities
+        Object scopeClaim = jwt.getClaim(SCOPE);
+        Stream<GrantedAuthority> scopeAuthorities = Stream.empty();
+    
+        if (scopeClaim instanceof String scopeString) {
+            scopeAuthorities = Stream.of(scopeString.split(" "))
+                    .map(scope -> new SimpleGrantedAuthority(SCOPE_ + scope))
+                    .map(GrantedAuthority.class::cast);
+        } else if (scopeClaim instanceof List<?> scopes) {
+            scopeAuthorities = scopes.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(scope -> new SimpleGrantedAuthority(SCOPE_ + scope))
+                    .map(GrantedAuthority.class::cast);
+        }
+
+        return Stream.concat(groupAuthorities, scopeAuthorities).toList();
     }
 
     @Bean

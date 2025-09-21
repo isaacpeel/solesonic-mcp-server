@@ -12,7 +12,7 @@ public class WeatherService {
 
     @SuppressWarnings("unused")
     @Tool(description = "Returns the weather in the given city.", name = "weather_lookup")
-    @PreAuthorize("hasAuthority('GROUP_MCP-GET-WEATHER')")
+    @PreAuthorize("hasAuthority('GROUP_MCP-GET-WEATHER') or hasAuthority('SCOPE_izzy-bot-mcp-server/mcp-execute')")
     public String weatherLookup(String city, ToolContext toolContext) {
         log.info("Received request for weather in {}", city);
 
