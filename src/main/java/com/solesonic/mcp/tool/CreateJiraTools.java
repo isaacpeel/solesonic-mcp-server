@@ -47,7 +47,7 @@ public class CreateJiraTools {
      */
     @SuppressWarnings("unused")
     @Tool(name = "assignee_id_lookup", description = "Look up Jira accountId for a given assignee string")
-    @PreAuthorize("hasAuthority('GROUP_MCP-CREATE-JIRA')")
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
     public String lookupAssigneeId(String assignee) {
         log.info("Looking up assignee ID for: {}", assignee);
 
@@ -79,7 +79,7 @@ public class CreateJiraTools {
      * @return CreateJiraIssueResponse with the created issue ID and URL
      */
     @SuppressWarnings("unused")
-    @PreAuthorize("hasAuthority('GROUP_MCP-CREATE-JIRA')")
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
     @Tool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
     public CreateJiraResponse createJiraIssue(@ToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
         log.debug("Invoking create jira function");

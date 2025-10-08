@@ -3,7 +3,7 @@
 Authentication/Authorization
 - 401 Unauthorized
   - Missing/invalid/expired JWT
-  - Issuer/JWKS mismatch (check COGNITO_ISSUER_URI or COGNITO_JWK_SET_URI)
+  - Issuer/JWKS mismatch (check ISSUER_URI or JWK_SET_URI)
   - Clock skew issues
 - 403 Forbidden
   - Token valid but missing required authority (GROUP_MCP-GET-WEATHER, GROUP_MCP-CREATE-JIRA)
