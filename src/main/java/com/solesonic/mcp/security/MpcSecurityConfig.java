@@ -40,8 +40,13 @@ public class MpcSecurityConfig {
     public static final String SCOPE_MCP_INVOKE = "SCOPE_MCP_INVOKE";
     public static final String SCOPE_ = "SCOPE_";
     public static final String SCOPE = "scope";
-    public static final String COGNITO_GROUPS = "cognito:groups";
+
     public static final String GROUP = "GROUP_";
+    public static final String GROUPS = "groups";
+
+    public static final String ROLE = "ROLE_";
+    public static final String ROLES = "roles";
+
 
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
     private String jwkSetUri;
@@ -62,23 +67,44 @@ public class MpcSecurityConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
             Collection<GrantedAuthority> grantedAuthorities = authoritiesConverter.convert(jwt);
             Collection<GrantedAuthority> groupAuthorities = extractGroupAuthorities(jwt);
+            Collection<GrantedAuthority> roleAuthorities = extractRoleAuthorities(jwt);
 
-            return Stream.concat(grantedAuthorities.stream(), groupAuthorities.stream()).toList();
+            return Stream.of(grantedAuthorities, groupAuthorities, roleAuthorities)
+                    .flatMap(Collection::stream)
+                    .toList();
         });
 
         return jwtAuthenticationConverter;
     }
 
     private Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
-        Object groupsClaim = jwt.getClaim(COGNITO_GROUPS);
+        Object groupsClaim = jwt.getClaim(GROUPS);
+
 
         if (groupsClaim instanceof List<?> groups) {
             return groups.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
-                    .map(group -> new SimpleGrantedAuthority(GROUP + group))
+                    .map(group -> new SimpleGrantedAuthority(GROUP + group.toUpperCase()))
                     .map(GrantedAuthority.class::cast)
                     .toList();
+
+        }
+
+        return List.of();
+    }
+
+    private Collection<GrantedAuthority> extractRoleAuthorities(Jwt jwt) {
+        Object rolesClaim = jwt.getClaim(ROLES);
+
+        if (rolesClaim instanceof List<?> roles) {
+            return  roles.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(role -> new SimpleGrantedAuthority(ROLE + role.toUpperCase()))
+                    .map(GrantedAuthority.class::cast)
+                    .toList();
+
         }
 
         return List.of();

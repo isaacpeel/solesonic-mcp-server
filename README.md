@@ -29,9 +29,9 @@
 
 ```bash
 # JWT verification (use one of the following depending on your IdP)
-COGNITO_JWK_SET_URI=https://your-issuer/.well-known/jwks.json
+JWK_SET_URI=https://your-issuer/.well-known/jwks.json
 # or
-COGNITO_ISSUER_URI=https://your-domain.auth.your-region.amazoncognito.com
+ISSUER_URI=https://your-domain.auth.your-region.amazoncognito.com
 
 # Jira tooling
 JIRA_URL_TEMPLATE=https://your-domain.atlassian.net/browse/{key}
