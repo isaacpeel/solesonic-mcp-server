@@ -27,7 +27,8 @@ Overview and Architecture
 - Protocol: HTTP JSON-RPC MCP endpoint at POST /mcp
 - Security: OAuth2 Resource Server (JWT)
   - Scope authorities are exposed as SCOPE_<scope>
-  - Cognito groups are exposed as GROUP_<group>
+  - Claim groups are exposed as GROUP_<group>
+  - Claim roles are exposed as GROUP_<role>
 - Atlassian integration: Jira tools call an external Atlassian Token Broker to obtain short-lived access tokens for Atlassian APIs
 - Profiles and ports:
   - Default port: 9443 (HTTPS when ssl profile enabled)

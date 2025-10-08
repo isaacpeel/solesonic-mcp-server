@@ -5,14 +5,12 @@
 [![Java](https://img.shields.io/badge/Java-24-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](docs/license.md)
 
-> Temporary note: Dynamic Client Registration (DCR) implementation plan is tracked here: [dcr-plan.md](docs/dcr/dcr-plan.md). This is a working document and may change or be relocated once finalized.
-
 ## Features
 
 - 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
 - 🧰 Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
 - 🔐 OAuth2 Resource Server (JWT) — JWT validation; group claims mapped to authorities
-- 👥 Group & Scope AuthZ — `cognito:groups` → `GROUP_<name>` authorities; scopes → `SCOPE_<scope>`
+- 👥 Group & Scope AuthZ — `groups` → `GROUP_<name>` `roles` → `ROLE_<role>` authorities; scopes → `SCOPE_<scope>`
 - ⚡ Atlassian Token Broker — Client-credentials integration for short-lived Atlassian access tokens
 - 🛡️ Production SSL Ready — PKCS12 keystore via `ssl` profile; TLS 1.2/1.3
 
@@ -31,7 +29,7 @@
 # JWT verification (use one of the following depending on your IdP)
 JWK_SET_URI=https://your-issuer/.well-known/jwks.json
 # or
-ISSUER_URI=https://your-domain.auth.your-region.amazoncognito.com
+ISSUER_URI=https://your-issuer
 
 # Jira tooling
 JIRA_URL_TEMPLATE=https://your-domain.atlassian.net/browse/{key}
@@ -39,7 +37,6 @@ ATLASSIAN_TOKEN_BROKER_URL=https://your-token-broker.example.com/broker/atlassia
 ATLASSIAN_TOKEN_BROKER_ISSUER_URI=https://your-authz-server/oauth2/token
 ATLASSIAN_TOKEN_BROKER_CLIENT_ID=your-client-id
 ATLASSIAN_TOKEN_BROKER_CLIENT_SECRET=your-client-secret
-ATLASSIAN_TOKEN_BROKER_SCOPES=your.scope.here
 JIRA_CLOUD_ID_PATH=/path/to/your/cloud-id
 
 ```

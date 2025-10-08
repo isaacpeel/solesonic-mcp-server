@@ -40,8 +40,8 @@ SSL profile (ssl)
 
 Examples
 - Local overrides
-  - export ISSUER_URI=https://<your-domain>.auth.<region>.amazoncognito.com
-  - export JWK_SET_URI=https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/jwks
+  - export ISSUER_URI=https://<your-issuer>
+  - export JWK_SET_URI=https://<your-domain>/.well-known/jwks.json
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>

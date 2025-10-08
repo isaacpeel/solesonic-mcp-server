@@ -5,7 +5,8 @@ Overview
 - Authentication and authorization are enforced for all HTTP requests
 - Authorities are derived from:
   - scope claim → SCOPE_<scope>
-  - cognito:groups claim → GROUP_<group>
+  - groups claim → GROUP_<group>
+  - roles claim → ROLE_<role>
 
 Authentication
 - Configure issuer or JWKS:
@@ -16,9 +17,9 @@ Authentication
 Authorization
 - Global rule: all requests require authentication
 - Tool-level restrictions via @PreAuthorize
-  - Weather tool requires GROUP_MCP-GET-WEATHER
-  - Jira tools require GROUP_MCP-CREATE-JIRA
-- There is no hard-coded required scope for /mcp in this repository; use group/scope-based method constraints to control access to individual tools.
+  - Weather tool requires ROLE_MCP-GET-WEATHER
+  - Jira tools require ROLE_MCP-CREATE-JIRA
+- There is no hard-coded required scope for /mcp in this repository; use group/role/scope-based method constraints to control access to individual tools.
 
 Token acquisition (example - placeholder)
 - Using a client credentials grant (your IdP will differ):
@@ -30,10 +31,6 @@ Token acquisition (example - placeholder)
 401 vs 403
 - 401 Unauthorized: Missing/invalid token; issuer or JWKS misconfigured; expired token
 - 403 Forbidden: Authenticated but lacking required authority (scope or group) for the tool
-
-Cognito groups mapping
-- If cognito:groups is present as a list of strings, each becomes GROUP_<group>
-- Example: group MCP-CREATE-JIRA yields authority GROUP_MCP-CREATE-JIRA
 
 Atlassian Token Broker (high-level)
 - Jira tools rely on an external Token Broker for secure, short-lived Atlassian access tokens
