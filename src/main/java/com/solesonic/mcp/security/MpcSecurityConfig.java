@@ -6,14 +6,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -21,13 +20,18 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static com.solesonic.mcp.api.ResourceMetadataController.WELL_KNOWN_OAUTH_PROTECTED_RESOURCE;
 import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
+import static org.springframework.http.HttpMethod.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Configuration
@@ -40,16 +44,32 @@ public class MpcSecurityConfig {
     public static final String SCOPE_MCP_INVOKE = "SCOPE_MCP_INVOKE";
     public static final String SCOPE_ = "SCOPE_";
     public static final String SCOPE = "scope";
+    public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
-    public static final String GROUP = "GROUP_";
-    public static final String GROUPS = "groups";
+    private static final List<String> ALLOWED_HEADERS = List.of(
+            "Authorization",
+            "WWW-Authenticate",
+            "Content-Type",
+            "Cache-Control",
+            "Expires",
+            "mcp-protocol-version"
+    );
 
-    public static final String ROLE = "ROLE_";
-    public static final String ROLES = "roles";
 
+    private final AuthoritiesService authoritiesService;
 
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
     private String jwkSetUri;
+
+    @Value("${cors.allowed.origins}")
+    private List<String> allowedOrigins;
+
+    @Value("${solesonic.mcp.resource}")
+    private String baseResource;
+
+    public MpcSecurityConfig(AuthoritiesService authoritiesService) {
+        this.authoritiesService = authoritiesService;
+    }
 
     @Bean
     @ConditionalOnProperty(name = "spring.security.oauth2.resourceserver.jwt.jwk-set-uri")
@@ -66,8 +86,8 @@ public class MpcSecurityConfig {
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
             Collection<GrantedAuthority> grantedAuthorities = authoritiesConverter.convert(jwt);
-            Collection<GrantedAuthority> groupAuthorities = extractGroupAuthorities(jwt);
-            Collection<GrantedAuthority> roleAuthorities = extractRoleAuthorities(jwt);
+            Collection<GrantedAuthority> groupAuthorities = authoritiesService.extractGroupAuthorities(jwt);
+            Collection<GrantedAuthority> roleAuthorities = authoritiesService.extractRoleAuthorities(jwt);
 
             return Stream.of(grantedAuthorities, groupAuthorities, roleAuthorities)
                     .flatMap(Collection::stream)
@@ -77,60 +97,49 @@ public class MpcSecurityConfig {
         return jwtAuthenticationConverter;
     }
 
-    private Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
-        Object groupsClaim = jwt.getClaim(GROUPS);
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of(GET.name(), OPTIONS.name(), POST.name()));
 
-        if (groupsClaim instanceof List<?> groups) {
-            return groups.stream()
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
-                    .map(group -> new SimpleGrantedAuthority(GROUP + group.toUpperCase()))
-                    .map(GrantedAuthority.class::cast)
-                    .toList();
+        configuration.setAllowedHeaders(ALLOWED_HEADERS);
 
-        }
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+        urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", configuration);
 
-        return List.of();
-    }
-
-    private Collection<GrantedAuthority> extractRoleAuthorities(Jwt jwt) {
-        Object rolesClaim = jwt.getClaim(ROLES);
-
-        if (rolesClaim instanceof List<?> roles) {
-            return  roles.stream()
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
-                    .map(role -> new SimpleGrantedAuthority(ROLE + role.toUpperCase()))
-                    .map(GrantedAuthority.class::cast)
-                    .toList();
-
-        }
-
-        return List.of();
+        return urlBasedCorsConfigurationSource;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.exceptionHandling(config -> config.accessDeniedHandler(accessDeniedHandler()));
-        http.exceptionHandling(config -> config.authenticationEntryPoint(authenticationEntryPoint()));
-
         http
-                .cors(AbstractHttpConfigurer::disable)
+                .exceptionHandling(config -> config
+                        .accessDeniedHandler(accessDeniedHandler())
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                )
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize -> authorize
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                        .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/mcp/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder())
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        )
+                );
+
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
 
         return http.build();
     }
-
 
     private AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, _) -> {
@@ -138,12 +147,13 @@ public class MpcSecurityConfig {
 
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(SC_UNAUTHORIZED);
+            response.setHeader(WWW_AUTHENTICATE, "\"%s%s\"".formatted(baseResource, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE));
         };
     }
 
     private AccessDeniedHandler accessDeniedHandler() {
         return (request, response, _) -> {
-            log.warn("{} - Access Denied: {} trying to access {} from IP: {}", SC_FORBIDDEN, request.getRemoteAddr(), request.getRequestURI(), request.getRemoteAddr());
+            log.warn("{} - Access Denied: {} trying to access {}", SC_FORBIDDEN, request.getRemoteAddr(), request.getRequestURI());
             response.sendError(SC_FORBIDDEN, "Access Denied");
         };
     }
