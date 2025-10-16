@@ -101,6 +101,12 @@
             <artifactId>spring-boot-starter-tomcat</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.logaritex.mcp</groupId>
+            <artifactId>spring-ai-mcp-annotations</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+
         <!-- Load .env files at runtime via spring-dotenv -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
