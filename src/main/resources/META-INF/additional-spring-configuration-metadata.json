@@ -9,5 +9,15 @@
       "name": "jira.url.template",
       "type": "java.lang.String",
       "description": "Template for returning a user clickable Jira Issue URL."
+    },
+    {
+      "name": "cors.allowed.origins",
+      "type": "java.lang.String[]",
+      "description": "List of allowed origins."
+    },
+    {
+      "name": "solesonic.mcp.resource",
+      "type": "java.lang.String",
+      "description": "The resource URI to use for dynamically registered clients."
     }
   ] }
