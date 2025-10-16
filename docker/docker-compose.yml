@@ -8,8 +8,8 @@ services:
       - "9443:9443"
     env_file:
       - .env
-    environment:
-      - SSL_CERT_LOCATION=/run/secrets/${SSL_CERT_FILE}
     volumes:
-      - ${SYSTEM_SSL_CERT_LOCATION}/${SSL_CERT_FILE}:/run/secrets/${SSL_CERT_FILE}:ro
+      - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
+      - ${SSL_PUBLIC_CERT}:/run/secrets/fullchain.pem:ro
+      - ${SSL_PRIVATE_CERT}:/run/secrets/privkey.pem:ro
     restart: no

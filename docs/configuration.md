@@ -31,26 +31,21 @@ Key properties (environment variables in parentheses)
 
 SSL profile (ssl)
 - src/main/resources/application-ssl.properties
-  - server.ssl.key-store=file:${SSL_CERT_LOCATION}
-  - server.ssl.key-store-type=PKCS12
   - server.ssl.key-alias=tomcat
-  - server.ssl.key-store-password=(${KEYSTORE_PASSWORD})
   - server.ssl.enabled-protocols=TLSv1.2,TLSv1.3
   - server.ssl.ciphers=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384
 
 Examples
 - Local overrides
-  - export ISSUER_URI=https://<your-domain>.auth.<region>.amazoncognito.com
-  - export JWK_SET_URI=https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/jwks
+  - export ISSUER_URI=https://<your-issuer>
+  - export JWK_SET_URI=https://<your-domain>/.well-known/jwks.json
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
   - java -jar target/solesonic-mcp-server-0.0.1.jar
 - Docker Compose (.env example)
-  - ISSUER_URI=https://<your-domain>.auth.<region>.amazoncognito.com
-  - JWK_SET_URI=https://<your-domain>.auth.<region>.amazoncognito.com/oauth2/jwks
-  - SSL_CERT_LOCATION=/run/secrets/server.p12
-  - KEYSTORE_PASSWORD=<change-me>
+  - SSL_PUBLIC_CERT=/your/public/cert
+  - SSL_PRIVATE_CERT=/your/private/cert
 
 Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
