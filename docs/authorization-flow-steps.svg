@@ -1,12 +1,60 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1350" width="100%" role="img" aria-label="Dynamic Client Registration flow">
-  <title>Dynamic Client Registration flow</title>
-  <desc>Client discovers resource metadata, fetches AS metadata, performs dynamic client registration, launches browser for authorization, exchanges code for tokens, and calls MCP.</desc>
-  <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#555"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1700 1350"
+   width="100%"
+   role="img"
+   aria-label="Dynamic Client Registration flow"
+   version="1.1"
+   id="svg26"
+   sodipodi:docname="authorization-flow-steps.svg"
+   inkscape:export-filename="authorization-flow-steps.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview26"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.48941176"
+     inkscape:cx="850"
+     inkscape:cy="674.27885"
+     inkscape:window-width="2528"
+     inkscape:window-height="1353"
+     inkscape:window-x="45"
+     inkscape:window-y="31"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg26" />
+  <title
+     id="title1">Dynamic Client Registration flow</title>
+  <desc
+     id="desc1">Client discovers resource metadata, fetches AS metadata, performs dynamic client registration, launches browser for authorization, exchanges code for tokens, and calls MCP.</desc>
+  <defs
+     id="defs1">
+    <marker
+       id="arrow"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L10,3 L0,6 Z"
+         fill="#555"
+         id="path1" />
     </marker>
-    <style type="text/css"><![CDATA[
+    <style
+       type="text/css"
+       id="style1"><![CDATA[
       .actor { fill:#f5f5f5; stroke:#999; rx:6; ry:6; }
       .swim { stroke:#ddd; stroke-width:1; }
       .label { font: 600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#222; }
@@ -16,84 +64,347 @@
       .arrow.dash { stroke-dasharray:5 5; }
     ]]></style>
   </defs>
-
   <!-- Actors -->
-  <rect class="actor" x="40" y="30" width="220" height="44"/>
-  <text class="label" x="150" y="58" text-anchor="middle">User-Agent (Browser)</text>
-
-  <rect class="actor" x="520" y="30" width="150" height="44"/>
-  <text class="label" x="595" y="58" text-anchor="middle">Client</text>
-
-  <rect class="actor" x="900" y="30" width="270" height="44"/>
-  <text class="label" x="1035" y="58" text-anchor="middle">MCP Server (Resource Server)</text>
-
-  <rect class="actor" x="1340" y="30" width="220" height="44"/>
-  <text class="label" x="1450" y="58" text-anchor="middle">Authorization Server</text>
-
+  <rect
+     class="actor"
+     x="40"
+     y="30"
+     width="220"
+     height="44"
+     id="rect1" />
+  <text
+     class="label"
+     x="150"
+     y="58"
+     text-anchor="middle"
+     id="text1">User-Agent (Browser)</text>
+  <rect
+     class="actor"
+     x="520"
+     y="30"
+     width="150"
+     height="44"
+     id="rect2" />
+  <text
+     class="label"
+     x="595"
+     y="58"
+     text-anchor="middle"
+     id="text2">Client</text>
+  <rect
+     class="actor"
+     x="900"
+     y="30"
+     width="270"
+     height="44"
+     id="rect3" />
+  <text
+     class="label"
+     x="1035"
+     y="58"
+     text-anchor="middle"
+     id="text3">MCP Server (Resource Server)</text>
+  <rect
+     class="actor"
+     x="1340"
+     y="30"
+     width="220"
+     height="44"
+     id="rect4" />
+  <text
+     class="label"
+     x="1450"
+     y="58"
+     text-anchor="middle"
+     id="text4">Authorization Server</text>
   <!-- Lifelines -->
-  <line class="swim" x1="150" y1="80" x2="150" y2="1280"/>
-  <line class="swim" x1="595" y1="80" x2="595" y2="1280"/>
-  <line class="swim" x1="1035" y1="80" x2="1035" y2="1280"/>
-  <line class="swim" x1="1450" y1="80" x2="1450" y2="1280"/>
-
+  <line
+     class="swim"
+     x1="150"
+     y1="80"
+     x2="150"
+     y2="1280"
+     id="line4" />
+  <line
+     class="swim"
+     x1="595"
+     y1="80"
+     x2="595"
+     y2="1280"
+     id="line5" />
+  <line
+     class="swim"
+     x1="1035"
+     y1="80"
+     x2="1035"
+     y2="1280"
+     id="line6" />
+  <line
+     class="swim"
+     x1="1450"
+     y1="80"
+     x2="1450"
+     y2="1280"
+     id="line7" />
   <!-- 1. Initial unauthorized call -->
-  <text class="small" x="815" y="120" text-anchor="middle">MCP request without token</text>
-  <line class="arrow" x1="595" y1="135" x2="1030" y2="135"/>
-  <text class="small" x="815" y="175" text-anchor="middle">401 Unauthorized with WWW-Authenticate</text>
-  <line class="arrow dash" x1="1035" y1="190" x2="595" y2="190"/>
-
+  <text
+     class="small"
+     x="815"
+     y="120"
+     text-anchor="middle"
+     id="text7">MCP request without token</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="135"
+     x2="1030"
+     y2="135"
+     id="line8" />
+  <text
+     class="small"
+     x="815"
+     y="175"
+     text-anchor="middle"
+     id="text8">401 Unauthorized with WWW-Authenticate</text>
+  <line
+     class="arrow dash"
+     x1="1035"
+     y1="190"
+     x2="595"
+     y2="190"
+     id="line9" />
   <!-- 2. Discover resource metadata -->
-  <text class="small" x="815" y="235" text-anchor="middle">Request Protected Resource Metadata</text>
-  <line class="arrow" x1="595" y1="250" x2="1030" y2="250"/>
-  <text class="small" x="815" y="295" text-anchor="middle">Return metadata</text>
-  <line class="arrow dash" x1="1035" y1="310" x2="595" y2="310"/>
-  <rect class="note" x="495" y="325" width="200" height="58"/>
-  <text class="small" x="595" y="355" text-anchor="middle">Extract AS URL(s)</text>
-
+  <text
+     class="small"
+     x="815"
+     y="235"
+     text-anchor="middle"
+     id="text9">Request Protected Resource Metadata</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="250"
+     x2="1030"
+     y2="250"
+     id="line10" />
+  <text
+     class="small"
+     x="815"
+     y="295"
+     text-anchor="middle"
+     id="text10">Return metadata</text>
+  <line
+     class="arrow dash"
+     x1="1035"
+     y1="310"
+     x2="595"
+     y2="310"
+     id="line11" />
+  <rect
+     class="note"
+     x="495"
+     y="325"
+     width="200"
+     height="58"
+     id="rect11" />
+  <text
+     class="small"
+     x="595"
+     y="355"
+     text-anchor="middle"
+     id="text11">Extract AS URL(s)</text>
   <!-- 3. Get AS metadata -->
-  <text class="small" x="1220" y="380" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
-  <line class="arrow" x1="595" y1="395" x2="1450" y2="395"/>
-  <text class="small" x="1220" y="440" text-anchor="middle">Authorization server metadata</text>
-  <line class="arrow dash" x1="1450" y1="455" x2="595" y2="455"/>
-
+  <text
+     class="small"
+     x="1220"
+     y="380"
+     text-anchor="middle"
+     id="text12">GET /.well-known/oauth-authorization-server</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="395"
+     x2="1450"
+     y2="395"
+     id="line12" />
+  <text
+     class="small"
+     x="1220"
+     y="440"
+     text-anchor="middle"
+     id="text13">Authorization server metadata</text>
+  <line
+     class="arrow dash"
+     x1="1450"
+     y1="455"
+     x2="595"
+     y2="455"
+     id="line13" />
   <!-- 4. Dynamic Client Registration -->
-  <text class="small" x="1220" y="500" text-anchor="middle">POST /register</text>
-  <line class="arrow" x1="595" y1="515" x2="1450" y2="515"/>
-  <text class="small" x="1220" y="560" text-anchor="middle">Client Credentials</text>
-  <line class="arrow dash" x1="1450" y1="575" x2="595" y2="575"/>
-
+  <text
+     class="small"
+     x="1220"
+     y="500"
+     text-anchor="middle"
+     id="text14">POST /register</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="515"
+     x2="1450"
+     y2="515"
+     id="line14" />
+  <text
+     class="small"
+     x="1220"
+     y="560"
+     text-anchor="middle"
+     id="text15">Client Credentials</text>
+  <line
+     class="arrow dash"
+     x1="1450"
+     y1="575"
+     x2="595"
+     y2="575"
+     id="line15" />
   <!-- 5. Prepare PKCE and resource param -->
-  <rect class="note" x="490" y="600" width="210" height="60"/>
-  <text class="small" x="595" y="625" text-anchor="middle">Generate PKCE</text>
-  <text class="small" x="595" y="645" text-anchor="middle">Include resource param</text>
-
+  <rect
+     class="note"
+     x="490"
+     y="600"
+     width="210"
+     height="60"
+     id="rect15" />
+  <text
+     class="small"
+     x="595"
+     y="625"
+     text-anchor="middle"
+     id="text16">Generate PKCE</text>
+  <text
+     class="small"
+     x="595"
+     y="645"
+     text-anchor="middle"
+     id="text17">Include resource param</text>
   <!-- 6. Start authorization in browser -->
-  <text class="small" x="375" y="700" text-anchor="middle">Open browser with authorization URL + code_challenge + resource</text>
-  <line class="arrow" x1="595" y1="715" x2="150" y2="715"/>
-
-  <text class="small" x="760" y="760" text-anchor="middle">Authorization request with resource</text>
-  <line class="arrow" x1="150" y1="775" x2="1450" y2="775"/>
-
-  <text class="small" x="760" y="820" text-anchor="middle">Redirect back with authorization code</text>
-  <line class="arrow" x1="1450" y1="835" x2="150" y2="835"/>
-
-  <text class="small" x="375" y="880" text-anchor="middle">Authorization code callback</text>
-  <line class="arrow" x1="150" y1="895" x2="585" y2="895"/>
-
+  <text
+     class="small"
+     x="375"
+     y="700"
+     text-anchor="middle"
+     id="text18">Open browser with authorization URL + code_challenge + resource</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="715"
+     x2="150"
+     y2="715"
+     id="line18" />
+  <text
+     class="small"
+     x="760"
+     y="760"
+     text-anchor="middle"
+     id="text19">Authorization request with resource</text>
+  <line
+     class="arrow"
+     x1="150"
+     y1="775"
+     x2="1450"
+     y2="775"
+     id="line19" />
+  <text
+     class="small"
+     x="760"
+     y="820"
+     text-anchor="middle"
+     id="text20">Redirect back with authorization code</text>
+  <line
+     class="arrow"
+     x1="1450"
+     y1="835"
+     x2="150"
+     y2="835"
+     id="line20" />
+  <text
+     class="small"
+     x="375"
+     y="880"
+     text-anchor="middle"
+     id="text21">Authorization code callback</text>
+  <line
+     class="arrow"
+     x1="150"
+     y1="895"
+     x2="585"
+     y2="895"
+     id="line21" />
   <!-- 7. Exchange code for tokens -->
-  <text class="small" x="815" y="945" text-anchor="middle">Token request + code_verifier + resource</text>
-  <line class="arrow" x1="595" y1="960" x2="1450" y2="960"/>
-
-  <text class="small" x="815" y="1005" text-anchor="middle">Access token (+ refresh token)</text>
-  <line class="arrow dash" x1="1450" y1="1020" x2="595" y2="1020"/>
-
+  <text
+     class="small"
+     x="815"
+     y="945"
+     text-anchor="middle"
+     id="text22">Token request + code_verifier + resource</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="960"
+     x2="1450"
+     y2="960"
+     id="line22" />
+  <text
+     class="small"
+     x="815"
+     y="1005"
+     text-anchor="middle"
+     id="text23">Access token (+ refresh token)</text>
+  <line
+     class="arrow dash"
+     x1="1450"
+     y1="1020"
+     x2="595"
+     y2="1020"
+     id="line23" />
   <!-- 8. Call MCP with token -->
-  <text class="small" x="815" y="1070" text-anchor="middle">MCP request with access token</text>
-  <line class="arrow" x1="595" y1="1085" x2="1030" y2="1085"/>
-
-  <text class="small" x="815" y="1130" text-anchor="middle">MCP response</text>
-  <line class="arrow dash" x1="1035" y1="1145" x2="595" y2="1145"/>
-
-  <rect class="note" x="520" y="1180" width="550" height="44"/>
-  <text class="small" x="795" y="1208" text-anchor="middle">MCP communication continues with valid token</text>
+  <text
+     class="small"
+     x="815"
+     y="1070"
+     text-anchor="middle"
+     id="text24">MCP request with access token</text>
+  <line
+     class="arrow"
+     x1="595"
+     y1="1085"
+     x2="1030"
+     y2="1085"
+     id="line24" />
+  <text
+     class="small"
+     x="815"
+     y="1130"
+     text-anchor="middle"
+     id="text25">MCP response</text>
+  <line
+     class="arrow dash"
+     x1="1035"
+     y1="1145"
+     x2="595"
+     y2="1145"
+     id="line25" />
+  <rect
+     class="note"
+     x="520"
+     y="1180"
+     width="550"
+     height="44"
+     id="rect25" />
+  <text
+     class="small"
+     x="795"
+     y="1208"
+     text-anchor="middle"
+     id="text26">MCP communication continues with valid token</text>
 </svg>
