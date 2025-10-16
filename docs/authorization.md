@@ -55,26 +55,9 @@ The server is implemented as an OAuth 2.0 Resource Server that accepts JWTs and 
 
 ### Sequence diagram: Authorization challenge + discovery + token use
 
-```
-Client                         Solesonic MCP Server                 Authorization Server (AS)
-  |            POST /mcp (no token)             |
-  |-------------------------------------------->|
-  |                    401                      |
-  |    WWW-Authenticate: "<resource>/.well-known/oauth-protected-resource"
-  |<--------------------------------------------|
-  |   GET /.well-known/oauth-protected-resource |
-  |-------------------------------------------->|
-  |                200 (JSON metadata)          |
-  |<--------------------------------------------|
-  |         Register (if needed) and obtain token at AS           |
-  |-------------------------------------------------------------->|
-  |                                             200 (access_token) |
-  |<---------------------------------------------------------------|
-  |     POST /mcp  Authorization: Bearer <access_token>           |
-  |-------------------------------------------->|
-  |                     200 (OK)                |
-  |<--------------------------------------------|
-```
+<picture>
+  <img alt="Authorization flow: challenge, discovery, token use" src="./example-flow.svg">
+</picture>
 
 
 ## Dynamic Client Registration (DCR)
@@ -87,25 +70,9 @@ This server supports DCR indirectly by advertising the protected resource metada
 
 ### Sequence diagram: Dynamic Client Registration
 
-```
-Client                    Solesonic MCP Server               Authorization Server (AS)
-  |   GET /.well-known/oauth-protected-resource  |
-  |--------------------------------------------->|
-  |             200 (metadata JSON)              |
-  |<---------------------------------------------|
-  |              Use issuer from metadata to locate AS DCR endpoint            |
-  |---------------------------------------------------------------------------->|
-  |                                        201/200 (client_id[/secret], metadata)|
-  |<-----------------------------------------------------------------------------|
-  | Obtain access token using newly registered client (auth code, client creds, etc.) |
-  |---------------------------------------------------------------------------->|
-  |                                        200 (access_token)                   |
-  |<-----------------------------------------------------------------------------|
-  |   Call /mcp with Bearer token          |
-  |--------------------------------------->|
-  |             200 (OK)                   |
-  |<---------------------------------------|
-```
+<picture>
+  <img alt="Dynamic Client Registration flow" src="./authorization-flow-steps.svg">
+</picture>
 
 
 ## Example: Unauthorized request and discovery
