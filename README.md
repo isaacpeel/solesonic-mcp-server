@@ -17,7 +17,7 @@
 ## Quick Start
 
 ### Prerequisites
-- Java 24+
+- Java 25+
 - Maven 3.9+
 - Docker (optional, for production-like run)
 
