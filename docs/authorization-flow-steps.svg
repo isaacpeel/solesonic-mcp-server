@@ -1,473 +1,100 @@
-<svg aria-roledescription="sequence" role="graphics-document document" viewBox="-50 -10 1619.5 1316"
-         style="max-width: 1619.5px;" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg"
-         width="100%" id="_r_d_">
-        <g>
-            <rect class="actor actor-bottom" ry="3" rx="3" name="A" height="65" width="175" stroke="#666" fill="#eaeaea"
-                  y="1230" x="1344.5"></rect>
-            <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                  class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="1262.5" x="1432">
-                <tspan dy="0" x="1432">Authorization Server</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="actor actor-bottom" ry="3" rx="3" name="M" height="65" width="252" stroke="#666" fill="#eaeaea"
-                  y="1230" x="1042.5"></rect>
-            <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                  class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="1262.5"
-                  x="1168.5">
-                <tspan dy="0" x="1168.5">MCP Server (Resource Server)</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="actor actor-bottom" ry="3" rx="3" name="C" height="65" width="150" stroke="#666" fill="#eaeaea"
-                  y="1230" x="594.5"></rect>
-            <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                  class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="1262.5" x="669.5">
-                <tspan dy="0" x="669.5">Client</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="actor actor-bottom" ry="3" rx="3" name="B" height="65" width="185" stroke="#666" fill="#eaeaea"
-                  y="1230" x="0"></rect>
-            <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                  class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="1262.5" x="92.5">
-                <tspan dy="0" x="92.5">User-Agent (Browser)</tspan>
-            </text>
-        </g>
-        <g>
-            <line name="A" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="1230" x2="1432" y1="65"
-                  x1="1432" id="actor6"></line>
-            <g id="root-6">
-                <rect class="actor actor-top" ry="3" rx="3" name="A" height="65" width="175" stroke="#666"
-                      fill="#eaeaea" y="0" x="1344.5"></rect>
-                <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                      class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5"
-                      x="1432">
-                    <tspan dy="0" x="1432">Authorization Server</tspan>
-                </text>
-            </g>
-        </g>
-        <g>
-            <line name="M" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="1230" x2="1168.5" y1="65"
-                  x1="1168.5" id="actor5"></line>
-            <g id="root-5">
-                <rect class="actor actor-top" ry="3" rx="3" name="M" height="65" width="252" stroke="#666"
-                      fill="#eaeaea" y="0" x="1042.5"></rect>
-                <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                      class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5"
-                      x="1168.5">
-                    <tspan dy="0" x="1168.5">MCP Server (Resource Server)</tspan>
-                </text>
-            </g>
-        </g>
-        <g>
-            <line name="C" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="1230" x2="669.5" y1="65"
-                  x1="669.5" id="actor4"></line>
-            <g id="root-4">
-                <rect class="actor actor-top" ry="3" rx="3" name="C" height="65" width="150" stroke="#666"
-                      fill="#eaeaea" y="0" x="594.5"></rect>
-                <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                      class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5"
-                      x="669.5">
-                    <tspan dy="0" x="669.5">Client</tspan>
-                </text>
-            </g>
-        </g>
-        <g>
-            <line name="B" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="1230" x2="92.5" y1="65"
-                  x1="92.5" id="actor3"></line>
-            <g id="root-3">
-                <rect class="actor actor-top" ry="3" rx="3" name="B" height="65" width="185" stroke="#666"
-                      fill="#eaeaea" y="0" x="0"></rect>
-                <text style="text-anchor: middle; font-size: 16px; font-weight: 400; font-family: inherit;"
-                      class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5"
-                      x="92.5">
-                    <tspan dy="0" x="92.5">User-Agent (Browser)</tspan>
-                </text>
-            </g>
-        </g>
-        <style>#_r_d_ {
-            font-family: inherit;
-            font-size: 16px;
-            fill: #ccc;
-        }
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1350" width="100%" role="img" aria-label="Dynamic Client Registration flow">
+  <title>Dynamic Client Registration flow</title>
+  <desc>Client discovers resource metadata, fetches AS metadata, performs dynamic client registration, launches browser for authorization, exchanges code for tokens, and calls MCP.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#555"/>
+    </marker>
+    <style type="text/css"><![CDATA[
+      .actor { fill:#f5f5f5; stroke:#999; rx:6; ry:6; }
+      .swim { stroke:#ddd; stroke-width:1; }
+      .label { font: 600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#222; }
+      .small { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#333; }
+      .swim-label { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:white; }
+      .note { fill:#FFF9C4; stroke:#BDB76B; }
+      .arrow { stroke:#555; stroke-width:2; fill:none; marker-end:url(#arrow); }
+      .arrow.dash { stroke-dasharray:5 5; }
+    ]]></style>
+  </defs>
 
-        #_r_d_ .error-icon {
-            fill: #a44141;
-        }
+  <!-- Actors -->
+  <rect class="actor" x="40" y="30" width="220" height="44"/>
+  <text class="label" x="150" y="58" text-anchor="middle">User-Agent (Browser)</text>
 
-        #_r_d_ .error-text {
-            fill: #ddd;
-            stroke: #ddd;
-        }
+  <rect class="actor" x="520" y="30" width="150" height="44"/>
+  <text class="label" x="595" y="58" text-anchor="middle">Client</text>
 
-        #_r_d_ .edge-thickness-normal {
-            stroke-width: 1px;
-        }
+  <rect class="actor" x="900" y="30" width="270" height="44"/>
+  <text class="label" x="1035" y="58" text-anchor="middle">MCP Server (Resource Server)</text>
 
-        #_r_d_ .edge-thickness-thick {
-            stroke-width: 3.5px;
-        }
+  <rect class="actor" x="1340" y="30" width="220" height="44"/>
+  <text class="label" x="1450" y="58" text-anchor="middle">Authorization Server</text>
 
-        #_r_d_ .edge-pattern-solid {
-            stroke-dasharray: 0;
-        }
+  <!-- Lifelines -->
+  <line class="swim" x1="150" y1="80" x2="150" y2="1280"/>
+  <line class="swim" x1="595" y1="80" x2="595" y2="1280"/>
+  <line class="swim" x1="1035" y1="80" x2="1035" y2="1280"/>
+  <line class="swim" x1="1450" y1="80" x2="1450" y2="1280"/>
 
-        #_r_d_ .edge-thickness-invisible {
-            stroke-width: 0;
-            fill: none;
-        }
+  <!-- 1. Initial unauthorized call -->
+  <text class="swim-label" x="815" y="120" text-anchor="middle">MCP request without token</text>
+  <line class="arrow" x1="595" y1="135" x2="1030" y2="135"/>
+  <text class="swim-label" x="815" y="175" text-anchor="middle">401 Unauthorized with WWW-Authenticate</text>
+  <line class="arrow dash" x1="1035" y1="190" x2="595" y2="190"/>
 
-        #_r_d_ .edge-pattern-dashed {
-            stroke-dasharray: 3;
-        }
+  <!-- 2. Discover resource metadata -->
+  <text class="swim-label" x="815" y="235" text-anchor="middle">Request Protected Resource Metadata</text>
+  <line class="arrow" x1="595" y1="250" x2="1030" y2="250"/>
+  <text class="swim-label" x="815" y="295" text-anchor="middle">Return metadata</text>
+  <line class="arrow dash" x1="1035" y1="310" x2="595" y2="310"/>
+  <rect class="note" x="495" y="325" width="200" height="58"/>
+  <text class="small" x="595" y="355" text-anchor="middle">Extract AS URL(s)</text>
 
-        #_r_d_ .edge-pattern-dotted {
-            stroke-dasharray: 2;
-        }
+  <!-- 3. Get AS metadata -->
+  <text class="swim-label" x="1220" y="380" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
+  <line class="arrow" x1="595" y1="395" x2="1450" y2="395"/>
+  <text class="swim-label" x="1220" y="440" text-anchor="middle">Authorization server metadata</text>
+  <line class="arrow dash" x1="1450" y1="455" x2="595" y2="455"/>
 
-        #_r_d_ .marker {
-            fill: lightgrey;
-            stroke: lightgrey;
-        }
+  <!-- 4. Dynamic Client Registration -->
+  <text class="swim-label" x="1220" y="500" text-anchor="middle">POST /register</text>
+  <line class="arrow" x1="595" y1="515" x2="1450" y2="515"/>
+  <text class="swim-label" x="1220" y="560" text-anchor="middle">Client Credentials</text>
+  <line class="arrow dash" x1="1450" y1="575" x2="595" y2="575"/>
 
-        #_r_d_ .marker.cross {
-            stroke: lightgrey;
-        }
+  <!-- 5. Prepare PKCE and resource param -->
+  <rect class="note" x="490" y="600" width="210" height="60"/>
+  <text class="small" x="595" y="625" text-anchor="middle">Generate PKCE</text>
+  <text class="small" x="595" y="645" text-anchor="middle">Include resource param</text>
 
-        #_r_d_ svg {
-            font-family: inherit;
-            font-size: 16px;
-        }
+  <!-- 6. Start authorization in browser -->
+  <text class="swim-label" x="375" y="700" text-anchor="middle">Open browser with authorization URL + code_challenge + resource</text>
+  <line class="arrow" x1="595" y1="715" x2="150" y2="715"/>
 
-        #_r_d_ p {
-            margin: 0;
-        }
+  <text class="swim-label" x="760" y="760" text-anchor="middle">Authorization request with resource</text>
+  <line class="arrow" x1="150" y1="775" x2="1450" y2="775"/>
 
-        #_r_d_ .actor {
-            stroke: #ccc;
-            fill: #1f2020;
-        }
+  <text class="swim-label" x="760" y="820" text-anchor="middle">Redirect back with authorization code</text>
+  <line class="arrow" x1="1450" y1="835" x2="150" y2="835"/>
 
-        #_r_d_ text.actor& gt
+  <text class="swim-label" x="375" y="880" text-anchor="middle">Authorization code callback</text>
+  <line class="arrow" x1="150" y1="895" x2="585" y2="895"/>
 
-        ;
-        tspan {
-            fill: lightgrey;
-            stroke: none;
-        }
+  <!-- 7. Exchange code for tokens -->
+  <text class="swim-label" x="815" y="945" text-anchor="middle">Token request + code_verifier + resource</text>
+  <line class="arrow" x1="595" y1="960" x2="1450" y2="960"/>
 
-        #_r_d_ .actor-line {
-            stroke: #ccc;
-        }
+  <text class="swim-label" x="815" y="1005" text-anchor="middle">Access token (+ refresh token)</text>
+  <line class="arrow dash" x1="1450" y1="1020" x2="595" y2="1020"/>
 
-        #_r_d_ .messageLine0 {
-            stroke-width: 1.5;
-            stroke-dasharray: none;
-            stroke: lightgrey;
-        }
+  <!-- 8. Call MCP with token -->
+  <text class="swim-label" x="815" y="1070" text-anchor="middle">MCP request with access token</text>
+  <line class="arrow" x1="595" y1="1085" x2="1030" y2="1085"/>
 
-        #_r_d_ .messageLine1 {
-            stroke-width: 1.5;
-            stroke-dasharray: 2, 2;
-            stroke: lightgrey;
-        }
+  <text class="swim-label" x="815" y="1130" text-anchor="middle">MCP response</text>
+  <line class="arrow dash" x1="1035" y1="1145" x2="595" y2="1145"/>
 
-        #_r_d_ #arrowhead path {
-            fill: lightgrey;
-            stroke: lightgrey;
-        }
-
-        #_r_d_ .sequenceNumber {
-            fill: black;
-        }
-
-        #_r_d_ #sequencenumber {
-            fill: lightgrey;
-        }
-
-        #_r_d_ #crosshead path {
-            fill: lightgrey;
-            stroke: lightgrey;
-        }
-
-        #_r_d_ .messageText {
-            fill: lightgrey;
-            stroke: none;
-        }
-
-        #_r_d_ .labelBox {
-            stroke: #ccc;
-            fill: #1f2020;
-        }
-
-        #_r_d_ .labelText, #_r_d_ .labelText& gt
-
-        ;
-        tspan {
-            fill: lightgrey;
-            stroke: none;
-        }
-
-        #_r_d_ .loopText, #_r_d_ .loopText& gt
-
-        ;
-        tspan {
-            fill: lightgrey;
-            stroke: none;
-        }
-
-        #_r_d_ .loopLine {
-            stroke-width: 2px;
-            stroke-dasharray: 2, 2;
-            stroke: #ccc;
-            fill: #ccc;
-        }
-
-        #_r_d_ .note {
-            stroke: hsl(180, 0%, 18.3529411765%);
-            fill: hsl(180, 1.5873015873%, 28.3529411765%);
-        }
-
-        #_r_d_ .noteText, #_r_d_ .noteText& gt
-
-        ;
-        tspan {
-            fill: rgb(183.8476190475, 181.5523809523, 181.5523809523);
-            stroke: none;
-        }
-
-        #_r_d_ .activation0 {
-            fill: hsl(180, 1.5873015873%, 28.3529411765%);
-            stroke: #ccc;
-        }
-
-        #_r_d_ .activation1 {
-            fill: hsl(180, 1.5873015873%, 28.3529411765%);
-            stroke: #ccc;
-        }
-
-        #_r_d_ .activation2 {
-            fill: hsl(180, 1.5873015873%, 28.3529411765%);
-            stroke: #ccc;
-        }
-
-        #_r_d_ .actorPopupMenu {
-            position: absolute;
-        }
-
-        #_r_d_ .actorPopupMenuPanel {
-            position: absolute;
-            fill: #1f2020;
-            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-            filter: drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4));
-        }
-
-        #_r_d_ .actor-man line {
-            stroke: #ccc;
-            fill: #1f2020;
-        }
-
-        #_r_d_ .actor-man circle, #_r_d_ line {
-            stroke: #ccc;
-            fill: #1f2020;
-            stroke-width: 2px;
-        }
-
-        #_r_d_ :root {
-            --mermaid-font-family: inherit;
-        }</style>
-        <g></g>
-        <defs>
-            <symbol height="24" width="24" id="computer">
-                <path d="M2 2v13h20v-13h-20zm18 11h-16v-9h16v9zm-10.228 6l.466-1h3.524l.467 1h-4.457zm14.228 3h-24l2-6h2.104l-1.33 4h18.45l-1.297-4h2.073l2 6zm-5-10h-14v-7h14v7z"
-                      transform="scale(.5)"></path>
-            </symbol>
-        </defs>
-        <defs>
-            <symbol clip-rule="evenodd" fill-rule="evenodd" id="database">
-                <path d="M12.2...(13131 characters truncated, it's impossible to view or edit this line)
-                      transform="scale(.5)"></path>
-            </symbol>
-        </defs>
-        <defs>
-            <symbol height="24" width="24" id="clock">
-                <path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.848 12.459c.202.038.202.333.001.372-1.907.361-6.045 1.111-6.547 1.111-.719 0-1.301-.582-1.301-1.301 0-.512.77-5.447 1.125-7.445.034-.192.312-.181.343.014l.985 6.238 5.394 1.011z"
-                      transform="scale(.5)"></path>
-            </symbol>
-        </defs>
-        <defs>
-            <marker orient="auto-start-reverse" markerHeight="12" markerWidth="12" markerUnits="userSpaceOnUse" refY="5"
-                    refX="7.9" id="arrowhead">
-                <path d="M -1 0 L 10 5 L 0 10 z"></path>
-            </marker>
-        </defs>
-        <defs>
-            <marker refY="4.5" refX="4" orient="auto" markerHeight="8" markerWidth="15" id="crosshead">
-                <path style="stroke-dasharray: 0, 0;" d="M 1,2 L 6,7 M 6,2 L 1,7" stroke-width="1pt" stroke="#000000"
-                      fill="none"></path>
-            </marker>
-        </defs>
-        <defs>
-            <marker orient="auto" markerHeight="28" markerWidth="20" refY="7" refX="15.5" id="filled-head">
-                <path d="M 18,7 L9,13 L14,7 L9,1 Z"></path>
-            </marker>
-        </defs>
-        <defs>
-            <marker orient="auto" markerHeight="40" markerWidth="60" refY="15" refX="15" id="sequencenumber">
-                <circle r="6" cy="15" cx="15"></circle>
-            </marker>
-        </defs>
-        <g>
-            <rect class="note" height="40" width="453" stroke="#666" fill="#EDF2AE" y="175" x="443"></rect>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="180" x="670">
-                <tspan x="670">Extract resource_metadata URL from WWW-Authenticate</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="note" height="60" width="404" stroke="#666" fill="#EDF2AE" y="325" x="467.5"></rect>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="330" x="670">
-                <tspan x="670">Parse metadata and extract authorization server(s)</tspan>
-            </text>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="350" x="670">
-                <tspan x="670">Client determines AS to use</tspan>
-            </text>
-        </g>
-        <g>
-            <line class="loopLine" y2="495" x2="1443" y1="495" x1="658.5"></line>
-            <line class="loopLine" y2="640" x2="1443" y1="495" x1="1443"></line>
-            <line class="loopLine" y2="640" x2="1443" y1="640" x1="658.5"></line>
-            <line class="loopLine" y2="640" x2="658.5" y1="495" x1="658.5"></line>
-            <polygon class="labelBox" points="658.5,495 708.5,495 708.5,508 700.1,515 658.5,515"></polygon>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" class="labelText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="508" x="684">alt
-            </text>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" class="loopText" text-anchor="middle"
-                  y="513" x="1075.75">
-                <tspan x="1075.75">[Dynamic client registration]</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="note" height="60" width="229" stroke="#666" fill="#EDF2AE" y="650" x="555"></rect>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="655" x="670">
-                <tspan x="670">Generate PKCE parameters</tspan>
-            </text>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="675" x="670">
-                <tspan x="670">Include resource parameter</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="note" height="40" width="175" stroke="#666" fill="#EDF2AE" y="820" x="1344.5"></rect>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="825" x="1432">
-                <tspan x="1432">User authorizes</tspan>
-            </text>
-        </g>
-        <g>
-            <rect class="note" height="40" width="549" stroke="#666" fill="#EDF2AE" y="1170" x="644.5"></rect>
-            <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="noteText"
-                  alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="1175" x="919">
-                <tspan x="919">MCP communication continues with valid token</tspan>
-            </text>
-        </g>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="80" x="918">MCP request
-            without token
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="115" x2="1164.5" y1="115" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="130" x="921">HTTP 401
-            Unauthorized with WWW-Authenticate header
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="165" x2="673.5" y1="165" x1="1167.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="230" x="918">Request
-            Protected Resource Metadata
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="265" x2="1164.5" y1="265" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="280" x="921">Return
-            metadata
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="315" x2="673.5" y1="315" x1="1167.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="400" x="1049">GET
-            /.well-known/oauth-authorization-server
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="435" x2="1428" y1="435" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="450" x="1052">Authorization
-            server metadata response
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="485" x2="673.5" y1="485" x1="1431"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="545" x="1049">POST
-            /register
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="580" x2="1428" y1="580" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="595" x="1052">Client
-            Credentials
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="630" x2="673.5" y1="630" x1="1431"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="725" x="383">Open browser
-            with authorization URL + code_challenge + resource
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="760" x2="96.5" y1="760" x1="668.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="775" x="761">Authorization
-            request with resource parameter
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="810" x2="1428" y1="810" x1="93.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="875" x="764">Redirect to
-            callback with authorization code
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="910" x2="96.5" y1="910" x1="1431"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="925" x="380">Authorization
-            code callback
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="960" x2="665.5" y1="960" x1="93.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="975" x="1049">Token request
-            + code_verifier + resource
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="1010" x2="1428" y1="1010" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="1025" x="1052">Access token
-            (+ refresh token)
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="1060" x2="673.5" y1="1060" x1="1431"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="1075" x="918">MCP request
-            with access token
-        </text>
-        <line style="fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2" class="messageLine0"
-              y2="1110" x2="1164.5" y1="1110" x1="670.5"></line>
-        <text style="font-family: inherit; font-size: 16px; font-weight: 400;" dy="1em" class="messageText"
-              alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="1125" x="921">MCP response
-        </text>
-        <line style="stroke-dasharray: 3, 3; fill: none;" marker-end="url(#arrowhead)" stroke="none" stroke-width="2"
-              class="messageLine1" y2="1160" x2="673.5" y1="1160" x1="1167.5"></line>
-    </svg>
+  <rect class="note" x="520" y="1180" width="550" height="44"/>
+  <text class="small" x="795" y="1208" text-anchor="middle">MCP communication continues with valid token</text>
+</svg>
