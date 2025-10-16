@@ -10,6 +10,7 @@
 - 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
 - 🧰 Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
 - 🔐 OAuth2 Resource Server (JWT) — JWT validation; group claims mapped to authorities
+- 🔏 MCP Authorization & Dynamic Client Registration — see [Authorization](docs/authorization.md)
 - 👥 Group & Scope AuthZ — `groups` → `GROUP_<name>` `roles` → `ROLE_<role>` authorities; scopes → `SCOPE_<scope>`
 - ⚡ Atlassian Token Broker — Client-credentials integration for short-lived Atlassian access tokens
 - 🛡️ Production SSL Ready — PKCS12 keystore via `ssl` profile; TLS 1.2/1.3
