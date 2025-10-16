@@ -54,11 +54,7 @@ The server is implemented as an OAuth 2.0 Resource Server that accepts JWTs and 
 
 
 ### Sequence diagram: Authorization challenge + discovery + token use
-
-<picture>
-  <img alt="Authorization flow: challenge, discovery, token use" src="./example-flow.svg">
-</picture>
-
+![alt text](example-flow.png "Authorization flow: challenge, discovery, token use")
 
 ## Dynamic Client Registration (DCR)
 
@@ -70,10 +66,7 @@ This server supports DCR indirectly by advertising the protected resource metada
 
 ### Sequence diagram: Dynamic Client Registration
 
-<picture>
-  <img alt="Dynamic Client Registration flow" src="./authorization-flow-steps.svg">
-</picture>
-
+![alt text](authorization-flow-steps.png "Dynamic Client Registration flow")
 
 ## Example: Unauthorized request and discovery
 

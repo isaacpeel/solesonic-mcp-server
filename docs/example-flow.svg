@@ -1,76 +1,288 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 700" width="100%" role="img" aria-label="Authorization flow: challenge, discovery, token use">
-  <title>Authorization flow: challenge, discovery, token use</title>
-  <desc>Client calls MCP without token, receives 401 with WWW-Authenticate, discovers resource metadata, fetches AS metadata, obtains token, calls MCP successfully.</desc>
-  <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#555"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1200 700"
+   width="100%"
+   role="img"
+   aria-label="Authorization flow: challenge, discovery, token use"
+   version="1.1"
+   id="svg16"
+   sodipodi:docname="example-flow.svg"
+   inkscape:export-filename="example-flow.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview16"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:export-bgcolor="#ffffffff"
+     inkscape:zoom="0.69333333"
+     inkscape:cx="600"
+     inkscape:cy="350.48077"
+     inkscape:window-width="2528"
+     inkscape:window-height="1353"
+     inkscape:window-x="45"
+     inkscape:window-y="31"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg16" />
+  <title
+     id="title1">Authorization flow: challenge, discovery, token use</title>
+  <desc
+     id="desc1">Client calls MCP without token, receives 401 with WWW-Authenticate, discovers resource metadata, fetches AS metadata, obtains token, calls MCP successfully.</desc>
+  <defs
+     id="defs1">
+    <marker
+       id="arrow"
+       markerWidth="10"
+       markerHeight="10"
+       refX="9"
+       refY="3"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L10,3 L0,6 Z"
+         fill="#555"
+         id="path1" />
     </marker>
-    <style type="text/css"><![CDATA[
+    <style
+       type="text/css"
+       id="style1"><![CDATA[
       .actor { fill: #f5f5f5; stroke: #999; rx:6; ry:6; }
       .swim { stroke:#ddd; stroke-width:1; }
       .label { font: 600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#222; }
       .small { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#333; }
-      .swim-label { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:white; }
       .note { fill:#FFF9C4; stroke:#BDB76B; }
       .arrow { stroke:#555; stroke-width:2; fill:none; marker-end:url(#arrow); }
       .arrow.dash { stroke-dasharray:5 5; }
     ]]></style>
   </defs>
-
   <!-- Actors -->
-  <rect class="actor" x="40" y="30" width="180" height="44"/>
-  <text class="label" x="130" y="58" text-anchor="middle">Client</text>
-
-  <rect class="actor" x="510" y="30" width="270" height="44"/>
-  <text class="label" x="645" y="58" text-anchor="middle">MCP Server (Resource Server)</text>
-
-  <rect class="actor" x="980" y="30" width="180" height="44"/>
-  <text class="label" x="1070" y="58" text-anchor="middle">Authorization Server</text>
-
+  <rect
+     class="actor"
+     x="40"
+     y="30"
+     width="180"
+     height="44"
+     id="rect1" />
+  <text
+     class="label"
+     x="130"
+     y="58"
+     text-anchor="middle"
+     id="text1">Client</text>
+  <rect
+     class="actor"
+     x="510"
+     y="30"
+     width="270"
+     height="44"
+     id="rect2" />
+  <text
+     class="label"
+     x="645"
+     y="58"
+     text-anchor="middle"
+     id="text2">MCP Server (Resource Server)</text>
+  <rect
+     class="actor"
+     x="980"
+     y="30"
+     width="180"
+     height="44"
+     id="rect3" />
+  <text
+     class="label"
+     x="1070"
+     y="58"
+     text-anchor="middle"
+     id="text3">Authorization Server</text>
   <!-- Lifelines -->
-  <line class="swim" x1="130" y1="80" x2="130" y2="700"/>
-  <line class="swim" x1="645" y1="80" x2="645" y2="700"/>
-  <line class="swim" x1="1070" y1="80" x2="1070" y2="700"/>
-
+  <line
+     class="swim"
+     x1="130"
+     y1="80"
+     x2="130"
+     y2="650"
+     id="line3" />
+  <line
+     class="swim"
+     x1="645"
+     y1="80"
+     x2="645"
+     y2="650"
+     id="line4" />
+  <line
+     class="swim"
+     x1="1070"
+     y1="80"
+     x2="1070"
+     y2="650"
+     id="line5" />
   <!-- 1. Client -> MCP without token -->
-  <text class="swim-label" x="387" y="120" text-anchor="middle">MCP request without token</text>
-  <line class="arrow" x1="130" y1="135" x2="640" y2="135"/>
-
+  <text
+     class="small"
+     x="387"
+     y="120"
+     text-anchor="middle"
+     id="text5">MCP request without token</text>
+  <line
+     class="arrow"
+     x1="130"
+     y1="135"
+     x2="640"
+     y2="135"
+     id="line6" />
   <!-- 2. MCP -> Client 401 WWW-Authenticate -->
-  <text class="swim-label" x="387" y="175" text-anchor="middle">401 Unauthorized with WWW-Authenticate</text>
-  <line class="arrow dash" x1="645" y1="190" x2="130" y2="190"/>
-  <rect class="note" x="45" y="205" width="210" height="60"/>
-  <text class="small" x="150" y="230" text-anchor="middle">Extract resource_metadata URL</text>
-
+  <text
+     class="small"
+     x="387"
+     y="175"
+     text-anchor="middle"
+     id="text6">401 Unauthorized with WWW-Authenticate</text>
+  <line
+     class="arrow dash"
+     x1="645"
+     y1="190"
+     x2="130"
+     y2="190"
+     id="line7" />
+  <rect
+     class="note"
+     x="45"
+     y="205"
+     width="210"
+     height="60"
+     id="rect7" />
+  <text
+     class="small"
+     x="150"
+     y="230"
+     text-anchor="middle"
+     id="text7">Extract resource_metadata URL</text>
   <!-- 3. Client -> MCP: GET well-known resource metadata -->
-  <text class="swim-label" x="387" y="285" text-anchor="middle">GET /.well-known/oauth-protected-resource</text>
-  <line class="arrow" x1="130" y1="300" x2="640" y2="300"/>
-
+  <text
+     class="small"
+     x="387"
+     y="285"
+     text-anchor="middle"
+     id="text8">GET /.well-known/oauth-protected-resource</text>
+  <line
+     class="arrow"
+     x1="130"
+     y1="300"
+     x2="640"
+     y2="300"
+     id="line8" />
   <!-- 4. MCP -> Client: resource metadata with AS URL -->
-  <text class="swim-label" x="387" y="345" text-anchor="middle">Resource metadata (authorization_servers, scopes)</text>
-  <line class="arrow dash" x1="645" y1="360" x2="130" y2="360"/>
-  <rect class="note" x="55" y="375" width="235" height="60"/>
-  <text class="small" x="172" y="400" text-anchor="middle">Validate metadata, derive</text>
-  <text class="small" x="172" y="420" text-anchor="middle">AS metadata URL</text>
-
+  <text
+     class="small"
+     x="387"
+     y="345"
+     text-anchor="middle"
+     id="text9">Resource metadata (authorization_servers, scopes)</text>
+  <line
+     class="arrow dash"
+     x1="645"
+     y1="360"
+     x2="130"
+     y2="360"
+     id="line9" />
+  <rect
+     class="note"
+     x="55"
+     y="375"
+     width="235"
+     height="60"
+     id="rect9" />
+  <text
+     class="small"
+     x="172"
+     y="400"
+     text-anchor="middle"
+     id="text10">Validate metadata, derive</text>
+  <text
+     class="small"
+     x="172"
+     y="420"
+     text-anchor="middle"
+     id="text11">AS metadata URL</text>
   <!-- 5. Client -> AS: GET AS metadata -->
-  <text class="swim-label" x="870" y="445" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
-  <line class="arrow" x1="130" y1="460" x2="1070" y2="460"/>
-
+  <text
+     class="small"
+     x="870"
+     y="445"
+     text-anchor="middle"
+     id="text12">GET /.well-known/oauth-authorization-server</text>
+  <line
+     class="arrow"
+     x1="130"
+     y1="460"
+     x2="1070"
+     y2="460"
+     id="line12" />
   <!-- 6. AS -> Client: AS metadata -->
-  <text class="swim-label" x="870" y="505" text-anchor="middle">Authorization server metadata</text>
-  <line class="arrow dash" x1="1070" y1="520" x2="130" y2="520"/>
-
+  <text
+     class="small"
+     x="870"
+     y="505"
+     text-anchor="middle"
+     id="text13">Authorization server metadata</text>
+  <line
+     class="arrow dash"
+     x1="1070"
+     y1="520"
+     x2="130"
+     y2="520"
+     id="line13" />
   <!-- 7. Client <-> AS: Token flow (abstracted) -->
-  <rect class="note" x="300" y="545" width="690" height="44"/>
-  <text class="small" x="645" y="572" text-anchor="middle">OAuth 2.1 authorization flow happens here</text>
-
+  <rect
+     class="note"
+     x="300"
+     y="545"
+     width="690"
+     height="44"
+     id="rect13" />
+  <text
+     class="small"
+     x="645"
+     y="572"
+     text-anchor="middle"
+     id="text14">OAuth 2.1 authorization flow happens here</text>
   <!-- 8. Client -> MCP with token -->
-  <text class="swim-label" x="387" y="620" text-anchor="middle">MCP request with access token</text>
-  <line class="arrow" x1="130" y1="635" x2="640" y2="635"/>
-
+  <text
+     class="small"
+     x="387"
+     y="620"
+     text-anchor="middle"
+     id="text15">MCP request with access token</text>
+  <line
+     class="arrow"
+     x1="130"
+     y1="635"
+     x2="640"
+     y2="635"
+     id="line15" />
   <!-- 9. MCP -> Client response -->
-  <text class="swim-label" x="387" y="665" text-anchor="middle">MCP response</text>
-  <line class="arrow dash" x1="645" y1="680" x2="130" y2="680"/>
+  <text
+     class="small"
+     x="387"
+     y="665"
+     text-anchor="middle"
+     id="text16">MCP response</text>
+  <line
+     class="arrow dash"
+     x1="645"
+     y1="680"
+     x2="130"
+     y2="680"
+     id="line16" />
 </svg>

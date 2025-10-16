@@ -11,7 +11,6 @@
       .swim { stroke:#ddd; stroke-width:1; }
       .label { font: 600 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#222; }
       .small { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:#333; }
-      .swim-label { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill:white; }
       .note { fill:#FFF9C4; stroke:#BDB76B; }
       .arrow { stroke:#555; stroke-width:2; fill:none; marker-end:url(#arrow); }
       .arrow.dash { stroke-dasharray:5 5; }
@@ -38,29 +37,29 @@
   <line class="swim" x1="1450" y1="80" x2="1450" y2="1280"/>
 
   <!-- 1. Initial unauthorized call -->
-  <text class="swim-label" x="815" y="120" text-anchor="middle">MCP request without token</text>
+  <text class="small" x="815" y="120" text-anchor="middle">MCP request without token</text>
   <line class="arrow" x1="595" y1="135" x2="1030" y2="135"/>
-  <text class="swim-label" x="815" y="175" text-anchor="middle">401 Unauthorized with WWW-Authenticate</text>
+  <text class="small" x="815" y="175" text-anchor="middle">401 Unauthorized with WWW-Authenticate</text>
   <line class="arrow dash" x1="1035" y1="190" x2="595" y2="190"/>
 
   <!-- 2. Discover resource metadata -->
-  <text class="swim-label" x="815" y="235" text-anchor="middle">Request Protected Resource Metadata</text>
+  <text class="small" x="815" y="235" text-anchor="middle">Request Protected Resource Metadata</text>
   <line class="arrow" x1="595" y1="250" x2="1030" y2="250"/>
-  <text class="swim-label" x="815" y="295" text-anchor="middle">Return metadata</text>
+  <text class="small" x="815" y="295" text-anchor="middle">Return metadata</text>
   <line class="arrow dash" x1="1035" y1="310" x2="595" y2="310"/>
   <rect class="note" x="495" y="325" width="200" height="58"/>
   <text class="small" x="595" y="355" text-anchor="middle">Extract AS URL(s)</text>
 
   <!-- 3. Get AS metadata -->
-  <text class="swim-label" x="1220" y="380" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
+  <text class="small" x="1220" y="380" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
   <line class="arrow" x1="595" y1="395" x2="1450" y2="395"/>
-  <text class="swim-label" x="1220" y="440" text-anchor="middle">Authorization server metadata</text>
+  <text class="small" x="1220" y="440" text-anchor="middle">Authorization server metadata</text>
   <line class="arrow dash" x1="1450" y1="455" x2="595" y2="455"/>
 
   <!-- 4. Dynamic Client Registration -->
-  <text class="swim-label" x="1220" y="500" text-anchor="middle">POST /register</text>
+  <text class="small" x="1220" y="500" text-anchor="middle">POST /register</text>
   <line class="arrow" x1="595" y1="515" x2="1450" y2="515"/>
-  <text class="swim-label" x="1220" y="560" text-anchor="middle">Client Credentials</text>
+  <text class="small" x="1220" y="560" text-anchor="middle">Client Credentials</text>
   <line class="arrow dash" x1="1450" y1="575" x2="595" y2="575"/>
 
   <!-- 5. Prepare PKCE and resource param -->
@@ -69,30 +68,30 @@
   <text class="small" x="595" y="645" text-anchor="middle">Include resource param</text>
 
   <!-- 6. Start authorization in browser -->
-  <text class="swim-label" x="375" y="700" text-anchor="middle">Open browser with authorization URL + code_challenge + resource</text>
+  <text class="small" x="375" y="700" text-anchor="middle">Open browser with authorization URL + code_challenge + resource</text>
   <line class="arrow" x1="595" y1="715" x2="150" y2="715"/>
 
-  <text class="swim-label" x="760" y="760" text-anchor="middle">Authorization request with resource</text>
+  <text class="small" x="760" y="760" text-anchor="middle">Authorization request with resource</text>
   <line class="arrow" x1="150" y1="775" x2="1450" y2="775"/>
 
-  <text class="swim-label" x="760" y="820" text-anchor="middle">Redirect back with authorization code</text>
+  <text class="small" x="760" y="820" text-anchor="middle">Redirect back with authorization code</text>
   <line class="arrow" x1="1450" y1="835" x2="150" y2="835"/>
 
-  <text class="swim-label" x="375" y="880" text-anchor="middle">Authorization code callback</text>
+  <text class="small" x="375" y="880" text-anchor="middle">Authorization code callback</text>
   <line class="arrow" x1="150" y1="895" x2="585" y2="895"/>
 
   <!-- 7. Exchange code for tokens -->
-  <text class="swim-label" x="815" y="945" text-anchor="middle">Token request + code_verifier + resource</text>
+  <text class="small" x="815" y="945" text-anchor="middle">Token request + code_verifier + resource</text>
   <line class="arrow" x1="595" y1="960" x2="1450" y2="960"/>
 
-  <text class="swim-label" x="815" y="1005" text-anchor="middle">Access token (+ refresh token)</text>
+  <text class="small" x="815" y="1005" text-anchor="middle">Access token (+ refresh token)</text>
   <line class="arrow dash" x1="1450" y1="1020" x2="595" y2="1020"/>
 
   <!-- 8. Call MCP with token -->
-  <text class="swim-label" x="815" y="1070" text-anchor="middle">MCP request with access token</text>
+  <text class="small" x="815" y="1070" text-anchor="middle">MCP request with access token</text>
   <line class="arrow" x1="595" y1="1085" x2="1030" y2="1085"/>
 
-  <text class="swim-label" x="815" y="1130" text-anchor="middle">MCP response</text>
+  <text class="small" x="815" y="1130" text-anchor="middle">MCP response</text>
   <line class="arrow dash" x1="1035" y1="1145" x2="595" y2="1145"/>
 
   <rect class="note" x="520" y="1180" width="550" height="44"/>
