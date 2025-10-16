@@ -29,9 +29,9 @@
   <text class="label" x="1070" y="58" text-anchor="middle">Authorization Server</text>
 
   <!-- Lifelines -->
-  <line class="swim" x1="130" y1="80" x2="130" y2="650"/>
-  <line class="swim" x1="645" y1="80" x2="645" y2="650"/>
-  <line class="swim" x1="1070" y1="80" x2="1070" y2="650"/>
+  <line class="swim" x1="130" y1="80" x2="130" y2="700"/>
+  <line class="swim" x1="645" y1="80" x2="645" y2="700"/>
+  <line class="swim" x1="1070" y1="80" x2="1070" y2="700"/>
 
   <!-- 1. Client -> MCP without token -->
   <text class="swim-label" x="387" y="120" text-anchor="middle">MCP request without token</text>
