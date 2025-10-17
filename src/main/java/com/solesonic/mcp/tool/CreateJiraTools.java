@@ -2,7 +2,8 @@ package com.solesonic.mcp.tool;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.*;
-import com.solesonic.mcp.service.atlassian.JiraService;
+import com.solesonic.mcp.service.atlassian.JiraIssueService;
+import com.solesonic.mcp.service.atlassian.JiraUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -14,8 +15,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.solesonic.mcp.service.atlassian.JiraService.ISSUE_TYPE_ID;
-import static com.solesonic.mcp.service.atlassian.JiraService.PROJECT_ID;
+import static com.solesonic.mcp.service.atlassian.AtlassianConstants.ISSUE_TYPE_ID;
+import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
 import static com.solesonic.mcp.tool.AssigneeJiraTools.ASSIGN_JIRA;
 
 /**
@@ -27,13 +28,16 @@ public class CreateJiraTools {
     private static final Logger log = LoggerFactory.getLogger(CreateJiraTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
 
-    private final JiraService jiraService;
+    private final JiraIssueService jiraIssueService;
+    private final JiraUserService jiraUserService;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public CreateJiraTools(JiraService jiraService) {
-        this.jiraService = jiraService;
+    public CreateJiraTools(JiraIssueService jiraIssueService,
+                           JiraUserService jiraUserService) {
+        this.jiraIssueService = jiraIssueService;
+        this.jiraUserService = jiraUserService;
     }
 
     public record CreateJiraResponse(String issueId, String issueUri) {}
@@ -57,7 +61,7 @@ public class CreateJiraTools {
         }
 
         try {
-            List<User> users = jiraService.userSearch(assignee);
+            List<User> users = jiraUserService.search(assignee);
 
             if (users == null || users.isEmpty()) {
                 log.info("No assignable users found for query: {}", assignee);
@@ -147,7 +151,7 @@ public class CreateJiraTools {
 
         JiraIssue jiraIssue = JiraIssue.fields(fields).build();
 
-        JiraIssue created = jiraService.create(jiraIssue);
+        JiraIssue created = jiraIssueService.create(jiraIssue);
 
         log.debug("Created jira issue: {}", created);
 

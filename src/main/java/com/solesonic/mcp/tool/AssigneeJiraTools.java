@@ -1,7 +1,7 @@
 package com.solesonic.mcp.tool;
 
 import com.solesonic.mcp.model.atlassian.jira.User;
-import com.solesonic.mcp.service.atlassian.JiraService;
+import com.solesonic.mcp.service.atlassian.JiraUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -17,10 +17,10 @@ public class AssigneeJiraTools {
 
     public static final String ASSIGN_JIRA = "assignee_id_lookup";
 
-    private final JiraService jiraService;
+   private final JiraUserService jiraUserService;
 
-    public AssigneeJiraTools(JiraService jiraService) {
-        this.jiraService = jiraService;
+    public AssigneeJiraTools(JiraUserService jiraUserService) {
+        this.jiraUserService = jiraUserService;
     }
 
     public record AssigneeResponse(String assigneeId) {}
@@ -32,7 +32,7 @@ public class AssigneeJiraTools {
     public AssigneeResponse assigneeLookup(@ToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest) {
         log.debug("Invoking user search for: {}", assigneeRequest);
 
-        User user = jiraService.userSearch(assigneeRequest.assignee())
+        User user = jiraUserService.search(assigneeRequest.assignee())
                 .stream()
                 .findFirst()
                 .orElse(User.accountId(null).build());
