@@ -21,6 +21,7 @@ import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
  * MCP tools service for Jira operations.
  * Provides assignee lookup and issue creation functionality.
  */
+@SuppressWarnings("unused")
 @Service
 public class JiraIssueTools {
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
