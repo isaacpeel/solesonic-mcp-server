@@ -4,8 +4,8 @@ import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -25,6 +25,7 @@ import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
 public class JiraIssueTools {
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
+    public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
 
     private final JiraIssueService jiraIssueService;
 
@@ -44,8 +45,8 @@ public class JiraIssueTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @Tool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
-    public CreateJiraResponse createJiraIssue(@ToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
+    @McpTool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
+    public CreateJiraResponse createJiraIssue(@McpToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
         log.debug("Invoking create jira function");
         log.debug("Summary: {}", createJiraRequest.summary);
         log.debug("Description: {}", createJiraRequest.description);
@@ -120,5 +121,16 @@ public class JiraIssueTools {
         log.debug("Using jira uri: {}", jiraUri);
 
         return new CreateJiraResponse(created.id(), jiraUri);
+    }
+
+    @SuppressWarnings("unused")
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-DELETE')")
+    @McpTool(name = DELETE_JIRA_ISSUE, description = "Deletes a jira issue by its ID.")
+    public String deleteJiraIssue(String issueId) {
+        log.debug("Deleting jira issue.");
+
+        jiraIssueService.delete(issueId);
+
+        return "Successfully deleted Jira Issue: "+issueId;
     }
 }

@@ -3,13 +3,11 @@ package com.solesonic.mcp.tool.atlassian;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.User;
 import com.solesonic.mcp.service.atlassian.JiraUserService;
-import io.modelcontextprotocol.server.McpSyncServerExchange;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.mcp.annotation.McpTool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -37,9 +35,7 @@ public class AssigneeUserTools {
     @SuppressWarnings("unused")
     @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid assignee for a new jira issue.")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public AssigneeResponse assigneeLookup(
-            McpSyncServerExchange mcpSyncServerExchange,
-            @ToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest
+    public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest
         ) {
         log.debug("Invoking user search for: {}", assigneeRequest);
 
@@ -47,11 +43,6 @@ public class AssigneeUserTools {
             log.warn("Empty assignee name provided");
             throw new JiraException("Empty assignee name provided");
         }
-
-        mcpSyncServerExchange.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-                .level(McpSchema.LoggingLevel.INFO)
-                .data("Invoking user search for: "+ assigneeRequest.assignee)
-                .build());
 
         User user = jiraUserService.search(assigneeRequest.assignee())
                 .stream()
