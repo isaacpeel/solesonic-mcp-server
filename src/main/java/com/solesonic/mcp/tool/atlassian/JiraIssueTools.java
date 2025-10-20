@@ -1,9 +1,7 @@
-package com.solesonic.mcp.tool;
+package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
-import com.solesonic.mcp.service.atlassian.JiraUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -17,66 +15,28 @@ import java.util.List;
 
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.ISSUE_TYPE_ID;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
-import static com.solesonic.mcp.tool.AssigneeJiraTools.ASSIGN_JIRA;
+import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
 
 /**
  * MCP tools service for Jira operations.
  * Provides assignee lookup and issue creation functionality.
  */
 @Service
-public class CreateJiraTools {
-    private static final Logger log = LoggerFactory.getLogger(CreateJiraTools.class);
+public class JiraIssueTools {
+    private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
 
     private final JiraIssueService jiraIssueService;
-    private final JiraUserService jiraUserService;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public CreateJiraTools(JiraIssueService jiraIssueService,
-                           JiraUserService jiraUserService) {
+    public JiraIssueTools(JiraIssueService jiraIssueService) {
         this.jiraIssueService = jiraIssueService;
-        this.jiraUserService = jiraUserService;
     }
 
     public record CreateJiraResponse(String issueId, String issueUri) {}
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {}
-
-    /**
-     * Looks up the Jira account ID for a given assignee name/query.
-     *
-     * @param assignee Name or email of the user to look up
-     * @return AssigneeIdLookupResponse with the account ID or null if not found
-     */
-    @SuppressWarnings("unused")
-    @Tool(name = "assignee_id_lookup", description = "Look up Jira accountId for a given assignee string")
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public String lookupAssigneeId(String assignee) {
-        log.info("Looking up assignee ID for: {}", assignee);
-
-        if (assignee == null || assignee.trim().isEmpty()) {
-            log.warn("Empty assignee query provided");
-            throw new JiraException("Empty assignee query provided");
-        }
-
-        try {
-            List<User> users = jiraUserService.search(assignee);
-
-            if (users == null || users.isEmpty()) {
-                log.info("No assignable users found for query: {}", assignee);
-                throw new JiraException("No assignable users found for query: " + assignee);
-            }
-
-            String accountId = users.getFirst().accountId();
-            log.info("Found assignee ID: {} for query: {}", accountId, assignee);
-            return accountId;
-
-        } catch (Exception e) {
-            log.error("Failed to lookup assignee ID for: {}", assignee, e);
-            throw new JiraException("Failed to lookup assignee: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * Creates a new Jira issue with the provided details.

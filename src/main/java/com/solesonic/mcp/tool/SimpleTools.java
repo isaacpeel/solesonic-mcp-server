@@ -16,19 +16,10 @@ public class SimpleTools {
                 .build();
     }
 
-    @Bean
-    public ToolCallbackProvider createJiraToolsRegistration(CreateJiraTools createJiraTools) {
-        return MethodToolCallbackProvider.builder()
-                .toolObjects(createJiraTools)
-                .build();
-    }
-
-    @Bean
-    public ToolCallbackProvider assignJiraToolsRegistration(AssigneeJiraTools assigneeJiraTools) {
-        return MethodToolCallbackProvider.builder()
-                .toolObjects(assigneeJiraTools)
-                .build();
-    }
-
-
+//    @Bean
+//    public ToolCallbackProvider assigneeUserToolsProvider(AssigneeUserTools assigneeUserTools) {
+//        return MethodToolCallbackProvider.builder()
+//                .toolObjects(assigneeUserTools)
+//                .build();
+//    }
 }
