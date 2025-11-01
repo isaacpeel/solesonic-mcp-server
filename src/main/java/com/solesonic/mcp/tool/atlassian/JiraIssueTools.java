@@ -27,6 +27,7 @@ public class JiraIssueTools {
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
+    public static final String GET_JIRA_ISSUE = "get_jira_issue";
 
     private final JiraIssueService jiraIssueService;
 
@@ -128,10 +129,18 @@ public class JiraIssueTools {
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-DELETE')")
     @McpTool(name = DELETE_JIRA_ISSUE, description = "Deletes a jira issue by its ID.")
     public String deleteJiraIssue(String issueId) {
-        log.debug("Deleting jira issue.");
+        log.info("Deleting jira issue.");
 
         jiraIssueService.delete(issueId);
 
         return "Successfully deleted Jira Issue: "+issueId;
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-GET')")
+    @McpTool(name = GET_JIRA_ISSUE, description = "Gets a jira issue by its ID")
+    public JiraIssue get(String issueId) {
+        log.info("Retrieving jira issue by ID: {}", issueId);
+
+        return jiraIssueService.get(issueId);
     }
 }

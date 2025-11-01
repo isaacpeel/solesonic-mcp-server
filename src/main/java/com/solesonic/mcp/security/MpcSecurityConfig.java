@@ -89,6 +89,8 @@ public class MpcSecurityConfig {
             Collection<GrantedAuthority> groupAuthorities = authoritiesService.extractGroupAuthorities(jwt);
             Collection<GrantedAuthority> roleAuthorities = authoritiesService.extractRoleAuthorities(jwt);
 
+            roleAuthorities.forEach(grantedAuthority -> log.debug(grantedAuthority.getAuthority()));
+
             return Stream.of(grantedAuthorities, groupAuthorities, roleAuthorities)
                     .flatMap(Collection::stream)
                     .toList();

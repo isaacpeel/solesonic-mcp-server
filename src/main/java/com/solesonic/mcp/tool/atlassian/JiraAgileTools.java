@@ -28,11 +28,21 @@ public class JiraAgileTools {
     }
 
     public record ListBoardsRequest(Integer startAt, Integer maxResults, String type, String name, String projectKeyOrId, String accountId){}
-    public record BoardIssuesRequest(String boardId,
+
+    public record BoardIssuesRequest(@McpToolParam(description = "The ID of the board to retrieve jira issues for.")
+//                                     @JsonProperty("board_id")
+                                     String boardId,
                                      @McpToolParam(required = false) String jql,
-                                     @McpToolParam(required = false) Integer startAt,
-                                     @McpToolParam(required = false, description = "The number of issues to return.  Will default to 15.") Integer maxResults,
-                                     @McpToolParam boolean validateQuery) {}
+                                     @McpToolParam(required = false)
+//                                     @JsonProperty("start_at")
+                                     Integer startAt,
+                                     @McpToolParam(required = false, description = "The number of issues to return.  Will default to 15.")
+//                                     @JsonProperty("max_results")
+                                     Integer maxResults,
+                                     @McpToolParam
+//                                     @JsonProperty("validated_query")
+                                     boolean validateQuery) {}
+
     public record BoardBacklogIssuesRequest(String boardId, String jql, Integer startAt, Integer maxResults, Boolean validateQuery) {}
 
     @McpTool(name = LIST_JIRA_BOARDS, description = "Lists Jira agile boards with optional filters and pagination.")
@@ -59,9 +69,20 @@ public class JiraAgileTools {
 
     @McpTool(name = GET_JIRA_BOARD_ISSUES, description = "Lists issues on a Jira board with optional JQL and pagination.")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-ISSUES')")
-    public BoardIssues getJiraBoardIssues(@McpToolParam(description = "Board ID, JQL, pagination, and validation flag.") BoardIssuesRequest boardIssuesRequest) {
-        log.debug("Fetching issues for board: {}", boardIssuesRequest.boardId());
+    public BoardIssues getJiraBoardIssues(@McpToolParam(description = "Request for getting issue by board.  Information about the board to search.") BoardIssuesRequest boardIssuesRequest) {
+        log.debug("Getting Jira board issues");
+
+        if(boardIssuesRequest == null) {
+            throw new IllegalArgumentException("Board issues request is null");
+        }
+
+        if(boardIssuesRequest.boardId == null) {
+            throw new IllegalArgumentException("Board ID is null");
+        }
+
+        log.info("Fetching issues for board: {}", boardIssuesRequest.boardId());
         BoardIssues boardIssues = jiraAgileService.getBoardIssues(boardIssuesRequest);
+
         log.info("Found Jira board issues");
 
         return boardIssues;

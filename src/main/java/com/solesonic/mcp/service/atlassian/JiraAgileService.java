@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
@@ -90,9 +91,10 @@ public class JiraAgileService {
     }
 
     public BoardIssues getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
-        log.info("Getting Jira board issues for board ID: {}", boardIssuesRequest.boardId());
+        String boardId = boardIssuesRequest.boardId();
+        log.info("Getting Jira board issues for board ID: {}", boardId);
 
-        String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardIssuesRequest.boardId(), ISSUE_PATH};
+        String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, ISSUE_PATH};
 
         BoardIssues boardIssues = webClient.get()
                 .uri(uriBuilder -> {
@@ -106,11 +108,7 @@ public class JiraAgileService {
                         uriBuilder.queryParam(JQL, jql);
                     }
 
-                    if (maxResults != null) {
-                        uriBuilder.queryParam(MAX_RESULTS, maxResults);
-                    } else {
-                        uriBuilder.queryParam(MAX_RESULTS, 15);
-                    }
+                    uriBuilder.queryParam(MAX_RESULTS, Objects.requireNonNullElse(maxResults, 15));
 
                     if (startAt != null) {
                         uriBuilder.queryParam(START_AT, startAt);
