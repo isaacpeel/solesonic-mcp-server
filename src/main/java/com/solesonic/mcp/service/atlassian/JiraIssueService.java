@@ -33,8 +33,8 @@ public class JiraIssueService {
         this.objectMapper = objectMapper;
     }
 
-    public JiraIssue get(String jiraId) {
-        String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, jiraId};
+    public JiraIssue get(String issueId) {
+        String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -76,5 +76,18 @@ public class JiraIssueService {
         jiraIssueHolder.set(issueKey);
 
         return jiraIssue;
+    }
+
+    public void delete(String issueId) {
+        log.info("Deleting jira issue.");
+
+        String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
+
+        webClient.delete()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .build())
+                .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
+                .block();
     }
 }
