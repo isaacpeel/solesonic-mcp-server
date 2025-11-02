@@ -1,7 +1,10 @@
 package com.solesonic.mcp.model.atlassian.jira;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record Description(
         String type,
         Integer version,

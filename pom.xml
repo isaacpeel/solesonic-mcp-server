@@ -43,13 +43,25 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <spring-ai.version>1.1.0-M3</spring-ai.version>
+        <spring-ai.version>1.1.0-M4</spring-ai.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.5.19</version>
         </dependency>
 
         <dependency>
@@ -132,11 +144,15 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- Apache Commons Lang for StringUtils -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.18.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
         </dependency>
     </dependencies>
     <dependencyManagement>

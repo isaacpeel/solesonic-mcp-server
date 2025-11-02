@@ -19,6 +19,8 @@ import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_TO
 
 @Configuration
 public class AtlassianTokenBrokerClientConfig {
+    public static final String ATLASSIAN_TOKEN_BROKER = "atlassian-token-broker";
+
     @Value("${atlassian.token.broker.uri}")
     private String atlassianTokenBrokerUrl;
 
@@ -26,7 +28,7 @@ public class AtlassianTokenBrokerClientConfig {
     @Qualifier(ATLASSIAN_TOKEN_BROKER_WEB_CLIENT)
     public WebClient atlassianTokenBrokerWebClient(ObjectMapper objectMapper, OAuth2AuthorizedClientManager authorizedClientManager) {
         ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client = new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
-        oauth2Client.setDefaultClientRegistrationId("atlassian-token-broker");
+        oauth2Client.setDefaultClientRegistrationId(ATLASSIAN_TOKEN_BROKER);
 
         return WebClient.builder()
                 .baseUrl(atlassianTokenBrokerUrl)

@@ -1,12 +1,11 @@
-package com.solesonic.mcp.tool;
+package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.*;
-import com.solesonic.mcp.service.atlassian.JiraService;
+import com.solesonic.mcp.service.atlassian.JiraIssueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -14,65 +13,33 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.solesonic.mcp.service.atlassian.JiraService.ISSUE_TYPE_ID;
-import static com.solesonic.mcp.service.atlassian.JiraService.PROJECT_ID;
-import static com.solesonic.mcp.tool.AssigneeJiraTools.ASSIGN_JIRA;
+import static com.solesonic.mcp.service.atlassian.AtlassianConstants.ISSUE_TYPE_ID;
+import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
+import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
 
 /**
  * MCP tools service for Jira operations.
  * Provides assignee lookup and issue creation functionality.
  */
+@SuppressWarnings("unused")
 @Service
-public class CreateJiraTools {
-    private static final Logger log = LoggerFactory.getLogger(CreateJiraTools.class);
+public class JiraIssueTools {
+    private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
+    public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
+    public static final String GET_JIRA_ISSUE = "get_jira_issue";
 
-    private final JiraService jiraService;
+    private final JiraIssueService jiraIssueService;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public CreateJiraTools(JiraService jiraService) {
-        this.jiraService = jiraService;
+    public JiraIssueTools(JiraIssueService jiraIssueService) {
+        this.jiraIssueService = jiraIssueService;
     }
 
     public record CreateJiraResponse(String issueId, String issueUri) {}
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {}
-
-    /**
-     * Looks up the Jira account ID for a given assignee name/query.
-     *
-     * @param assignee Name or email of the user to look up
-     * @return AssigneeIdLookupResponse with the account ID or null if not found
-     */
-    @SuppressWarnings("unused")
-    @Tool(name = "assignee_id_lookup", description = "Look up Jira accountId for a given assignee string")
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public String lookupAssigneeId(String assignee) {
-        log.info("Looking up assignee ID for: {}", assignee);
-
-        if (assignee == null || assignee.trim().isEmpty()) {
-            log.warn("Empty assignee query provided");
-            throw new JiraException("Empty assignee query provided");
-        }
-
-        try {
-            List<User> users = jiraService.userSearch(assignee);
-
-            if (users == null || users.isEmpty()) {
-                log.info("No assignable users found for query: {}", assignee);
-                throw new JiraException("No assignable users found for query: " + assignee);
-            }
-
-            String accountId = users.getFirst().accountId();
-            log.info("Found assignee ID: {} for query: {}", accountId, assignee);
-            return accountId;
-
-        } catch (Exception e) {
-            log.error("Failed to lookup assignee ID for: {}", assignee, e);
-            throw new JiraException("Failed to lookup assignee: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * Creates a new Jira issue with the provided details.
@@ -80,8 +47,8 @@ public class CreateJiraTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @Tool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
-    public CreateJiraResponse createJiraIssue(@ToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
+    @McpTool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
+    public CreateJiraResponse createJiraIssue(@McpToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
         log.debug("Invoking create jira function");
         log.debug("Summary: {}", createJiraRequest.summary);
         log.debug("Description: {}", createJiraRequest.description);
@@ -147,7 +114,7 @@ public class CreateJiraTools {
 
         JiraIssue jiraIssue = JiraIssue.fields(fields).build();
 
-        JiraIssue created = jiraService.create(jiraIssue);
+        JiraIssue created = jiraIssueService.create(jiraIssue);
 
         log.debug("Created jira issue: {}", created);
 
@@ -156,5 +123,24 @@ public class CreateJiraTools {
         log.debug("Using jira uri: {}", jiraUri);
 
         return new CreateJiraResponse(created.id(), jiraUri);
+    }
+
+    @SuppressWarnings("unused")
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-DELETE')")
+    @McpTool(name = DELETE_JIRA_ISSUE, description = "Deletes a jira issue by its ID.")
+    public String deleteJiraIssue(String issueId) {
+        log.info("Deleting jira issue.");
+
+        jiraIssueService.delete(issueId);
+
+        return "Successfully deleted Jira Issue: "+issueId;
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-GET')")
+    @McpTool(name = GET_JIRA_ISSUE, description = "Gets a jira issue by its ID")
+    public JiraIssue get(String issueId) {
+        log.info("Retrieving jira issue by ID: {}", issueId);
+
+        return jiraIssueService.get(issueId);
     }
 }
