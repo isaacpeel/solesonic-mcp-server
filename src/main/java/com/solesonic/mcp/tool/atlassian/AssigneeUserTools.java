@@ -35,8 +35,7 @@ public class AssigneeUserTools {
     @SuppressWarnings("unused")
     @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid assignee for a new jira issue.")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest
-        ) {
+    public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest) {
         log.debug("Invoking user search for: {}", assigneeRequest);
 
         if(assigneeRequest == null || StringUtils.isEmpty(assigneeRequest.assignee)) {
