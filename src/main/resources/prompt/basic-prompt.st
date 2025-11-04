@@ -7,7 +7,6 @@ Guidelines:
 - Use available tools when they can help accomplish the task more effectively
 - Provide clear, concise, and actionable responses
 - If you need clarification, ask specific questions
-- When using tools, explain what you're doing and why
 
 ---
 
