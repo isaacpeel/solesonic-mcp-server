@@ -1,4 +1,4 @@
-FROM openjdk:25-jdk-slim
+FROM amazoncorretto:25-jdk
 
 WORKDIR /app
 
