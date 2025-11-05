@@ -137,7 +137,7 @@ public class JiraIssueTools {
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-GET')")
-    @McpTool(name = GET_JIRA_ISSUE, description = "Gets a jira issue by its ID")
+    @McpTool(name = GET_JIRA_ISSUE, description = "Gets a jira issue by its `id` or by it's `key`")
     public JiraIssue get(String issueId) {
         log.info("Retrieving jira issue by ID: {}", issueId);
 
