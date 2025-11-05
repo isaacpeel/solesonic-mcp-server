@@ -19,7 +19,7 @@ import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
 
 /**
  * MCP tools service for Jira operations.
- * Provides assignee lookup and issue creation functionality.
+ * Provides jiraUserName lookup and issue creation functionality.
  */
 @SuppressWarnings("unused")
 @Service
@@ -47,7 +47,7 @@ public class JiraIssueTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @McpTool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an assignee is needed always call '"+ASSIGN_JIRA+"' first.")
+    @McpTool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an jiraUserName is needed always call '"+ASSIGN_JIRA+"' first.")
     public CreateJiraResponse createJiraIssue(@McpToolParam(description = "Request to create a jira issue.") CreateJiraRequest createJiraRequest) {
         log.debug("Invoking create jira function");
         log.debug("Summary: {}", createJiraRequest.summary);

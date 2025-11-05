@@ -146,7 +146,7 @@ public record Fields(
                     null, // aggregatetimeoriginalestimate
                     null, // versions
                     null, // issuelinks
-                    assignee, // assignee
+                    assignee, // jiraUserName
                     null, // updated
                     null, // status
                     null, // components
