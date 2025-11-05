@@ -33,7 +33,7 @@ public class AssigneeUserTools {
      * @return AssigneeIdLookupResponse with the account ID or null if not found
      */
     @SuppressWarnings("unused")
-    @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid jira user that can be and assignee for a new jira issue.")
+    @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid jira user that can be an assignee for a new jira issue.  This can be used for a general jira user search by name.")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
     public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up.  This is a jira user") AssigneeRequest assigneeRequest) {
         log.debug("Invoking user search for: {}", assigneeRequest);
