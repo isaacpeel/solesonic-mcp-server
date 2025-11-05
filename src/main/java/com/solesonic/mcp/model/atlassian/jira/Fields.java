@@ -14,7 +14,7 @@ public record Fields(
         List<String> fixVersions,
         String customfield_10034,
         String aggregatetimespent,
-        String resolution,
+        Resolution resolution,
         String customfield_10035,
         String customfield_10036,
         String customfield_10037,
