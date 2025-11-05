@@ -1,5 +1,7 @@
 package com.solesonic.mcp.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -10,6 +12,8 @@ import java.util.List;
 
 @Service
 public class AuthoritiesService {
+    private static final Logger log =  LoggerFactory.getLogger(AuthoritiesService.class);
+
     public static final String GROUP = "GROUP_";
     public static final String GROUPS = "groups";
 
@@ -24,6 +28,7 @@ public class AuthoritiesService {
             return groups.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
+                    .peek(group -> log.info("User belongs to group: {}", group))
                     .map(group -> new SimpleGrantedAuthority(GROUP + group.toUpperCase()))
                     .map(GrantedAuthority.class::cast)
                     .toList();
@@ -40,6 +45,7 @@ public class AuthoritiesService {
             return  roles.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
+                    .peek(role -> log.info("User belongs to role: {}", role))
                     .map(role -> new SimpleGrantedAuthority(ROLE + role.toUpperCase()))
                     .map(GrantedAuthority.class::cast)
                     .toList();
