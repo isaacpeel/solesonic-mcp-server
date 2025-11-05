@@ -29,7 +29,7 @@ public class PromptProvider {
     @McpPrompt(name = "basic-prompt")
     public McpSchema.GetPromptResult basicPrompt(@McpArg(name="userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
-        log.info("Getting basic prompt...");
+        log.info("Getting basic prompt.");
 
         Map<String, Object> promptContext = Map.of(AGENT_NAME, agentName,
                 USER_MESSAGE, userMessage);
