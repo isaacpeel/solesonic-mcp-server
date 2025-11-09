@@ -90,9 +90,7 @@ public class JiraAgileTools {
                                     @McpToolParam(required = false, description = BOARD_NAME_DESCRIPTION)
                                     String name,
                                     @McpToolParam(required = false, description = PROJECT_KEY_OR_ID_DESCRIPTION)
-                                    String projectKeyOrId,
-                                    @McpToolParam(required = false, description = ACCOUNT_ID_DESCRIPTION)
-                                    String accountId){}
+                                    String projectKeyOrId){}
 
     public record BoardIssuesRequest(@McpToolParam(description = BOARD_ID_DESCRIPTION)
                                      String boardId,

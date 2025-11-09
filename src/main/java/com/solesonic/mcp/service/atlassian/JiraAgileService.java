@@ -43,25 +43,26 @@ public class JiraAgileService {
     }
 
     public Boards listBoards(JiraAgileTools.ListBoardsRequest listBoardsRequest) {
-        log.debug("Listing Jira boards for account ID: {}", listBoardsRequest.accountId());
+        log.info("Listing Jira boards");
 
         String[] baseUri = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH};
 
-        return webClient.get()
+        Boards boards = webClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(baseUri);
                     uriBuilder.queryParamIfPresent(START_AT, Optional.ofNullable(listBoardsRequest.startAt()));
                     uriBuilder.queryParamIfPresent(MAX_RESULTS, Optional.ofNullable(listBoardsRequest.maxResults()));
                     uriBuilder.queryParamIfPresent(TYPE, Optional.ofNullable(listBoardsRequest.type()));
                     uriBuilder.queryParamIfPresent(NAME, Optional.ofNullable(listBoardsRequest.name()));
-                    uriBuilder.queryParamIfPresent(ACCOUNT_ID, Optional.ofNullable(listBoardsRequest.accountId()));
                     uriBuilder.queryParamIfPresent(PROJECT_KEY_OR_ID, Optional.ofNullable(listBoardsRequest.projectKeyOrId()));
-                    uriBuilder.queryParamIfPresent(ACCOUNT_ID, Optional.ofNullable(listBoardsRequest.accountId()));
 
                     return uriBuilder.build();
                 })
                 .exchangeToMono(response -> response.bodyToMono(Boards.class))
                 .block();
+
+        log.info("Jira boards retrieved successfully");
+        return boards;
     }
 
     public Board getBoard(String boardId) {
