@@ -52,7 +52,7 @@ public class JiraIssueTools {
             List<String> acceptanceCriteria, String assigneeId) {
     }
 
-    public record DeleteConfirmation(boolean confirmed, UUID chatId) {
+    public record DeleteConfirmation(boolean confirmed, String chatId) {
     }
 
     /**
@@ -151,16 +151,23 @@ public class JiraIssueTools {
         log.info("Delete request for jira issue: {}", keyOrIssueId);
 
         Map<String, Object> toolContext = mcpSyncRequestContext.requestMeta();
-        assert toolContext != null;
-        String chatId = toolContext.get("chatId").toString();
-        log.info("Chat ID from ToolContext: {}", chatId);
+
+        String chatId;
+        if(toolContext != null && toolContext.containsKey("chatId")) {
+            chatId = toolContext.get("chatId").toString();
+            log.info("Chat ID from ToolContext: {}", chatId);
+        } else {
+            chatId = UUID.randomUUID().toString();
+        }
 
         mcpSyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId));
+
+        String finalChatId = chatId;
 
         StructuredElicitResult<DeleteConfirmation> elicitation = mcpSyncRequestContext.elicit(
                 elicit -> elicit
                         .message("Are you sure you want to delete Jira issue: " + keyOrIssueId + "?")
-                        .meta(Map.of("chatId", chatId)),
+                        .meta(Map.of("chatId", finalChatId)),
                 DeleteConfirmation.class
         );
 
