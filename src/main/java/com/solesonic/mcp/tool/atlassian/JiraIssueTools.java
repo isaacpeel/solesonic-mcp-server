@@ -33,6 +33,7 @@ public class JiraIssueTools {
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
     public static final String GET_JIRA_ISSUE = "get_jira_issue";
+    public static final String CHAT_ID = "chatId";
 
     private final JiraIssueService jiraIssueService;
 
@@ -52,8 +53,7 @@ public class JiraIssueTools {
             List<String> acceptanceCriteria, String assigneeId) {
     }
 
-    public record DeleteConfirmation(boolean confirmed, String chatId) {
-    }
+    public record DeleteConfirmation(boolean confirmed, String chatId) {}
 
     /**
      * Creates a new Jira issue with the provided details.
@@ -153,8 +153,8 @@ public class JiraIssueTools {
         Map<String, Object> toolContext = mcpSyncRequestContext.requestMeta();
 
         String chatId;
-        if(toolContext != null && toolContext.containsKey("chatId")) {
-            chatId = toolContext.get("chatId").toString();
+        if(toolContext != null && toolContext.containsKey(CHAT_ID)) {
+            chatId = toolContext.get(CHAT_ID).toString();
             log.info("Chat ID from ToolContext: {}", chatId);
         } else {
             chatId = UUID.randomUUID().toString();
@@ -167,9 +167,7 @@ public class JiraIssueTools {
         StructuredElicitResult<DeleteConfirmation> elicitation = mcpSyncRequestContext.elicit(
                 elicit -> elicit
                         .message("Are you sure you want to delete Jira issue: " + keyOrIssueId + "?")
-                        .meta(Map.of("chatId", finalChatId)),
-                DeleteConfirmation.class
-        );
+                        .meta(Map.of(CHAT_ID, finalChatId)), DeleteConfirmation.class);
 
         McpSchema.ElicitResult.Action action = elicitation.action();
 
