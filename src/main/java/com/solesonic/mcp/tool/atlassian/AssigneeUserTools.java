@@ -24,31 +24,31 @@ public class AssigneeUserTools {
     }
 
     public record AssigneeResponse(String assigneeId) {}
-    public record AssigneeRequest(String assignee) {}
+    public record AssigneeRequest(@McpToolParam(description = "The name of a jira user.") String jiraUserName) {}
 
     /**
-     * Looks up the Jira account ID for a given assignee name/query.
+     * Looks up the Jira account ID for a given jiraUserName name/query.
      *
-     * @param assigneeRequest The request used to look up an assignee for jira issues
+     * @param assigneeRequest The request used to look up an jiraUserName for jira issues
      * @return AssigneeIdLookupResponse with the account ID or null if not found
      */
     @SuppressWarnings("unused")
-    @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid assignee for a new jira issue.")
+    @McpTool(name = ASSIGN_JIRA, description = "Searches for a valid jira user that can be an jiraUserName for a new jira issue.  This can be used for a general jira user search by name.")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up.") AssigneeRequest assigneeRequest) {
+    public AssigneeResponse assigneeLookup(@McpToolParam(description = "Assignee to look up or user search.  Use this to search users by name or as an jiraUserName.") AssigneeRequest assigneeRequest) {
         log.debug("Invoking user search for: {}", assigneeRequest);
 
-        if(assigneeRequest == null || StringUtils.isEmpty(assigneeRequest.assignee)) {
-            log.warn("Empty assignee name provided");
-            throw new JiraException("Empty assignee name provided");
+        if(assigneeRequest == null || StringUtils.isEmpty(assigneeRequest.jiraUserName())) {
+            log.warn("Empty jiraUserName name provided");
+            throw new JiraException("Empty jiraUserName name provided");
         }
 
-        User user = jiraUserService.search(assigneeRequest.assignee())
+        User user = jiraUserService.search(assigneeRequest.jiraUserName())
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new JiraException("No assignable user found"));
 
-        log.debug("Found assignee with ID: {}", user.accountId());
+        log.debug("Found jiraUserName with ID: {}", user.accountId());
 
         return new AssigneeResponse(user.accountId());
     }

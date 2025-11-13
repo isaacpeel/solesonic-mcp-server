@@ -47,7 +47,7 @@ class JiraAgileServiceTest {
         when(requestHeadersSpec.exchangeToMono(any()))
                 .thenReturn(Mono.just(new Boards(List.of(new Board(1, "self", "Board 1", "scrum")), 50, 1, true)));
 
-        ListBoardsRequest listBoardsRequest = new ListBoardsRequest(0, 50, null, null, null, null);
+        ListBoardsRequest listBoardsRequest = new ListBoardsRequest(0, 50, null, null, null);
         Boards boards = service.listBoards(listBoardsRequest);
 
         assertNotNull(boards);

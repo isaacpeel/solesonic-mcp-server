@@ -52,7 +52,8 @@ public class MpcSecurityConfig {
             "Content-Type",
             "Cache-Control",
             "Expires",
-            "mcp-protocol-version"
+            "mcp-protocol-version",
+            "Mcp-Session-Id"
     );
 
 
@@ -107,6 +108,7 @@ public class MpcSecurityConfig {
         configuration.setAllowedMethods(List.of(GET.name(), OPTIONS.name(), POST.name()));
 
         configuration.setAllowedHeaders(ALLOWED_HEADERS);
+        configuration.setExposedHeaders(ALLOWED_HEADERS);
 
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();

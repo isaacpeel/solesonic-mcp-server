@@ -21,10 +21,7 @@ public class JiraIssueService {
     @Value("${solesonic.llm.jira.cloud.id.path}")
     private String cloudIdPath;
 
-
     private final ThreadLocal<String> jiraIssueHolder = ThreadLocal.withInitial(() -> null);
-
-
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
@@ -36,12 +33,16 @@ public class JiraIssueService {
     public JiraIssue get(String issueId) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
-        return webClient.get()
+        JiraIssue jiraIssue = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
                 .block();
+
+        log.info("Jira issue successfully retrieved: {}", issueId);
+
+        return jiraIssue;
     }
 
     public JiraIssue create(JiraIssue jiraIssue) {
