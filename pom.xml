@@ -43,7 +43,7 @@
     </scm>
     <properties>
         <java.version>25</java.version>
-        <spring-ai.version>1.1.0-RC1</spring-ai.version>
+        <spring-ai.version>1.1.0</spring-ai.version>
     </properties>
 
     <dependencies>
