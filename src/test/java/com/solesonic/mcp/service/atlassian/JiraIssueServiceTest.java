@@ -2,6 +2,7 @@ package com.solesonic.mcp.service.atlassian;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.exception.atlassian.DuplicateJiraCreationException;
+import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,5 +101,30 @@ class JiraIssueServiceTest {
         assertThrows(DuplicateJiraCreationException.class, () ->
                 service.create(new JiraIssue.Builder().id("2").key("TEMP2").build())
         );
+    }
+
+    @Test
+    void create_shouldThrowJiraException_withErrorDetails_whenJiraReturnsErrors() {
+        WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
+        WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
+
+        when(webClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+
+        String errorJson = "{" +
+                "\"errorMessages\":[]," +
+                "\"errors\":{\"summary\":\"You must specify a summary of the issue.\"}" +
+                "}";
+
+        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(errorJson));
+
+        JiraIssue input = new JiraIssue.Builder().id("1").key("TEMP").build();
+
+        JiraException ex = assertThrows(JiraException.class, () -> service.create(input));
+
+        assertTrue(ex.getMessage().contains("Jira issue creation failed"));
+        assertTrue(ex.getMessage().contains("summary: You must specify a summary of the issue."));
+        assertEquals(errorJson, ex.getResponseBody());
     }
 }
