@@ -63,6 +63,7 @@ public class JiraIssueService {
                 .block();
 
         try {
+            log.info("Jira create response JSON: {}", jiraIssueJson);
             jiraIssue = objectMapper.readValue(jiraIssueJson, JiraIssue.class);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
