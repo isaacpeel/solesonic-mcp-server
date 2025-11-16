@@ -23,7 +23,6 @@ Tool Usage Best Practices (optional, when tools are applicable):
 
 Constraints & Safety:
 - Respect privacy and security; never request or expose secrets or sensitive data.
-- Stay within legal and content policies.
 - If something is out of scope or not possible, explain why and suggest safe, practical alternatives.
 
 ---
