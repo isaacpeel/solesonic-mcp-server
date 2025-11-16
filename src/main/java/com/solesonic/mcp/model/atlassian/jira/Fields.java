@@ -1,6 +1,7 @@
 package com.solesonic.mcp.model.atlassian.jira;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 
 import java.util.List;
 
@@ -62,7 +63,7 @@ public record Fields(
         String customfield_10009,
         String aggregatetimeestimate,
         List<String> attachment,
-        String summary,
+        @McpToolParam(description = "The summary for the jira issue.") String summary,
         User creator,
         List<String> subtasks,
         User reporter

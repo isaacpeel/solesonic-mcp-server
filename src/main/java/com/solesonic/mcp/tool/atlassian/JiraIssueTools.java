@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.ISSUE_TYPE_ID;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
-import static com.solesonic.mcp.tool.atlassian.AssigneeUserTools.ASSIGN_JIRA;
 
 /**
  * MCP tools service for Jira operations.
@@ -47,10 +46,38 @@ public class JiraIssueTools {
     public record CreateJiraResponse(String issueId, String issueUri) {
     }
 
+    public static final String CREATE_JIRA_ISSUE_DESCRIPTION = """
+            A short, required title for the Jira issue (the “summary” field in Jira).
+            - Must not be empty.
+            - Should briefly describe the user story or task (for example: "Add password reset flow to login page").
+            """;
+
+    public static final String CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION = """
+            A required, detailed description of the Jira issue.
+            - Explain the background, goal, and any important details.
+            - Include any context that will help the assignee understand what to implement or fix.
+            - Do NOT leave this blank; always provide a meaningful description.
+            """;
+
+    public static final String CREATE_JIRA_ISSUE_ASSIGNEE_DESCRIPTION = """
+            The Jira account ID of the user to assign this issue to.
+            - This is NOT the display name or email.
+            - Before calling this tool, if the user specified an assignee by name or email, first call the `jira_assignee_search` tool to look up the user.
+            - Use the `accountId` returned by `jira_assignee_search` as this `assigneeId` value.
+            - Do NOT guess or invent an ID; always use a real `accountId` from `jira_assignee_search`, or omit this only if the user explicitly requests an unassigned issue.
+    """;
+
+    public static final String CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION = """
+            A list of acceptance criteria for the Jira issue.
+             - Each item should be one clear, testable condition (for example: "User can request a password reset from the login page").
+             - Include at least one item whenever possible.
+    """;
+
     public record CreateJiraRequest(
             @McpToolParam(description = "A summary of the jira issue, this is a short title for the user story.") String summary,
             @McpToolParam(description = "This is the main body of the jira ") String description,
-            List<String> acceptanceCriteria, String assigneeId) {
+            @McpToolParam(description = CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION) List<String> acceptanceCriteria,
+            @McpToolParam(description = CREATE_JIRA_ISSUE_ASSIGNEE_DESCRIPTION) String assigneeId) {
     }
 
     public record DeleteConfirmation(boolean confirmed, String chatId) {}
@@ -62,8 +89,8 @@ public class JiraIssueTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @McpTool(name = CREATE_JIRA_ISSUE, description = "Creates a jira issue.  Use responsibly and ensure no repeated calls for the same request.  If an jiraUserName is needed always call '" + ASSIGN_JIRA + "' first.")
-    public CreateJiraResponse createJiraIssue(@McpToolParam(description = "Request to create a jira issue.  This includes a `description` of the user story, a list of its `acceptanceCriteria` and an `assigneeId") CreateJiraRequest createJiraRequest) {
+    @McpTool(name = CREATE_JIRA_ISSUE, description = CREATE_JIRA_ISSUE_DESCRIPTION)
+    public CreateJiraResponse createJiraIssue(@McpToolParam(description = CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION) CreateJiraRequest createJiraRequest) {
         log.debug("Invoking create jira function");
         log.debug("Summary: {}", createJiraRequest.summary);
         log.debug("Description: {}", createJiraRequest.description);
