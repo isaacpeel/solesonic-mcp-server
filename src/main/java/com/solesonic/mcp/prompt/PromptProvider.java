@@ -41,7 +41,7 @@ public class PromptProvider {
     @Value("classpath:prompt/create_confluence_page_prompt.st")
     private Resource createConfluencePagePrompt;
 
-    @Value("classpath:prompt/create_jira__issue_prompt.st")
+    @Value("classpath:prompt/create_jira_issue_prompt.st")
     private Resource createJiraIssuePrompt;
     
     private static final String BASIC_PROMPT_DESCRIPTION = """

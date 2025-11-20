@@ -49,7 +49,6 @@ So that [benefit/value].
 
 2. **Assignee Validation** (if assignee specified):
    - Call `assignee_id_lookup` with the exact username
-   - Example: If user says "assign to john.doe", call with {lbrace}"assignee": "john.doe"{rbrace}
    - Wait for response and verify assigneeId is not null
    - If null, inform user the assignee was not found and ask for correct username
 
@@ -65,7 +64,7 @@ So that [benefit/value].
    - Assigned user (if applicable)
 
 **ERROR HANDLING:**
-- If assignee lookup returns null: "The assignee '{lbrace}username{rbrace}' was not found in Jira. Please provide a valid username."
+- If assignee lookup returns null: "The assignee 'username' was not found in Jira. Please provide a valid username."
 - If issue creation fails: Provide specific error details to help user correct the request.
 
 ### AVAILABLE TOOLS
