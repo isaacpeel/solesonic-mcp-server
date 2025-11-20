@@ -1,6 +1,9 @@
 package com.solesonic.mcp.prompt;
 
+import com.solesonic.mcp.tool.atlassian.AssigneeUserTools;
+import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
+import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
+import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
+
 @SuppressWarnings("unused")
 @Service
 public class PromptProvider {
@@ -24,6 +29,7 @@ public class PromptProvider {
     private static final String AGENT_NAME = "agentName";
     private static final String USER_MESSAGE = "userMessage";
     private static final String INPUT = "input";
+    public static final String AVAILABLE_TOOLS = "available_tools";
 
     @Value("classpath:prompt/basic-prompt.st")
     private Resource basicPrompt;
@@ -137,12 +143,12 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira agile board prompt.");
 
-        String availableTools = JiraAgileTools.availableTools(JiraAgileTools.class);
+        String availableTools = availableTools(JiraAgileTools.class);
 
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
                 INPUT, userMessage,
-                "available_tools", availableTools
+                AVAILABLE_TOOLS, availableTools
         );
 
         return buildPromptResult("jira-agile-board-prompt", this.jiraAgilePrompt, templateVariables);
@@ -159,9 +165,12 @@ public class PromptProvider {
     ) {
         log.info("Getting Confluence page creation prompt.");
 
+        String availableTools = availableTools(CreateConfluenceTools.class);
+
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
-                INPUT, userMessage
+                INPUT, userMessage,
+                AVAILABLE_TOOLS, availableTools
         );
 
         return buildPromptResult("create-confluence-page-prompt", this.createConfluencePagePrompt, templateVariables);
@@ -178,9 +187,12 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira issue creation prompt.");
 
+        String availableTools = availableTools(JiraIssueTools.class, AssigneeUserTools.class);
+
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
-                INPUT, userMessage
+                INPUT, userMessage,
+                AVAILABLE_TOOLS, availableTools
         );
 
         return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);

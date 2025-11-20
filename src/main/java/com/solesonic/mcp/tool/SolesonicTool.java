@@ -7,12 +7,14 @@ import java.util.stream.Collectors;
 
 public class SolesonicTool {
     /**
-     * Generates a dynamic string describing all available tools in this class
+     * Generates a dynamic string describing all available tools in the provided classes
      * based on the @McpTool annotation.
+     * @param toolClasses One or more classes to inspect for tools
      * @return A formatted string suitable for LLM prompt context.
      */
-    public static String availableTools(Class<?> toolClass) {
-        return Arrays.stream(toolClass.getMethods())
+    public static String availableTools(Class<?>... toolClasses) {
+        return Arrays.stream(toolClasses)
+                .flatMap(clazz -> Arrays.stream(clazz.getMethods()))
                 .filter(method -> method.isAnnotationPresent(McpTool.class))
                 .map(method -> {
                     McpTool tool = method.getAnnotation(McpTool.class);
