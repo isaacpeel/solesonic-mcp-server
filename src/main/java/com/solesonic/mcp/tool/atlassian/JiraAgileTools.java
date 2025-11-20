@@ -4,6 +4,7 @@ import com.solesonic.mcp.model.atlassian.agile.Board;
 import com.solesonic.mcp.model.atlassian.agile.BoardIssues;
 import com.solesonic.mcp.model.atlassian.agile.Boards;
 import com.solesonic.mcp.service.atlassian.JiraAgileService;
+import com.solesonic.mcp.tool.SolesonicTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.mcp.annotation.McpTool;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 @SuppressWarnings("unused")
 @Service
-public class JiraAgileTools {
+public class JiraAgileTools extends SolesonicTool {
     private static final Logger log = LoggerFactory.getLogger(JiraAgileTools.class);
 
     public static final String LIST_JIRA_BOARDS = "list_jira_boards";

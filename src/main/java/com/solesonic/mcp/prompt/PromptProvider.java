@@ -1,5 +1,6 @@
 package com.solesonic.mcp.prompt;
 
+import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,7 @@ public class PromptProvider {
             - “Summarize the in-progress work on board 123.”
             - “Identify bottlenecks and blocked issues on this Jira board.”
             - “Help me plan the next sprint using the issues on board 42.”
+            - "Show me all issues in board 1."
 
             This prompt is appropriate when the agent should use a Jira board ID and tools like `get_jira_board_issues`
             to inspect or reason about the content of a board.
@@ -109,7 +111,9 @@ public class PromptProvider {
             Also do not use it for non-Jira general tasks or for creating Confluence pages.
             """;
 
-    @McpPrompt(name = "basic-prompt", description = BASIC_PROMPT_DESCRIPTION)
+    @McpPrompt(name = "basic-prompt", 
+              title = "General Assistant",
+              description = BASIC_PROMPT_DESCRIPTION)
     public McpSchema.GetPromptResult basicPrompt(@McpArg(name="userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
@@ -124,6 +128,7 @@ public class PromptProvider {
 
     @McpPrompt(
             name = "jira-agile-board-prompt",
+            title = "Jira Agile Board Analysis",
             description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION
     )
     public McpSchema.GetPromptResult jiraAgileBoardPrompt(
@@ -132,9 +137,12 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira agile board prompt.");
 
+        String availableTools = JiraAgileTools.availableTools(JiraAgileTools.class);
+
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
-                INPUT, userMessage
+                INPUT, userMessage,
+                "available_tools", availableTools
         );
 
         return buildPromptResult("jira-agile-board-prompt", this.jiraAgilePrompt, templateVariables);
@@ -142,6 +150,7 @@ public class PromptProvider {
 
     @McpPrompt(
             name = "create-confluence-page-prompt",
+            title = "Create Confluence Page",
             description = CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION
     )
     public McpSchema.GetPromptResult createConfluencePagePrompt(
@@ -160,6 +169,7 @@ public class PromptProvider {
 
     @McpPrompt(
             name = "create-jira-issue-prompt",
+            title = "Create Jira Issue",
             description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION
     )
     public McpSchema.GetPromptResult createJiraIssuePrompt(
