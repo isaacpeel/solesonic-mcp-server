@@ -15,3 +15,8 @@ Your primary role is to provide direct, helpful, and intelligent responses acros
 ---
 
 User Request: {userMessage}
+
+### AVAILABLE TOOLS
+The following tools are currently loaded in your environment. Use them precisely as named:
+
+{available_tools}

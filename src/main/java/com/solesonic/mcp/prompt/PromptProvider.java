@@ -1,5 +1,6 @@
 package com.solesonic.mcp.prompt;
 
+import com.solesonic.mcp.service.WeatherService;
 import com.solesonic.mcp.tool.atlassian.AssigneeUserTools;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
@@ -124,9 +125,12 @@ public class PromptProvider {
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
 
+        String availableTools = availableTools(WeatherService.class);
+
         Map<String, Object> promptContext = Map.of(
                 AGENT_NAME, agentName,
-                USER_MESSAGE, userMessage
+                USER_MESSAGE, userMessage,
+                AVAILABLE_TOOLS, availableTools
         );
 
         return buildPromptResult("basic-prompt", this.basicPrompt, promptContext);
