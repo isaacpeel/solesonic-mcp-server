@@ -68,9 +68,9 @@ public class JiraIssueTools {
     """;
 
     public static final String CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION = """
-            A list of acceptance criteria for the Jira issue.
-             - Each item should be one clear, testable condition (for example: "User can request a password reset from the login page").
-             - Include at least one item whenever possible.
+            A required list of acceptance criteria for the Jira issue.
+             - This field is MANDATORY. You must NOT send an empty list.
+             - If the user did not provide specific criteria, you MUST generate at least 3 logical, testable conditions based on the description.
     """;
 
     public record CreateJiraRequest(

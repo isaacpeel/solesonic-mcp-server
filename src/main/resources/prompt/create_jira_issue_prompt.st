@@ -45,9 +45,10 @@ So that [benefit/value].
    - Issue summary/title (format as user story when appropriate)
    - Detailed description (minimum 2 sentences, use user story format for features)
    - Assignee username (if mentioned)
-   - Acceptance criteria (convert user requirements to measurable, testable criteria)
+   - Acceptance criteria (MANDATORY: If the user did not provide specific criteria, you MUST generate them based on the description. Do not call the tool with an empty list.)
 
 2. **Assignee Validation** (if assignee specified):
+   - Call `assignee_id_lookup` with the exact username
    - Call `assignee_id_lookup` with the exact username
    - Wait for response and verify assigneeId is not null
    - If null, inform user the assignee was not found and ask for correct username
