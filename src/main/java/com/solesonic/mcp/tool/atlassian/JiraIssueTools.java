@@ -68,7 +68,7 @@ public class JiraIssueTools {
     """;
 
     public static final String CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION = """
-            A required list of acceptance criteria for the Jira issue.
+            A required `String[]` of acceptance criteria for the Jira issue.
              - This field is MANDATORY. You must NOT send an empty list.
              - If the user did not provide specific criteria, you MUST generate at least 3 logical, testable conditions based on the description.
     """;
