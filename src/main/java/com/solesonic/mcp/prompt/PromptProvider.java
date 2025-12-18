@@ -5,6 +5,8 @@ import com.solesonic.mcp.tool.atlassian.AssigneeUserTools;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
+import com.solesonic.mcp.tool.general.DateTools;
+import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +127,7 @@ public class PromptProvider {
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
 
-        String availableTools = availableTools(WeatherService.class, JiraAgileTools.class, JiraIssueTools.class);
+        String availableTools = availableTools(WeatherService.class, JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
 
         Map<String, Object> promptContext = Map.of(
                 AGENT_NAME, agentName,
@@ -147,7 +149,7 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira agile board prompt.");
 
-        String availableTools = availableTools(JiraAgileTools.class, JiraIssueTools.class);
+        String availableTools = availableTools(JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
 
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
@@ -169,7 +171,7 @@ public class PromptProvider {
     ) {
         log.info("Getting Confluence page creation prompt.");
 
-        String availableTools = availableTools(CreateConfluenceTools.class);
+        String availableTools = availableTools(CreateConfluenceTools.class, WebSearchTools.class, DateTools.class);
 
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
@@ -191,7 +193,7 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira issue creation prompt.");
 
-        String availableTools = availableTools(JiraIssueTools.class, AssigneeUserTools.class);
+        String availableTools = availableTools(JiraIssueTools.class, AssigneeUserTools.class, WebSearchTools.class, DateTools.class);
 
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
