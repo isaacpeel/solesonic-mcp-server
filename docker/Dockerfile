@@ -2,7 +2,7 @@ FROM amazoncorretto:25-jdk
 
 WORKDIR /app
 
-COPY target/solesonic-mcp-server-0.1.0.jar app.jar
+COPY target/solesonic-mcp-server-*.jar app.jar
 
 EXPOSE 9443
 
