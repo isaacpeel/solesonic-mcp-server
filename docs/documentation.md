@@ -10,6 +10,8 @@ Who this is for
 Table of Contents
 - Overview and Architecture
 - Quickstart
+- Prompts (MCP server-side prompts)
+- Web Search
 - Configuration
 - Security
 - Endpoints (MCP over HTTP)
@@ -42,6 +44,8 @@ High-level flow
 
 See also
 - Quickstart: ./quickstart.md
+- Prompts: ./prompts.md
+- Web Search: ./web-search.md
 - Security: ./security.md
 - Configuration: ./configuration.md
 - Endpoints: ./endpoints.md

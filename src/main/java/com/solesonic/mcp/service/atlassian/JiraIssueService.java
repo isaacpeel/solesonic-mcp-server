@@ -3,6 +3,8 @@ package com.solesonic.mcp.service.atlassian;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.exception.atlassian.DuplicateJiraCreationException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +63,47 @@ public class JiraIssueService {
                 .bodyValue(jiraIssue)
                 .exchangeToMono(response -> response.bodyToMono(String.class))
                 .block();
+
+        log.info("Jira create response JSON: {}", jiraIssueJson);
+
+        if (jiraIssueJson == null || jiraIssueJson.isBlank()) {
+            throw new JiraException("Jira issue creation failed: empty response from Jira.", jiraIssueJson);
+        }
+
+        // Detect Jira error structure in the JSON body and surface a helpful message to tool callers
+        try {
+            JsonNode root = objectMapper.readTree(jiraIssueJson);
+
+            boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
+            boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
+
+            if (hasErrorMessages || hasErrorsObject) {
+                StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
+
+                if (hasErrorMessages) {
+                    for (JsonNode msgNode : root.get("errorMessages")) {
+                        if (messageBuilder.length() > 30) { // already has some content
+                            messageBuilder.append("; ");
+                        }
+                        messageBuilder.append(msgNode.asText());
+                    }
+                }
+
+                if (hasErrorsObject) {
+                    root.get("errors").properties().forEach(entry -> {
+                        if (messageBuilder.length() > 30) {
+                            messageBuilder.append("; ");
+                        }
+                        messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asText());
+                    });
+                }
+
+                throw new JiraException(messageBuilder.toString(), jiraIssueJson);
+            }
+        } catch (JsonProcessingException e) {
+            // If we cannot parse for errors, proceed to try mapping to a JiraIssue below.
+            log.debug("Unable to parse Jira response for error details.", e);
+        }
 
         try {
             jiraIssue = objectMapper.readValue(jiraIssueJson, JiraIssue.class);

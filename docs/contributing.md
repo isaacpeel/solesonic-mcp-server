@@ -1,9 +1,9 @@
 # Contributing
 
 Development setup
-- Prerequisites: JDK 24+, Maven 3.9+
+- Prerequisites: JDK 25+, Maven 3.9+
 - Build and test: ./mvnw clean verify
-- Run locally: java -jar target/solesonic-mcp-server-0.0.1.jar
+- Run locally: java -jar target/solesonic-mcp-server-1.1.0.jar
 
 Coding guidelines
 - Java, Spring Boot conventions; constructor injection for new beans

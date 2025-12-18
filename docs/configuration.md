@@ -17,6 +17,15 @@ Key properties (environment variables in parentheses)
   - spring.ai.mcp.server.name=solesonic-mcp-server
   - spring.ai.mcp.server.version=1.0.0
   - spring.ai.mcp.server.type=sync
+- Web Search (Tavily)
+  - websearch.provider=tavily
+  - tavily.api.key=(${TAVILY_API_KEY})
+  - tavily.api.endpoint=(${TAVILY_API_ENDPOINT:https://api.tavily.com/search})
+  - websearch.default.max-results=10
+  - websearch.advanced.max-results=25
+  - websearch.news.max-results=20
+  - websearch.extract.max-urls=5
+  - websearch.default.depth=basic   # basic|advanced (provider-specific)
 - Jira tools
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
@@ -39,6 +48,8 @@ Examples
 - Local overrides
   - export ISSUER_URI=https://<your-issuer>
   - export JWK_SET_URI=https://<your-domain>/.well-known/jwks.json
+  - export TAVILY_API_KEY=<your-tavily-api-key>
+  - export TAVILY_API_ENDPOINT=https://api.tavily.com/search
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
@@ -50,3 +61,5 @@ Examples
 Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
+- Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
+- Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.
