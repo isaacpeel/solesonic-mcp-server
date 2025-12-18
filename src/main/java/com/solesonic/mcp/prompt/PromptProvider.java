@@ -125,7 +125,7 @@ public class PromptProvider {
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
 
-        String availableTools = availableTools(WeatherService.class);
+        String availableTools = availableTools(WeatherService.class, JiraAgileTools.class, JiraIssueTools.class);
 
         Map<String, Object> promptContext = Map.of(
                 AGENT_NAME, agentName,
@@ -147,7 +147,7 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira agile board prompt.");
 
-        String availableTools = availableTools(JiraAgileTools.class);
+        String availableTools = availableTools(JiraAgileTools.class, JiraIssueTools.class);
 
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,

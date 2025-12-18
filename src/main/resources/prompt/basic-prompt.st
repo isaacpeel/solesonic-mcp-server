@@ -10,7 +10,6 @@ Your primary role is to provide direct, helpful, and intelligent responses acros
 **Guidelines:**
 - Analyze the user's intent. If it's a straightforward question or request, answer it immediately and directly.
 - Be concise and actionable.
-- Do not reference code from context attachments unless the user explicitly asks about it or it is strictly necessary to solve the problem.
 
 ---
 
