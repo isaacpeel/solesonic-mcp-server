@@ -7,13 +7,16 @@
 
 ## Features
 
-- 🔗 HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
-- 🧰 Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
-- 🔐 OAuth2 Resource Server (JWT) — JWT validation; group claims mapped to authorities
-- 🔏 MCP Authorization & Dynamic Client Registration — see [Authorization](docs/authorization.md)
-- 👥 Group & Scope AuthZ — `groups` → `GROUP_<name>` `roles` → `ROLE_<role>` authorities; scopes → `SCOPE_<scope>`
+- HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
+- Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
+- OAuth2 Resource Server (JWT) — JWT validation; group claims mapped to authorities
+- MCP Authorization & Dynamic Client Registration — see [Authorization](docs/authorization.md)
+- Group & Role Authorization — `groups` → `GROUP_<name>` `roles` → `ROLE_<role>`
 - ⚡ Atlassian Token Broker — Client-credentials integration for short-lived Atlassian access tokens
 - 🛡️ Production SSL Ready — PKCS12 keystore via `ssl` profile; TLS 1.2/1.3
+- Web Search Tools — General, advanced, and news search via Tavily; content extraction
+- MCP Prompts — Server-exposed prompts for structured workflows and agent guidance
+- Elicitation Prompts — Guided workflows for structured user input and problem refinement
 
 ## Quick Start
 
@@ -88,11 +91,13 @@ See:
 - [Tools](docs/tools.md)
 - [Security](docs/security.md)
 - [Configuration](docs/configuration.md)
+- [Prompts](docs/prompts.md)
+- [Web Search](docs/web-search.md)
 
 ## Documentation
 
 - Start here: [Documentation](docs/documentation.md)
-- Deep dives: [Configuration](docs/configuration.md), [Security](docs/security.md), [Endpoints](docs/endpoints.md), [Tools](docs/tools.md), [Deployment](docs/deployment.md), [Troubleshooting](docs/troubleshooting.md)
+- Deep dives: [Configuration](docs/configuration.md), [Security](docs/security.md), [Endpoints](docs/endpoints.md), [Tools](docs/tools.md), [Prompts](docs/prompts.md), [Web Search](docs/web-search.md), [Deployment](docs/deployment.md), [Troubleshooting](docs/troubleshooting.md)
 
 ---
 

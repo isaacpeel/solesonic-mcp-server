@@ -19,7 +19,12 @@ Authorization
 - Tool-level restrictions via @PreAuthorize
   - Weather tool requires ROLE_MCP-GET-WEATHER
   - Jira tools require ROLE_MCP-CREATE-JIRA
+  - Web Search tools require ROLE_MCP-WEB-SEARCH
 - There is no hard-coded required scope for /mcp in this repository; use group/role/scope-based method constraints to control access to individual tools.
+
+Prompts
+- Prompt discovery and execution are available to authenticated users; prompts themselves do not require additional authorities beyond standard MCP access.
+- Prompts may reference tools that have their own authorization. Agents should handle 403 errors when following prompt guidance to call tools.
 
 Token acquisition (example - placeholder)
 - Using a client credentials grant (your IdP will differ):
@@ -44,3 +49,6 @@ Troubleshooting
 - Confirm your token has the required groups/scopes
 - Check TLS/SSL settings when running with the ssl profile
 - Inspect server logs for access denied (403) or unauthorized (401) reasons
+
+External API considerations
+- Web Search uses an external provider (Tavily). Consider rate limiting and retries with backoff for robustness.

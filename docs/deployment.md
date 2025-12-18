@@ -2,8 +2,8 @@
 
 Local (JAR)
 - Build: ./mvnw clean verify
-- Run (default profile): java -jar target/solesonic-mcp-server-0.0.1.jar
-- Run with profiles: java -Dspring.profiles.active=prod,ssl -jar target/solesonic-mcp-server-0.0.1.jar
+- Run (default profile): java -jar target/solesonic-mcp-server-1.1.0.jar
+- Run with profiles: java -Dspring.profiles.active=prod,ssl -jar target/solesonic-mcp-server-1.1.0.jar
 - Port: 9443
 
 Docker Compose
