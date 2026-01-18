@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: solesonic-mcp-server
     ports:
-      - "9090:8080"
+      - "8181:8080"
     env_file:
       - .env
     volumes:
