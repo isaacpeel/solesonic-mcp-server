@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY target/solesonic-mcp-server-*.jar app.jar
 
-EXPOSE 9090
+EXPOSE 8181
 
 ENTRYPOINT ["java", "-Dspring.profiles.active=prod-nginx", "-jar", "app.jar"]
