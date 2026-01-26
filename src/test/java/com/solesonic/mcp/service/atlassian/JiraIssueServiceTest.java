@@ -20,13 +20,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings({"unchecked", "rawtypes"})
 class JiraIssueServiceTest {
-
     @Mock
     private WebClient webClient;
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
     private JiraIssueService service;
 
@@ -40,13 +38,12 @@ class JiraIssueServiceTest {
 
     @Test
     void get_shouldReturnIssue_fromApi() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+        doReturn(requestHeadersUriSpec).when(webClient).get();
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
 
         JiraIssue expected = new JiraIssue.Builder().id("123").key("ISSUE-1").build();
 
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(expected));
+        doReturn(Mono.just(expected)).when(requestHeadersSpec).exchangeToMono(any());
 
         JiraIssue result = service.get("ISSUE-1");
 
@@ -63,15 +60,14 @@ class JiraIssueServiceTest {
         WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
 
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        doReturn(requestBodyUriSpec).when(webClient).post();
+        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
+        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
 
         JiraIssue input = new JiraIssue.Builder().id("999").key("TEMP").build();
         String responseJson = "{\"id\":\"123\",\"key\":\"ISSUE-2\"}";
 
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(responseJson));
+        doReturn(Mono.just(responseJson)).when(requestHeadersSpec).exchangeToMono(any());
 
         JiraIssue created = service.create(input);
 
@@ -85,14 +81,13 @@ class JiraIssueServiceTest {
         WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
 
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        doReturn(requestBodyUriSpec).when(webClient).post();
+        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
+        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
 
         String responseJson = "{\"id\":\"123\",\"key\":\"ISSUE-3\"}";
 
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(responseJson));
+        doReturn(Mono.just(responseJson)).when(requestHeadersSpec).exchangeToMono(any());
 
         // First creation sets the thread-local key
         service.create(new JiraIssue.Builder().id("1").key("TEMP").build());
@@ -108,16 +103,16 @@ class JiraIssueServiceTest {
         WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
         WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
 
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        doReturn(requestBodyUriSpec).when(webClient).post();
+        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
+        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
 
         String errorJson = "{" +
                 "\"errorMessages\":[]," +
                 "\"errors\":{\"summary\":\"You must specify a summary of the issue.\"}" +
                 "}";
 
-        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(errorJson));
+        doReturn(Mono.just(errorJson)).when(requestHeadersSpec).exchangeToMono(any());
 
         JiraIssue input = new JiraIssue.Builder().id("1").key("TEMP").build();
 

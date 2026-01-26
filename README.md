@@ -63,6 +63,30 @@ JIRA_CLOUD_ID_PATH=/path/to/your/cloud-id
 > Tip: To enable HTTPS locally, run with profiles `prod,ssl`:
 > ./mvnw spring-boot:run -Dspring-boot.run.profiles=prod,ssl
 
+### JVM Options for JDK 25+
+
+On JDK 25+, Netty requires native access for optimal performance. To suppress warnings about restricted method calls, add the following JVM option:
+
+```
+--enable-native-access=ALL-UNNAMED
+```
+
+**Maven tests:** Already configured in `pom.xml` via `maven-surefire-plugin`.
+
+**IntelliJ IDEA:** Add to your run configuration under `VM options`:
+- Run > Edit Configurations > Select your configuration > Modify options > Add VM options
+- Add: `--enable-native-access=ALL-UNNAMED`
+
+**Command line (spring-boot:run):**
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.jvmArguments="--enable-native-access=ALL-UNNAMED"
+```
+
+**JAR execution:**
+```bash
+java --enable-native-access=ALL-UNNAMED -jar target/solesonic-mcp-server-1.1.0.jar
+```
+
 ### 3) Verify Setup
 Send an MCP initialize request (replace placeholders):
 

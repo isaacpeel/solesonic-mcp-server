@@ -25,7 +25,6 @@ import static com.solesonic.mcp.config.tavily.TavilyConstants.TOPIC_NEWS;
 @SuppressWarnings("unused")
 @Service
 public class WebSearchTools {
-
     private static final Logger log = LoggerFactory.getLogger(WebSearchTools.class);
 
     public static final String WEB_SEARCH = "web_search";
