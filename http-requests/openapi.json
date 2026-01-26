@@ -1,0 +1,2020 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ComfyUI API",
+    "description": "API for ComfyUI server",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/ws": {
+      "get": {
+        "summary": "WebSocket connection",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols"
+          }
+        }
+      }
+    },
+    "/api/ws": {
+      "get": {
+        "summary": "WebSocket connection",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Serve index.html",
+        "responses": {
+          "200": {
+            "description": "The main page"
+          }
+        }
+      }
+    },
+    "/api/": {
+      "get": {
+        "summary": "Serve index.html",
+        "responses": {
+          "200": {
+            "description": "The main page"
+          }
+        }
+      }
+    },
+    "/embeddings": {
+      "get": {
+        "summary": "List embeddings",
+        "responses": {
+          "200": {
+            "description": "List of embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/embeddings": {
+      "get": {
+        "summary": "List embeddings",
+        "responses": {
+          "200": {
+            "description": "List of embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "summary": "List model types",
+        "responses": {
+          "200": {
+            "description": "List of model types",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "summary": "List model types",
+        "responses": {
+          "200": {
+            "description": "List of model types",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/{folder}": {
+      "get": {
+        "summary": "List models in a folder",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Folder not found"
+          }
+        }
+      }
+    },
+    "/api/models/{folder}": {
+      "get": {
+        "summary": "List models in a folder",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Folder not found"
+          }
+        }
+      }
+    },
+    "/extensions": {
+      "get": {
+        "summary": "List UI extensions",
+        "responses": {
+          "200": {
+            "description": "List of extension script paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extensions": {
+      "get": {
+        "summary": "List UI extensions",
+        "responses": {
+          "200": {
+            "description": "List of extension script paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/image": {
+      "post": {
+        "summary": "Upload an image",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "overwrite": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "subfolder": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded successfully"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/upload/image": {
+      "post": {
+        "summary": "Upload an image",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "overwrite": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "subfolder": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded successfully"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/upload/mask": {
+      "post": {
+        "summary": "Upload a mask",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "original_ref": {
+                    "type": "string"
+                  },
+                  "overwrite": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mask uploaded and merged successfully"
+          }
+        }
+      }
+    },
+    "/api/upload/mask": {
+      "post": {
+        "summary": "Upload a mask",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "original_ref": {
+                    "type": "string"
+                  },
+                  "overwrite": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mask uploaded and merged successfully"
+          }
+        }
+      }
+    },
+    "/view": {
+      "get": {
+        "summary": "View an image or other file",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subfolder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "preview",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file content"
+          },
+          "400": {
+            "description": "Invalid filename"
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      }
+    },
+    "/api/view": {
+      "get": {
+        "summary": "View an image or other file",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subfolder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "preview",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file content"
+          },
+          "400": {
+            "description": "Invalid filename"
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      }
+    },
+    "/view_metadata/{folder_name}": {
+      "get": {
+        "summary": "View metadata of a safetensors file",
+        "parameters": [
+          {
+            "name": "folder_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The metadata"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      }
+    },
+    "/api/view_metadata/{folder_name}": {
+      "get": {
+        "summary": "View metadata of a safetensors file",
+        "parameters": [
+          {
+            "name": "folder_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The metadata"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        }
+      }
+    },
+    "/system_stats": {
+      "get": {
+        "summary": "Get system statistics",
+        "responses": {
+          "200": {
+            "description": "System statistics"
+          }
+        }
+      }
+    },
+    "/api/system_stats": {
+      "get": {
+        "summary": "Get system statistics",
+        "responses": {
+          "200": {
+            "description": "System statistics"
+          }
+        }
+      }
+    },
+    "/features": {
+      "get": {
+        "summary": "Get server features",
+        "responses": {
+          "200": {
+            "description": "List of features"
+          }
+        }
+      }
+    },
+    "/api/features": {
+      "get": {
+        "summary": "Get server features",
+        "responses": {
+          "200": {
+            "description": "List of features"
+          }
+        }
+      }
+    },
+    "/prompt": {
+      "get": {
+        "summary": "Get queue information",
+        "responses": {
+          "200": {
+            "description": "Queue info"
+          }
+        }
+      },
+      "post": {
+        "summary": "Queue a new prompt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "object"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "number"
+                  },
+                  "extra_data": {
+                    "type": "object"
+                  },
+                  "partial_execution_targets": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prompt queued"
+          },
+          "400": {
+            "description": "Invalid prompt"
+          }
+        }
+      }
+    },
+    "/api/prompt": {
+      "get": {
+        "summary": "Get queue information",
+        "responses": {
+          "200": {
+            "description": "Queue info"
+          }
+        }
+      },
+      "post": {
+        "summary": "Queue a new prompt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "object"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "number"
+                  },
+                  "extra_data": {
+                    "type": "object"
+                  },
+                  "partial_execution_targets": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prompt queued"
+          },
+          "400": {
+            "description": "Invalid prompt"
+          }
+        }
+      }
+    },
+    "/object_info": {
+      "get": {
+        "summary": "Get info about all available nodes",
+        "responses": {
+          "200": {
+            "description": "Nodes info"
+          }
+        }
+      }
+    },
+    "/api/object_info": {
+      "get": {
+        "summary": "Get info about all available nodes",
+        "responses": {
+          "200": {
+            "description": "Nodes info"
+          }
+        }
+      }
+    },
+    "/object_info/{node_class}": {
+      "get": {
+        "summary": "Get info about a specific node class",
+        "parameters": [
+          {
+            "name": "node_class",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node info"
+          }
+        }
+      }
+    },
+    "/api/object_info/{node_class}": {
+      "get": {
+        "summary": "Get info about a specific node class",
+        "parameters": [
+          {
+            "name": "node_class",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node info"
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "summary": "List all jobs",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of jobs"
+          }
+        }
+      }
+    },
+    "/api/api/jobs": {
+      "get": {
+        "summary": "List all jobs",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of jobs"
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "summary": "Get a single job by ID",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job details"
+          }
+        }
+      }
+    },
+    "/api/api/jobs/{job_id}": {
+      "get": {
+        "summary": "Get a single job by ID",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job details"
+          }
+        }
+      }
+    },
+    "/history": {
+      "get": {
+        "summary": "Get prompt history",
+        "parameters": [
+          {
+            "name": "max_items",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt history"
+          }
+        }
+      },
+      "post": {
+        "summary": "Clear or delete history items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "delete": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "summary": "Get prompt history",
+        "parameters": [
+          {
+            "name": "max_items",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt history"
+          }
+        }
+      },
+      "post": {
+        "summary": "Clear or delete history items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "delete": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/history/{prompt_id}": {
+      "get": {
+        "summary": "Get history for a specific prompt ID",
+        "parameters": [
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt history item"
+          }
+        }
+      }
+    },
+    "/api/history/{prompt_id}": {
+      "get": {
+        "summary": "Get history for a specific prompt ID",
+        "parameters": [
+          {
+            "name": "prompt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt history item"
+          }
+        }
+      }
+    },
+    "/queue": {
+      "get": {
+        "summary": "Get current queue",
+        "responses": {
+          "200": {
+            "description": "Current queue status"
+          }
+        }
+      },
+      "post": {
+        "summary": "Clear or delete queue items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "delete": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/queue": {
+      "get": {
+        "summary": "Get current queue",
+        "responses": {
+          "200": {
+            "description": "Current queue status"
+          }
+        }
+      },
+      "post": {
+        "summary": "Clear or delete queue items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "delete": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/interrupt": {
+      "post": {
+        "summary": "Interrupt current execution",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/interrupt": {
+      "post": {
+        "summary": "Interrupt current execution",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/free": {
+      "post": {
+        "summary": "Free memory and models",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unload_models": {
+                    "type": "boolean"
+                  },
+                  "free_memory": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/free": {
+      "post": {
+        "summary": "Free memory and models",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "unload_models": {
+                    "type": "boolean"
+                  },
+                  "free_memory": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Get all user settings",
+        "responses": {
+          "200": {
+            "description": "User settings"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update user settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "summary": "Get all user settings",
+        "responses": {
+          "200": {
+            "description": "User settings"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update user settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/settings/{id}": {
+      "get": {
+        "summary": "Get a specific setting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The setting value"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update a specific setting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/settings/{id}": {
+      "get": {
+        "summary": "Get a specific setting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The setting value"
+          }
+        }
+      },
+      "post": {
+        "summary": "Update a specific setting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "Get users information",
+        "responses": {
+          "200": {
+            "description": "Users information"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "Get users information",
+        "responses": {
+          "200": {
+            "description": "Users information"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/userdata": {
+      "get": {
+        "summary": "List user data files",
+        "parameters": [
+          {
+            "name": "dir",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recurse",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "full_info",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "split",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of files"
+          }
+        }
+      }
+    },
+    "/api/userdata": {
+      "get": {
+        "summary": "List user data files",
+        "parameters": [
+          {
+            "name": "dir",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recurse",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "full_info",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "split",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of files"
+          }
+        }
+      }
+    },
+    "/v2/userdata": {
+      "get": {
+        "summary": "List files and directories in user's data directory (v2)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of entries"
+          }
+        }
+      }
+    },
+    "/api/v2/userdata": {
+      "get": {
+        "summary": "List files and directories in user's data directory (v2)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of entries"
+          }
+        }
+      }
+    },
+    "/userdata/{file}": {
+      "get": {
+        "summary": "Get user data file content",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload or update user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "overwrite",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "full_info",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/api/userdata/{file}": {
+      "get": {
+        "summary": "Get user data file content",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload or update user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "overwrite",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "full_info",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/userdata/{file}/move/{dest}": {
+      "post": {
+        "summary": "Move or rename user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/userdata/{file}/move/{dest}": {
+      "post": {
+        "summary": "Move or rename user data file",
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/experiment/models": {
+      "get": {
+        "summary": "Experiment: List model folders",
+        "responses": {
+          "200": {
+            "description": "Model folders"
+          }
+        }
+      }
+    },
+    "/api/experiment/models": {
+      "get": {
+        "summary": "Experiment: List model folders",
+        "responses": {
+          "200": {
+            "description": "Model folders"
+          }
+        }
+      }
+    },
+    "/experiment/models/{folder}": {
+      "get": {
+        "summary": "Experiment: List all models in folder",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of models"
+          }
+        }
+      }
+    },
+    "/api/experiment/models/{folder}": {
+      "get": {
+        "summary": "Experiment: List all models in folder",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of models"
+          }
+        }
+      }
+    },
+    "/experiment/models/preview/{folder}/{path_index}/{filename:.*}": {
+      "get": {
+        "summary": "Experiment: Get model preview",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview image"
+          }
+        }
+      }
+    },
+    "/api/experiment/models/preview/{folder}/{path_index}/{filename:.*}": {
+      "get": {
+        "summary": "Experiment: Get model preview",
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview image"
+          }
+        }
+      }
+    },
+    "/workflow_templates": {
+      "get": {
+        "summary": "Get workflow templates from custom nodes",
+        "responses": {
+          "200": {
+            "description": "Workflow templates"
+          }
+        }
+      }
+    },
+    "/api/workflow_templates": {
+      "get": {
+        "summary": "Get workflow templates from custom nodes",
+        "responses": {
+          "200": {
+            "description": "Workflow templates"
+          }
+        }
+      }
+    },
+    "/i18n": {
+      "get": {
+        "summary": "Get translations from all custom nodes",
+        "responses": {
+          "200": {
+            "description": "Translations"
+          }
+        }
+      }
+    },
+    "/api/i18n": {
+      "get": {
+        "summary": "Get translations from all custom nodes",
+        "responses": {
+          "200": {
+            "description": "Translations"
+          }
+        }
+      }
+    },
+    "/global_subgraphs": {
+      "get": {
+        "summary": "Get global subgraphs",
+        "responses": {
+          "200": {
+            "description": "Subgraphs info"
+          }
+        }
+      }
+    },
+    "/api/global_subgraphs": {
+      "get": {
+        "summary": "Get global subgraphs",
+        "responses": {
+          "200": {
+            "description": "Subgraphs info"
+          }
+        }
+      }
+    },
+    "/global_subgraphs/{id}": {
+      "get": {
+        "summary": "Get a specific global subgraph",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subgraph details"
+          }
+        }
+      }
+    },
+    "/api/global_subgraphs/{id}": {
+      "get": {
+        "summary": "Get a specific global subgraph",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subgraph details"
+          }
+        }
+      }
+    }
+  }
+}
