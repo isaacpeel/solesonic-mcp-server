@@ -1,6 +1,5 @@
 package com.solesonic.mcp.service.comfyui;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.model.comfyui.*;
 import com.solesonic.mcp.model.comfyui.websocket.ComfyWebSocketEvent;
 import org.slf4j.Logger;
@@ -11,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.util.Map;
@@ -28,17 +28,21 @@ public class ComfyUiService {
     public static final String TEXT = "text";
     public static final String SEED = "seed";
     public static final String VIEW = "view";
+    @SuppressWarnings("unused")
     public static final String FILENAME = "filename";
+    @SuppressWarnings("unused")
     public static final String SUBFOLDER = "subfolder";
+    @SuppressWarnings("unused")
     public static final String TYPE = "type";
     public static final String JOBS = "jobs";
     public static final String API = "api";
 
     private static final String PROMPT_NODE = "58";
     private static final String SEED_NODE = "57:3";
+    @SuppressWarnings("unused")
     private static final String PREVIEW_OUTPUT = "preview_output";
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final WebClient comfyUiWebClient;
     private final ComfyUiWebSocketClient webSocketClient;
 
@@ -48,6 +52,7 @@ public class ComfyUiService {
     /**
      * Internal record to store image output information.
      */
+    @SuppressWarnings("unused")
     private record ImageOutputInfo(String filename, String subfolder, String type) {
     }
 
@@ -61,6 +66,7 @@ public class ComfyUiService {
      * @param initialStatus the initial status of the job
      * @param statusFlux a Flux emitting status updates for the job (null if submission failed)
      */
+    @SuppressWarnings("unused")
     public record ImageGenerationJobResult(
             String jobId,
             UUID clientId,
@@ -71,12 +77,12 @@ public class ComfyUiService {
     }
 
     public ComfyUiService(
-            ObjectMapper objectMapper,
+            JsonMapper jsonMapper,
             @Qualifier(COMFY_UI_WEB_CLIENT) WebClient comfyUiWebClient,
             ComfyUiWebSocketClient webSocketClient) {
-        this.objectMapper = objectMapper;
         this.comfyUiWebClient = comfyUiWebClient;
         this.webSocketClient = webSocketClient;
+        this.jsonMapper = jsonMapper;
     }
 
     /**
@@ -219,7 +225,7 @@ public class ComfyUiService {
 
     private ComfyWorkflow loadWorkflowTemplate() {
         try {
-            return objectMapper.readValue(workflowFile.getInputStream(), ComfyWorkflow.class);
+            return jsonMapper.readValue(workflowFile.getInputStream(), ComfyWorkflow.class);
         } catch (IOException ioException) {
             throw new RuntimeException("Failed to load workflow template", ioException);
         }

@@ -1,23 +1,11 @@
 package com.solesonic.mcp.service.comfyui;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutingEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionCachedEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionErrorEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionStartEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionSuccessEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyProgressEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyStatusEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyUnknownEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyWebSocketEvent;
+import com.solesonic.mcp.model.comfyui.websocket.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ComfyWebSocketEventParserTest {
 
@@ -25,7 +13,7 @@ class ComfyWebSocketEventParserTest {
 
     @BeforeEach
     void setUp() {
-        parser = new ComfyWebSocketEventParser(new ObjectMapper());
+        parser = new ComfyWebSocketEventParser(new JsonMapper());
     }
 
     @Test

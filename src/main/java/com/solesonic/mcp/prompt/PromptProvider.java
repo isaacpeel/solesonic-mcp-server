@@ -127,7 +127,7 @@ public class PromptProvider {
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
 
-        String availableTools = availableTools(WeatherService.class, JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
+        String availableTools = availableTools(WeatherService.class, WebSearchTools.class, DateTools.class);
 
         Map<String, Object> promptContext = Map.of(
                 AGENT_NAME, agentName,

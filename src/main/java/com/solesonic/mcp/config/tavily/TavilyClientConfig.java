@@ -1,14 +1,14 @@
 package com.solesonic.mcp.config.tavily;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
+import org.springframework.http.codec.json.JacksonJsonDecoder;
+import org.springframework.http.codec.json.JacksonJsonEncoder;
 import org.springframework.web.reactive.function.client.WebClient;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
@@ -25,7 +25,7 @@ public class TavilyClientConfig {
 
     @Bean
     @Qualifier(TAVILY_API_WEB_CLIENT)
-    public WebClient tavilyApiWebClient(ObjectMapper objectMapper) {
+    public WebClient tavilyApiWebClient(JsonMapper jsonMapper) {
         return WebClient.builder()
                 .baseUrl(tavilyApiUri)
                 .defaultHeaders(httpHeaders -> {
@@ -34,8 +34,8 @@ public class TavilyClientConfig {
                     httpHeaders.setBearerAuth(tavilyApiKey);
                 })
                 .codecs(configurer -> {
-                    configurer.defaultCodecs().jackson2JsonEncoder(new Jackson2JsonEncoder(objectMapper, MediaType.APPLICATION_JSON));
-                    configurer.defaultCodecs().jackson2JsonDecoder(new Jackson2JsonDecoder(objectMapper, MediaType.APPLICATION_JSON));
+                    configurer.defaultCodecs().jacksonJsonEncoder(new JacksonJsonEncoder(jsonMapper));
+                    configurer.defaultCodecs().jacksonJsonDecoder(new JacksonJsonDecoder(jsonMapper));
                 })
                 .build();
     }

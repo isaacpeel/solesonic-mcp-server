@@ -1,6 +1,6 @@
 package com.solesonic.mcp.model.comfyui.websocket;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 

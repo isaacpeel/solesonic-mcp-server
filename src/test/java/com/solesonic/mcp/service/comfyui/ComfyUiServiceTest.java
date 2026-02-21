@@ -1,6 +1,5 @@
 package com.solesonic.mcp.service.comfyui;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.model.comfyui.ComfyNode;
 import com.solesonic.mcp.model.comfyui.ComfyPrompt;
 import com.solesonic.mcp.model.comfyui.ComfyWorkflow;
@@ -21,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.UUID;
 import java.util.function.Function;
@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class ComfyUiServiceTest {
 
     private ComfyUiService comfyUiService;
@@ -52,11 +53,11 @@ class ComfyUiServiceTest {
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper jsonMapper = new JsonMapper();
 
     @BeforeEach
     void setUp() {
-        comfyUiService = new ComfyUiService(objectMapper, webClient, webSocketClient);
+        comfyUiService = new ComfyUiService(jsonMapper, webClient, webSocketClient);
         ReflectionTestUtils.setField(comfyUiService, "workflowFile", new ClassPathResource("comfyui/test-workflow.json"));
     }
 

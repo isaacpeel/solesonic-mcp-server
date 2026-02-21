@@ -1,19 +1,11 @@
 package com.solesonic.mcp.service.comfyui;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutingEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionCachedEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionErrorEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionStartEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyExecutionSuccessEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyProgressEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyStatusEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyUnknownEvent;
-import com.solesonic.mcp.model.comfyui.websocket.ComfyWebSocketEvent;
+import tools.jackson.databind.JsonNode;
+import com.solesonic.mcp.model.comfyui.websocket.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,10 +31,10 @@ public class ComfyWebSocketEventParser {
     private static final String EXCEPTION_MESSAGE_FIELD = "exception_message";
     private static final String EXCEPTION_TYPE_FIELD = "exception_type";
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public ComfyWebSocketEventParser(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public ComfyWebSocketEventParser(JsonMapper jsonMapper) {
+        this.jsonMapper = jsonMapper;
     }
 
     /**
@@ -50,7 +42,7 @@ public class ComfyWebSocketEventParser {
      */
     public ComfyWebSocketEvent parse(String jsonMessage) {
         try {
-            JsonNode rootNode = objectMapper.readTree(jsonMessage);
+            JsonNode rootNode = jsonMapper.readTree(jsonMessage);
             return parseNode(rootNode);
         } catch (Exception exception) {
             log.warn("Failed to parse WebSocket message: {}", jsonMessage, exception);
@@ -107,7 +99,7 @@ public class ComfyWebSocketEventParser {
     private ComfyExecutionStartEvent parseExecutionStartEvent(JsonNode dataNode, JsonNode rootNode) {
         return new ComfyExecutionStartEvent(
                 getPromptId(dataNode),
-                getLongValue(dataNode, TIMESTAMP_FIELD),
+                getLongValue(dataNode),
                 rootNode
         );
     }
@@ -120,7 +112,7 @@ public class ComfyWebSocketEventParser {
 
             if (nodesArray.isArray()) {
                 for (JsonNode nodeElement : nodesArray) {
-                    cachedNodes.add(nodeElement.asText());
+                    cachedNodes.add(nodeElement.asString());
                 }
             }
         }
@@ -128,7 +120,7 @@ public class ComfyWebSocketEventParser {
         return new ComfyExecutionCachedEvent(
                 getPromptId(dataNode),
                 cachedNodes,
-                getLongValue(dataNode, TIMESTAMP_FIELD),
+                getLongValue(dataNode),
                 rootNode
         );
     }
@@ -154,7 +146,7 @@ public class ComfyWebSocketEventParser {
     private ComfyExecutionSuccessEvent parseExecutionSuccessEvent(JsonNode dataNode, JsonNode rootNode) {
         return new ComfyExecutionSuccessEvent(
                 getPromptId(dataNode),
-                getLongValue(dataNode, TIMESTAMP_FIELD),
+                getLongValue(dataNode),
                 rootNode
         );
     }
@@ -187,7 +179,7 @@ public class ComfyWebSocketEventParser {
             return null;
         }
 
-        return fieldNode.asText();
+        return fieldNode.asString();
     }
 
     private int getIntValue(JsonNode node, String fieldName) {
@@ -198,11 +190,11 @@ public class ComfyWebSocketEventParser {
         return node.get(fieldName).asInt(0);
     }
 
-    private long getLongValue(JsonNode node, String fieldName) {
-        if (node == null || !node.has(fieldName)) {
+    private long getLongValue(JsonNode node) {
+        if (node == null || !node.has(ComfyWebSocketEventParser.TIMESTAMP_FIELD)) {
             return 0L;
         }
 
-        return node.get(fieldName).asLong(0L);
+        return node.get(ComfyWebSocketEventParser.TIMESTAMP_FIELD).asLong(0L);
     }
 }

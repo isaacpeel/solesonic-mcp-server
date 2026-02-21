@@ -1,6 +1,6 @@
 package com.solesonic.mcp.model.comfyui.websocket;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Represents an execution_start event from ComfyUI WebSocket.

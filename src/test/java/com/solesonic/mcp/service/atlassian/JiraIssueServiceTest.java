@@ -1,6 +1,5 @@
 package com.solesonic.mcp.service.atlassian;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solesonic.mcp.exception.atlassian.DuplicateJiraCreationException;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
@@ -12,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Function;
 
@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unchecked")
 class JiraIssueServiceTest {
     @Mock
     private WebClient webClient;
@@ -32,7 +33,7 @@ class JiraIssueServiceTest {
     void setUp() {
         requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
         requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        service = new JiraIssueService(webClient, new ObjectMapper());
+        service = new JiraIssueService(webClient, new JsonMapper());
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
     }
 
