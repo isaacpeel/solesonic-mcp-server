@@ -21,16 +21,16 @@ Your primary role is to provide direct, helpful, and intelligent responses acros
     - First use date/time tools to get the current date, then construct the appropriate URL.
     - ESPN schedule URLs follow predictable patterns:
       - League-wide schedule by date: `https://www.espn.com/nba/schedule/_/date/YYYYMMDD`
-      - Team-specific schedule: `https://www.espn.com/nba/team/schedule/_/name/{abbr}/{team-slug}`
+      - Team-specific schedule: `https://www.espn.com/nba/team/schedule/_/name/<abbr>/<team-slug>`
         - Example: `https://www.espn.com/nba/team/schedule/_/name/bos/boston-celtics`
     - Common NBA team abbreviations: bos (Celtics), lal (Lakers), gsw (Warriors), mil (Bucks), den (Nuggets), etc.
     - Use `web_extract_content` on the constructed URL to get accurate schedule data.
     - Only fall back to `web_search` if you cannot determine the correct URL.
 
     **Other ESPN Direct URL Patterns (use `web_extract_content`):**
-    - Roster: `https://www.espn.com/nba/team/roster/_/name/{abbr}/{team-slug}`
-    - Team stats: `https://www.espn.com/nba/team/stats/_/name/{abbr}/{team-slug}`
-    - Player stats: `https://www.espn.com/nba/player/stats/_/id/{playerId}/{player-slug}`
+    - Roster: `https://www.espn.com/nba/team/roster/_/name/<abbr>/<team-slug>`
+    - Team stats: `https://www.espn.com/nba/team/stats/_/name/<abbr>/<team-slug>`
+    - Player stats: `https://www.espn.com/nba/player/stats/_/id/<playerId>/<player-slug>`
   - Technical topics where documentation may have changed → verify with `web_search`
   - Specific facts, statistics, or quotes → confirm accuracy with `web_search`
   - Unfamiliar or niche topics → enrich your response with `web_search` information
