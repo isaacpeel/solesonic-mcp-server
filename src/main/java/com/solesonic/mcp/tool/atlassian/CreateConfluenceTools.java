@@ -6,8 +6,8 @@ import com.solesonic.mcp.model.atlassian.confluence.Storage;
 import com.solesonic.mcp.service.atlassian.ConfluencePageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.mcp.annotation.McpTool;
-import org.springaicommunity.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import static com.solesonic.mcp.service.atlassian.ConfluenceConstants.STORAGE_FORMAT;

@@ -5,10 +5,10 @@ import com.solesonic.mcp.service.comfyui.ComfyUiService;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.mcp.annotation.McpResource;
-import org.springaicommunity.mcp.annotation.McpTool;
-import org.springaicommunity.mcp.annotation.McpToolParam;
-import org.springaicommunity.mcp.context.McpSyncRequestContext;
+import org.springframework.ai.mcp.annotation.McpResource;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.core.io.Resource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -59,7 +59,7 @@ public class ComfyUiTools {
         log.info("Starting async image generation using a ComfyUI workflow");
         UUID clientId = UUID.randomUUID();
 
-        return comfyUiService.generateImage(imagePrompt,  clientId);
+        return comfyUiService.generateImage(imagePrompt, clientId);
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-GENERATE-IMAGE')")
@@ -76,7 +76,7 @@ public class ComfyUiTools {
         try {
             bytes = image.getContentAsByteArray();
             String encoded = Base64.getEncoder().encodeToString(bytes);
-            return new McpSchema.BlobResourceContents("image:/images/"+promptId, "image/png", encoded);
+            return new McpSchema.BlobResourceContents("image://images/"+promptId, "image/png", encoded);
         } catch (IOException ioException) {
             throw new RuntimeException(ioException);
         }

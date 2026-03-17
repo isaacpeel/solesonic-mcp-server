@@ -1,12 +1,12 @@
 package com.solesonic.mcp.model.atlassian.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.annotation.Nonnull;
 
-import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record TokenExchange(
-        @NotNull
+        @Nonnull
         @JsonProperty("subject_token")
         UUID subjectToken,
         String audience) {

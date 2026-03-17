@@ -10,11 +10,11 @@ import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.mcp.annotation.McpArg;
-import org.springaicommunity.mcp.annotation.McpPrompt;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.mcp.annotation.McpArg;
+import org.springframework.ai.mcp.annotation.McpPrompt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
 @SuppressWarnings("unused")
 @Service
 public class PromptProvider {
-    private static final Logger log =  LoggerFactory.getLogger(PromptProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(PromptProvider.class);
 
     private static final String AGENT_NAME = "agentName";
     private static final String USER_MESSAGE = "userMessage";
@@ -45,7 +45,7 @@ public class PromptProvider {
 
     @Value("classpath:prompt/create_jira_issue_prompt.st")
     private Resource createJiraIssuePrompt;
-    
+
     private static final String BASIC_PROMPT_DESCRIPTION = """
             A general-purpose assistant prompt for any topic that is not clearly about Jira or Confluence. Use this when the user is asking for explanations,
             brainstorming, coding help, writing, troubleshooting, planning, or casual conversation that does not primarily involve Jira issues, Jira boards, or
@@ -66,17 +66,17 @@ public class PromptProvider {
             primary intent is to understand, summarize, or manage the state of a Jira board, sprint, or backlog, especially
             when they mention a Jira board, sprint, or board ID. The agent is focused on reading board data, understanding
             issue distribution, surfacing blockers, and helping with agile workflows.
-
+            
             Typical use cases:
             - “Show me the current status of our Sprint 5 board.”
             - “Summarize the in-progress work on board 123.”
             - “Identify bottlenecks and blocked issues on this Jira board.”
             - “Help me plan the next sprint using the issues on board 42.”
             - "Show me all issues in board 1."
-
+            
             This prompt is appropriate when the agent should use a Jira board ID and tools like `get_jira_board_issues`
             to inspect or reason about the content of a board.
-
+            
             Do not use this prompt when the user is mainly asking to create a new Jira issue from scratch (e.g., “Create a
             bug ticket for login failures”) or to write a user story; in those cases, prefer the Jira issue creation prompt.
             """;
@@ -86,15 +86,15 @@ public class PromptProvider {
             wants to create, structure, or generate content for a Confluence page, including technical documentation, runbooks,
             design specs, meeting notes, or project documentation. The agent will analyze the user’s request, structure the
             content with headings and sections, and use the `create_confluence_page` tool to create the page.
-
+            
             Typical use cases:
             - “Create a Confluence page documenting our new API endpoints.”
             - “Generate a runbook page for handling production incidents.”
             - “Create a design spec page for the new authentication flow.”
             - “Turn this meeting summary into a Confluence page in the backend team space.”
-
+            
             This prompt is appropriate when the final output should be a Confluence page with a clear title, structure, and content.
-
+            
             Do not use this prompt when the user is just asking for a short explanation or text snippet that is not intended
             to live as a Confluence page, or when they are clearly working with Jira tickets instead of documentation.
             """;
@@ -105,25 +105,25 @@ public class PromptProvider {
             they provide requirements, scenarios, or acceptance criteria. The agent will extract a clear summary, write
             a detailed description (often in user-story format), derive acceptance criteria, handle assignee resolution
             with `assignee_id_lookup`, and create the issue using `create_jira_issue`.
-
+            
             Typical use cases:
             - “Create a Jira ticket for a login authentication bug with these details…”
             - “Write a user story for password reset and create it in Jira.”
             - “Create a Jira task assigned to john.doe to add metrics to the billing service.”
             - “Turn these requirements into a Jira story with acceptance criteria.”
-
+            
             This prompt is appropriate when the goal is to end up with a new Jira issue in the system, including
             optional assignee and acceptance criteria.
-
+            
             Do not use this prompt when the user only wants to analyze or summarize existing Jira boards or
             sprints without creating new issues; in those cases, prefer the Jira agile board prompt.
             Also do not use it for non-Jira general tasks or for creating Confluence pages.
             """;
 
-    @McpPrompt(name = "basic-prompt", 
-              title = "General Assistant",
-              description = BASIC_PROMPT_DESCRIPTION)
-    public McpSchema.GetPromptResult basicPrompt(@McpArg(name="userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
+    @McpPrompt(name = "basic-prompt",
+                title = "General Assistant",
+                description = BASIC_PROMPT_DESCRIPTION)
+    public McpSchema.GetPromptResult basicPrompt(@McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
 

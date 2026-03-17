@@ -1,7 +1,7 @@
 package com.solesonic.mcp.service;
 
 import org.slf4j.Logger;
-import org.springaicommunity.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 

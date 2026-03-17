@@ -8,7 +8,6 @@ import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -36,7 +35,7 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
 
     @Override
     @Nonnull
-    public Mono<ClientResponse> filter(ClientRequest request, @NonNull ExchangeFunction next) {
+    public Mono<ClientResponse> filter(ClientRequest request, @Nonnull ExchangeFunction next) {
         log.info("Filtering {}: {}", request.method().name(), request.url());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
