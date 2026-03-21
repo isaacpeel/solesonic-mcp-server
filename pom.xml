@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.3</version>
+        <version>4.0.4</version>
         <relativePath/>
     </parent>
     <groupId>com.solesonic</groupId>
@@ -44,7 +44,6 @@
     <properties>
         <java.version>25</java.version>
         <spring-ai.version>2.0.0-M3</spring-ai.version>
-        <jackson-bom.version>3.1.0</jackson-bom.version>
     </properties>
 
     <dependencies>
@@ -88,10 +87,17 @@
         </dependency>
 
         <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
-            <version>12.1.0</version>
+            <version>12.1.1</version>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>

@@ -33,6 +33,7 @@ public class PromptProvider {
     private static final String USER_MESSAGE = "userMessage";
     private static final String INPUT = "input";
     public static final String AVAILABLE_TOOLS = "available_tools";
+    public static final String COMMAND = "command";
 
     @Value("classpath:prompt/basic-prompt.st")
     private Resource basicPrompt;
@@ -120,9 +121,11 @@ public class PromptProvider {
             Also do not use it for non-Jira general tasks or for creating Confluence pages.
             """;
 
-    @McpPrompt(name = "basic-prompt",
-                title = "General Assistant",
-                description = BASIC_PROMPT_DESCRIPTION)
+    @McpPrompt(
+            name = "basic-prompt",
+            title = "General Assistant",
+            description = BASIC_PROMPT_DESCRIPTION,
+            metaProvider = DefaultCommandProvider.class)
     public McpSchema.GetPromptResult basicPrompt(@McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
                                                  @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
         log.info("Getting basic prompt.");
@@ -141,7 +144,8 @@ public class PromptProvider {
     @McpPrompt(
             name = "jira-agile-board-prompt",
             title = "Jira Agile Board Analysis",
-            description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION
+            description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION,
+            metaProvider = AgileCommandProvider.class
     )
     public McpSchema.GetPromptResult jiraAgileBoardPrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing what they want to know or do with a Jira board.") String userMessage,
@@ -163,7 +167,8 @@ public class PromptProvider {
     @McpPrompt(
             name = "create-confluence-page-prompt",
             title = "Create Confluence Page",
-            description = CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION
+            description = CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION,
+            metaProvider = ConfluenceCommandProvider.class
     )
     public McpSchema.GetPromptResult createConfluencePagePrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing the page to create in Confluence.") String userMessage,
@@ -185,7 +190,8 @@ public class PromptProvider {
     @McpPrompt(
             name = "create-jira-issue-prompt",
             title = "Create Jira Issue",
-            description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION
+            description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION,
+            metaProvider = JiraCommandProvider.class
     )
     public McpSchema.GetPromptResult createJiraIssuePrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing the issue to create in Jira.") String userMessage,
