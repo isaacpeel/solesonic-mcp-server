@@ -68,6 +68,13 @@ public class MpcSecurityConfig {
     @Value("${solesonic.mcp.resource}")
     private String baseResource;
 
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private String issuerUri;
+
+    @Value("${solesonic.mcp.resource}")
+    @SuppressWarnings("unused")
+    private String clientRegistrationResource;
+
     public MpcSecurityConfig(AuthoritiesService authoritiesService) {
         this.authoritiesService = authoritiesService;
     }
@@ -118,7 +125,7 @@ public class MpcSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .exceptionHandling(config -> config
                         .accessDeniedHandler(accessDeniedHandler())
@@ -135,6 +142,14 @@ public class MpcSecurityConfig {
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder())
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        )
+                        .protectedResourceMetadata(metadata -> metadata
+                                .protectedResourceMetadataCustomizer(builder -> builder
+                                        .authorizationServer(issuerUri)
+                                        .scope("openid")
+                                        .scope("profile")
+                                        .scope("email")
+                                )
                         )
                 );
 

@@ -1,0 +1,27 @@
+{
+  "prompt": {
+    "58": {
+      "inputs": {
+        "text": "placeholder prompt"
+      },
+      "class_type": "PrimitiveStringMultiline",
+      "_meta": {
+        "title": "Prompt"
+      }
+    },
+    "57:3": {
+      "inputs": {
+        "seed": 0,
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "res_multistep",
+        "scheduler": "simple",
+        "denoise": 1
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler"
+      }
+    }
+  }
+}

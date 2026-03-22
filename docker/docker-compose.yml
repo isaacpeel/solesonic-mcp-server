@@ -5,11 +5,9 @@ services:
       dockerfile: docker/Dockerfile
     container_name: solesonic-mcp-server
     ports:
-      - "9443:9443"
+      - "8181:8080"
     env_file:
       - .env
     volumes:
       - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
-      - ${SSL_PUBLIC_CERT}:/run/secrets/fullchain.pem:ro
-      - ${SSL_PRIVATE_CERT}:/run/secrets/privkey.pem:ro
     restart: no

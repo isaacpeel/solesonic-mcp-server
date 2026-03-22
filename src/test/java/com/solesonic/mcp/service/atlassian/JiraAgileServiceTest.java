@@ -21,14 +21,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings({"unchecked", "rawtypes"})
 class JiraAgileServiceTest {
-
     @Mock
     private WebClient webClient;
 
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
     private JiraAgileService service;
 
@@ -42,10 +40,10 @@ class JiraAgileServiceTest {
 
     @Test
     void listBoards_shouldReturnJson_fromApi() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(new Boards(List.of(new Board(1, "self", "Board 1", "scrum")), 50, 1, true)));
+        doReturn(requestHeadersUriSpec).when(webClient).get();
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
+        doReturn(Mono.just(new Boards(List.of(new Board(1, "self", "Board 1", "scrum")), 50, 1, true)))
+                .when(requestHeadersSpec).exchangeToMono(any());
 
         ListBoardsRequest listBoardsRequest = new ListBoardsRequest(0, 50, null, null, null);
         Boards boards = service.listBoards(listBoardsRequest);
@@ -57,10 +55,10 @@ class JiraAgileServiceTest {
 
     @Test
     void getBoard_shouldReturnJson_fromApi() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(new Board(1, "self", "Board", "scrum")));
+        doReturn(requestHeadersUriSpec).when(webClient).get();
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
+        doReturn(Mono.just(new Board(1, "self", "Board", "scrum")))
+                .when(requestHeadersSpec).exchangeToMono(any());
 
         Board board = service.getBoard("1");
 

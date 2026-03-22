@@ -1,7 +1,7 @@
 package com.solesonic.mcp.model.atlassian.jira;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import org.springaicommunity.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 
 import java.util.List;
 

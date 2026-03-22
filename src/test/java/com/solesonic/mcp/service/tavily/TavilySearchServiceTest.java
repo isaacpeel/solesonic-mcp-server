@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TavilySearchServiceTest {
@@ -32,8 +32,7 @@ class TavilySearchServiceTest {
     private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
-    @SuppressWarnings("rawtypes")
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
     @Mock
     private WebClient.ResponseSpec responseSpec;
@@ -45,7 +44,6 @@ class TavilySearchServiceTest {
         tavilySearchService = new TavilySearchService(webClient);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     void testSearchReturnsResponse() {
         TavilySearchResult searchResult = new TavilySearchResult(
@@ -68,7 +66,7 @@ class TavilySearchServiceTest {
 
         when(webClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(any(String.class))).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(eq(TavilySearchResponse.class))).thenReturn(Mono.just(expectedResponse));
 

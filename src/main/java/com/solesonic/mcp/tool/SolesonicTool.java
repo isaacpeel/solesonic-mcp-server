@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool;
 
-import org.springaicommunity.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpTool;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
