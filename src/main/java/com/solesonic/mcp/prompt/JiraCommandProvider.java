@@ -7,8 +7,11 @@ import java.util.Map;
 import static com.solesonic.mcp.prompt.PromptProvider.COMMAND;
 
 public class JiraCommandProvider extends DefaultMetaProvider {
+
+    public static final String JIRA = "jira";
+
     @Override
     public Map<String, Object> getMeta() {
-        return Map.of(COMMAND, "jira");
+        return Map.of(COMMAND, JIRA);
     }
 }
