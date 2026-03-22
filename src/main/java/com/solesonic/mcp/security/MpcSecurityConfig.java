@@ -55,6 +55,9 @@ public class MpcSecurityConfig {
             "mcp-protocol-version",
             "Mcp-Session-Id"
     );
+    public static final String OPENID = "openid";
+    public static final String PROFILE = "profile";
+    public static final String EMAIL = "email";
 
 
     private final AuthoritiesService authoritiesService;
@@ -146,9 +149,9 @@ public class MpcSecurityConfig {
                         .protectedResourceMetadata(metadata -> metadata
                                 .protectedResourceMetadataCustomizer(builder -> builder
                                         .authorizationServer(issuerUri)
-                                        .scope("openid")
-                                        .scope("profile")
-                                        .scope("email")
+                                        .scope(OPENID)
+                                        .scope(PROFILE)
+                                        .scope(EMAIL)
                                 )
                         )
                 );

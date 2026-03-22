@@ -7,8 +7,11 @@ import java.util.Map;
 import static com.solesonic.mcp.prompt.PromptProvider.COMMAND;
 
 public class AgileCommandProvider extends DefaultMetaProvider {
+
+    public static final String AGILE = "agile";
+
     @Override
     public Map<String, Object> getMeta() {
-        return Map.of(COMMAND, "agile");
+        return Map.of(COMMAND, AGILE);
     }
 }
