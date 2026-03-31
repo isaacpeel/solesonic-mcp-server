@@ -2,6 +2,8 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
+import com.solesonic.mcp.workflow.CreateJiraWorkflow;
+import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +37,14 @@ public class JiraIssueTools {
     public static final String CHAT_ID = "chatId";
 
     private final JiraIssueService jiraIssueService;
+    private final CreateJiraWorkflow createJiraWorkflow;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public JiraIssueTools(JiraIssueService jiraIssueService) {
+    public JiraIssueTools(JiraIssueService jiraIssueService, CreateJiraWorkflow createJiraWorkflow) {
         this.jiraIssueService = jiraIssueService;
+        this.createJiraWorkflow = createJiraWorkflow;
     }
 
     public record CreateJiraResponse(String issueId, String issueUri) {
@@ -90,7 +94,11 @@ public class JiraIssueTools {
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
     @McpTool(name = CREATE_JIRA_ISSUE, description = CREATE_JIRA_ISSUE_DESCRIPTION)
-    public CreateJiraResponse createJiraIssue(@McpToolParam(description = CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION) CreateJiraRequest createJiraRequest) {
+    public CreateJiraResponse createJiraWorkflow(@McpToolParam(description = CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION) String userMessage) {
+
+        JiraIssueCreatePayload jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(userMessage);
+        CreateJiraRequest createJiraRequest = new CreateJiraRequest(jiraIssueCreatePayload.summary(), jiraIssueCreatePayload.description(), jiraIssueCreatePayload.acceptanceCriteria(), jiraIssueCreatePayload.assigneeId());
+
         log.debug("Invoking create jira function");
         log.debug("Summary: {}", createJiraRequest.summary);
         log.debug("Description: {}", createJiraRequest.description);
@@ -145,7 +153,8 @@ public class JiraIssueTools {
 
         Project project = Project.id(PROJECT_ID).build();
 
-        User user = User.accountId(createJiraRequest.assigneeId()).build();
+        String assigneeId = createJiraRequest.assigneeId();
+        User user = User.accountId(assigneeId).build();
 
         Fields fields = Fields.summary(createJiraRequest.summary())
                 .project(project)

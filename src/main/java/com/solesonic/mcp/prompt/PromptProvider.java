@@ -1,5 +1,9 @@
 package com.solesonic.mcp.prompt;
 
+import com.solesonic.mcp.command.AgileCommandProvider;
+import com.solesonic.mcp.command.ConfluenceCommandProvider;
+import com.solesonic.mcp.command.DefaultCommandProvider;
+import com.solesonic.mcp.command.JiraCommandProvider;
 import com.solesonic.mcp.service.WeatherService;
 import com.solesonic.mcp.tool.atlassian.AssigneeUserTools;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
@@ -210,7 +214,7 @@ public class PromptProvider {
         return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);
     }
 
-    private McpSchema.GetPromptResult buildPromptResult(
+    public McpSchema.GetPromptResult buildPromptResult(
             String promptName,
             Resource templateResource,
             Map<String, Object> templateVariables
