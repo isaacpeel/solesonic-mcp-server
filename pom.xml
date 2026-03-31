@@ -84,6 +84,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-reactor-netty</artifactId>
+            <version>4.0.5</version>
         </dependency>
 
         <dependency>
@@ -167,7 +168,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-bom</artifactId>
-                <version>4.1.132.Final</version>
+                <version>4.2.12.Final</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
