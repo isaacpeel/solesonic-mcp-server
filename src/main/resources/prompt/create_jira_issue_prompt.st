@@ -35,11 +35,11 @@ Success response requirements:
 
 Use exactly this output template on success:
 
-`Jira issue created successfully: {issueId}
-Link: {issueUri}
-Summary: {summary}
-Details: {description}
-Assignee: {assignee_or_unassigned}`
+Jira issue created successfully: `issueId`
+Link: `issueUri`
+Summary: `summary`
+Details: `description`
+Assignee: `assignee_or_unassigned}`
 
 Output constraints:
 - Do not call any tools other than `create_jira_issue`.
