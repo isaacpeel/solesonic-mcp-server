@@ -107,8 +107,7 @@ public class PromptProvider {
             A specialized prompt for creating well-structured Jira issues based on natural language user requests. Use this
             when the user asks to create a new Jira ticket (story, task, bug, epic, etc.) or user story, especially when
             they provide requirements, scenarios, or acceptance criteria. The agent will extract a clear summary, write
-            a detailed description (often in user-story format), derive acceptance criteria, handle assignee resolution
-            with `assignee_id_lookup`, and create the issue using `create_jira_issue`.
+            a detailed description (often in user-story format), derive acceptance criteria, and create the issue using `create_jira_issue`.
             
             Typical use cases:
             - “Create a Jira ticket for a login authentication bug with these details…”
@@ -197,8 +196,7 @@ public class PromptProvider {
             metaProvider = JiraCommandProvider.class
     )
     public McpSchema.GetPromptResult createJiraIssuePrompt(
-            @McpArg(name = "userMessage", description = "The user’s natural language request describing the issue to create in Jira.") String userMessage,
-            @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
+            @McpArg(name = "userMessage", description = "The user’s natural language request describing the issue to create in Jira.") String userMessage
     ) {
         log.info("Getting Jira issue creation prompt.");
 

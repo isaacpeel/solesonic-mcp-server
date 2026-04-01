@@ -47,6 +47,8 @@ public class AssigneeResolutionService {
                 .findFirst()
                 .orElseThrow(() -> new JiraException("Assignee lookup failed for required assignee: " + assigneeToLookup));
 
+        log.info("Found assignee: {}", user.displayName());
+
         return new AssigneeLookupResult(true, user.accountId(), "RESOLVED");
     }
 }
