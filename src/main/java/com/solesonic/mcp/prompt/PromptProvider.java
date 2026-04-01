@@ -5,7 +5,6 @@ import com.solesonic.mcp.command.ConfluenceCommandProvider;
 import com.solesonic.mcp.command.DefaultCommandProvider;
 import com.solesonic.mcp.command.JiraCommandProvider;
 import com.solesonic.mcp.service.WeatherService;
-import com.solesonic.mcp.tool.atlassian.AssigneeUserTools;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
@@ -203,10 +202,9 @@ public class PromptProvider {
     ) {
         log.info("Getting Jira issue creation prompt.");
 
-        String availableTools = availableTools(JiraIssueTools.class, AssigneeUserTools.class, WebSearchTools.class, DateTools.class);
+        String availableTools = availableTools(JiraIssueTools.class);
 
         Map<String, Object> templateVariables = Map.of(
-                AGENT_NAME, agentName,
                 INPUT, userMessage,
                 AVAILABLE_TOOLS, availableTools
         );
