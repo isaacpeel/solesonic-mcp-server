@@ -47,7 +47,7 @@ public class JiraIssueTools {
         this.createJiraWorkflow = createJiraWorkflow;
     }
 
-    public record CreateJiraResponse(String issueId, String issueUri) {
+    public record CreateJiraResponse(String issueId, String issueUri, String summary, String description, String assignee) {
     }
 
     public static final String CREATE_JIRA_ISSUE_DESCRIPTION = """
@@ -173,7 +173,7 @@ public class JiraIssueTools {
 
         log.debug("Using jira uri: {}", jiraUri);
 
-        return new CreateJiraResponse(created.id(), jiraUri);
+        return new CreateJiraResponse(created.id(), jiraUri, createJiraRequest.summary(), createJiraRequest.description(), user.displayName());
     }
 
     @SuppressWarnings("unused")
