@@ -2,6 +2,7 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
+import com.solesonic.mcp.tool.DirectReturnMetaProvider;
 import com.solesonic.mcp.workflow.CreateJiraWorkflow;
 import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -93,13 +94,12 @@ public class JiraIssueTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @McpTool(name = CREATE_JIRA_ISSUE, description = CREATE_JIRA_ISSUE_DESCRIPTION)
-    public CreateJiraResponse createJiraWorkflow(@McpToolParam(description = CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION) String userMessage) {
-
+    @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = DirectReturnMetaProvider.class)
+    public CreateJiraResponse createJiraWorkflow(@McpToolParam(description = "The users request.") String userMessage) {
         JiraIssueCreatePayload jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(userMessage);
         CreateJiraRequest createJiraRequest = new CreateJiraRequest(jiraIssueCreatePayload.summary(), jiraIssueCreatePayload.description(), jiraIssueCreatePayload.acceptanceCriteria(), jiraIssueCreatePayload.assigneeId());
 
-        log.debug("Invoking create jira function");
+        log.info("Invoking create jira tool");
         log.debug("Summary: {}", createJiraRequest.summary);
         log.debug("Description: {}", createJiraRequest.description);
         log.debug("Assignee ID: {}", createJiraRequest.assigneeId);

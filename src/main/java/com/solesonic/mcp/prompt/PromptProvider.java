@@ -2,8 +2,8 @@ package com.solesonic.mcp.prompt;
 
 import com.solesonic.mcp.command.AgileCommandProvider;
 import com.solesonic.mcp.command.ConfluenceCommandProvider;
+import com.solesonic.mcp.command.CreateJiraCommandProvider;
 import com.solesonic.mcp.command.DefaultCommandProvider;
-import com.solesonic.mcp.command.JiraCommandProvider;
 import com.solesonic.mcp.service.WeatherService;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
@@ -13,19 +13,17 @@ import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.mcp.annotation.McpArg;
 import org.springframework.ai.mcp.annotation.McpPrompt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
 
+import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
+import static com.solesonic.mcp.tool.atlassian.JiraIssueTools.CREATE_JIRA_ISSUE;
 
 @SuppressWarnings("unused")
 @Service
@@ -193,14 +191,16 @@ public class PromptProvider {
             name = "create-jira-issue-prompt",
             title = "Create Jira Issue",
             description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION,
-            metaProvider = JiraCommandProvider.class
+            metaProvider = CreateJiraCommandProvider.class
     )
     public McpSchema.GetPromptResult createJiraIssuePrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing the issue to create in Jira.") String userMessage
     ) {
         log.info("Getting Jira issue creation prompt.");
 
-        String availableTools = availableTools(JiraIssueTools.class);
+        String availableTools = CREATE_JIRA_ISSUE;
+
+        log.info("Available tools: {}", availableTools);
 
         Map<String, Object> templateVariables = Map.of(
                 INPUT, userMessage,
@@ -208,26 +208,5 @@ public class PromptProvider {
         );
 
         return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);
-    }
-
-    public McpSchema.GetPromptResult buildPromptResult(
-            String promptName,
-            Resource templateResource,
-            Map<String, Object> templateVariables
-    ) {
-        PromptTemplate promptTemplate = PromptTemplate.builder()
-                .resource(templateResource)
-                .variables(templateVariables)
-                .build();
-
-        Prompt prompt = promptTemplate.create();
-
-        UserMessage promptUserMessage = prompt.getUserMessage();
-        String promptText = promptUserMessage.getText();
-
-        McpSchema.TextContent textContent = new McpSchema.TextContent(promptText);
-        McpSchema.PromptMessage promptMessage = new McpSchema.PromptMessage(McpSchema.Role.USER, textContent);
-
-        return new McpSchema.GetPromptResult(promptName, List.of(promptMessage));
     }
 }
