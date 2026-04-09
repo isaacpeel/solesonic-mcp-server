@@ -17,7 +17,6 @@ import java.util.Map;
 @Component
 public class CreateJiraWorkflow {
     private static final Logger log = LoggerFactory.getLogger(CreateJiraWorkflow.class);
-    private static final double TOTAL_PROGRESS = 100.0;
 
     private static final String USER_STORY_TASK = "user-story-generation";
     private static final String ASSIGNEE_LOOKUP_TASK = "assignee-lookup";
