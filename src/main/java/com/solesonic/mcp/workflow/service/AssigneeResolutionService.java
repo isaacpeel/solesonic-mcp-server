@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -32,8 +33,9 @@ public class AssigneeResolutionService {
         this.chatClient = chatClient;
     }
 
-    public AssigneeLookupResult resolve(String userRequest) {
+    public AssigneeLookupResult resolve(String userRequest, McpSyncRequestContext mcpSyncRequestContext) {
         log.info("resolve AssigneeResolutionService");
+        mcpSyncRequestContext.progress(p -> p.percentage(50).message("Looking up assignee"));
 
         PromptTemplate assigneeLookupTemplate = new PromptTemplate(jiraAssigneeLookupPrompt);
 
@@ -48,6 +50,7 @@ public class AssigneeResolutionService {
                 .orElseThrow(() -> new JiraException("Assignee lookup failed for required assignee: " + assigneeToLookup));
 
         log.info("Found assignee: {}", user.displayName());
+        mcpSyncRequestContext.progress(p -> p.percentage(5).message("Found up assignee: "+user.displayName()));
 
         return new AssigneeLookupResult(true, user.accountId(), "RESOLVED");
     }

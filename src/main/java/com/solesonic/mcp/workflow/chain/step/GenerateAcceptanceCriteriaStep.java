@@ -8,6 +8,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.ListOutputConverter;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
@@ -35,8 +36,9 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context) {
+    public void execute(UserStoryChainContext context, McpSyncRequestContext mcpSyncRequestContext) {
         log.info("execute GenerateAcceptanceCriteriaStep");
+        mcpSyncRequestContext.progress(p -> p.percentage(10).message("Generating acceptance criteria"));
 
         String rawRequest = context.getRawRequest();
         String summary = context.getSummary();

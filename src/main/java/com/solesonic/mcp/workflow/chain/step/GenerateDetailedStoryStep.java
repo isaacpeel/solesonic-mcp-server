@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -29,8 +30,9 @@ public class GenerateDetailedStoryStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context) {
+    public void execute(UserStoryChainContext context, McpSyncRequestContext mcpSyncRequestContext) {
         log.info("execute GenerateDetailedStoryStep");
+        mcpSyncRequestContext.progress(p -> p.percentage(10).message("Creating story details"));
 
         String rawRequest = context.getRawRequest();
         Map<String, Object> descriptionInputs = Map.of(INPUT, rawRequest);

@@ -43,7 +43,8 @@ public class JiraIssueTools {
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public JiraIssueTools(JiraIssueService jiraIssueService, CreateJiraWorkflow createJiraWorkflow) {
+    public JiraIssueTools(JiraIssueService jiraIssueService,
+                          CreateJiraWorkflow createJiraWorkflow) {
         this.jiraIssueService = jiraIssueService;
         this.createJiraWorkflow = createJiraWorkflow;
     }
@@ -95,8 +96,12 @@ public class JiraIssueTools {
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
     @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = DirectReturnMetaProvider.class)
-    public CreateJiraResponse createJiraWorkflow(@McpToolParam(description = "The users request.") String userMessage) {
-        JiraIssueCreatePayload jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(userMessage);
+    public CreateJiraResponse createJiraWorkflow(
+            McpSyncRequestContext mcpSyncRequestContext,
+            @McpToolParam(description = "The users request.") String userMessage
+    ) {
+        JiraIssueCreatePayload jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
+
         CreateJiraRequest createJiraRequest = new CreateJiraRequest(jiraIssueCreatePayload.summary(), jiraIssueCreatePayload.description(), jiraIssueCreatePayload.acceptanceCriteria(), jiraIssueCreatePayload.assigneeId());
 
         log.info("Invoking create jira tool");
