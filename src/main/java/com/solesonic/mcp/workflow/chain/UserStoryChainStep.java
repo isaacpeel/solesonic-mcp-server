@@ -1,8 +1,8 @@
 package com.solesonic.mcp.workflow.chain;
 
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
+import com.solesonic.mcp.workflow.WeightedProgressCoordinator;
 
 public interface UserStoryChainStep {
-    void execute(UserStoryChainContext context, McpSyncRequestContext mcpSyncRequestContext);
+    void execute(UserStoryChainContext context, WeightedProgressCoordinator.TaskProgress taskProgress);
     String name();
 }

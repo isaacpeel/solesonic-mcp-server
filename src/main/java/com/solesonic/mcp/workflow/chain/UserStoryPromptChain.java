@@ -1,6 +1,8 @@
 package com.solesonic.mcp.workflow.chain;
 
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
+import com.solesonic.mcp.workflow.WeightedProgressCoordinator;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -11,13 +13,17 @@ public class UserStoryPromptChain {
         this.steps = steps;
     }
 
-    public UserStoryChainContext run(String rawRequest, McpSyncRequestContext mcpSyncRequestContext) {
-        UserStoryChainContext context = new UserStoryChainContext(rawRequest);
+    public Mono<UserStoryChainContext> run(String rawRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
+        return Mono.fromCallable(() -> {
+                    UserStoryChainContext context = new UserStoryChainContext(rawRequest);
 
-        for (UserStoryChainStep step : steps) {
-            step.execute(context, mcpSyncRequestContext);
-        }
+                    for (UserStoryChainStep step : steps) {
+                        step.execute(context, taskProgress);
+                    }
 
-        return context;
+                    taskProgress.done("User story generated");
+                    return context;
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

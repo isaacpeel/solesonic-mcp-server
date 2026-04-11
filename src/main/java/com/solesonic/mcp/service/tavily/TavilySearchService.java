@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -27,38 +28,30 @@ public class TavilySearchService {
         this.webClient = webClient;
     }
 
-    public TavilySearchResponse search(TavilySearchRequest request) {
+    public Mono<TavilySearchResponse> search(TavilySearchRequest request) {
         log.info("Executing Tavily search for query: {}", request.query());
 
-        TavilySearchResponse response = webClient.post()
+        return webClient.post()
                 .uri(SEARCH_ENDPOINT)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(TavilySearchResponse.class)
-                .block();
-
-        log.info("Tavily search completed. Results count: {}",
-                response != null && response.results() != null ? response.results().size() : 0);
-
-        return response;
+                .doOnSuccess(response -> log.info("Tavily search completed. Results count: {}",
+                        response != null && response.results() != null ? response.results().size() : 0));
     }
 
-    public TavilyExtractResponse extract(List<String> urls) {
+    public Mono<TavilyExtractResponse> extract(List<String> urls) {
         log.info("Executing Tavily extract for {} URLs", urls.size());
 
         TavilyExtractRequest request = new TavilyExtractRequest(urls);
 
-        TavilyExtractResponse response = webClient.post()
+        return webClient.post()
                 .uri(EXTRACT_ENDPOINT)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(TavilyExtractResponse.class)
-                .block();
-
-        log.info("Tavily extract completed. Success: {}, Failed: {}",
-                response != null && response.results() != null ? response.results().size() : 0,
-                response != null && response.failedResults() != null ? response.failedResults().size() : 0);
-
-        return response;
+                .doOnSuccess(response -> log.info("Tavily extract completed. Success: {}, Failed: {}",
+                        response != null && response.results() != null ? response.results().size() : 0,
+                        response != null && response.failedResults() != null ? response.failedResults().size() : 0));
     }
 }

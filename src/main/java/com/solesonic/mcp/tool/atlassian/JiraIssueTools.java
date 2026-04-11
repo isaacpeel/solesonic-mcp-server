@@ -2,19 +2,18 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
-import com.solesonic.mcp.tool.DirectReturnMetaProvider;
+import com.solesonic.mcp.tool.provider.DirectReturnMetaProvider;
 import com.solesonic.mcp.workflow.CreateJiraWorkflow;
-import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
 import org.springframework.ai.mcp.annotation.context.StructuredElicitResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,11 +30,17 @@ import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
 @SuppressWarnings("unused")
 @Service
 public class JiraIssueTools {
+    public static final String LIST_ITEM = "listItem";
+    public static final String ACCEPTANCE_CRITERIA = "Acceptance Criteria:";
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
     public static final String GET_JIRA_ISSUE = "get_jira_issue";
     public static final String CHAT_ID = "chatId";
+    public static final String TEXT = "text";
+    public static final String PARAGRAPH = "paragraph";
+    public static final String BULLET_LIST = "bulletList";
+    public static final String DOC = "doc";
 
     private final JiraIssueService jiraIssueService;
     private final CreateJiraWorkflow createJiraWorkflow;
@@ -96,154 +101,150 @@ public class JiraIssueTools {
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
     @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = DirectReturnMetaProvider.class)
-    public CreateJiraResponse createJiraWorkflow(
-            McpSyncRequestContext mcpSyncRequestContext,
+    public Mono<CreateJiraResponse> createJiraWorkflow(
+            McpAsyncRequestContext mcpAsyncRequestContext,
             @McpToolParam(description = "The users request.") String userMessage
     ) {
-        JiraIssueCreatePayload jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
+        return createJiraWorkflow.startWorkflow(mcpAsyncRequestContext, userMessage)
+                .flatMap(jiraIssueCreatePayload -> {
+                    CreateJiraRequest createJiraRequest = new CreateJiraRequest(
+                            jiraIssueCreatePayload.summary(),
+                            jiraIssueCreatePayload.description(),
+                            jiraIssueCreatePayload.acceptanceCriteria(),
+                            jiraIssueCreatePayload.assigneeId());
 
-        CreateJiraRequest createJiraRequest = new CreateJiraRequest(jiraIssueCreatePayload.summary(), jiraIssueCreatePayload.description(), jiraIssueCreatePayload.acceptanceCriteria(), jiraIssueCreatePayload.assigneeId());
+                    log.info("Invoking create jira tool");
+                    log.debug("Summary: {}", createJiraRequest.summary);
+                    log.debug("Description: {}", createJiraRequest.description);
+                    log.debug("Assignee ID: {}", createJiraRequest.assigneeId);
 
-        log.info("Invoking create jira tool");
-        log.debug("Summary: {}", createJiraRequest.summary);
-        log.debug("Description: {}", createJiraRequest.description);
-        log.debug("Assignee ID: {}", createJiraRequest.assigneeId);
+                    TextContent descriptionText = TextContent.text(createJiraRequest.description())
+                            .type(TEXT)
+                            .build();
 
-        TextContent descriptionText = TextContent.text(createJiraRequest.description())
-                .type("text")
-                .build();
+                    List<TextContent> acceptanceCriteria = new ArrayList<>();
 
-        List<TextContent> acceptanceCriteria = new ArrayList<>();
+                    createJiraRequest.acceptanceCriteria().forEach(ac -> {
+                        TextContent acceptanceCriteriaItemTextContent = TextContent.type(TEXT)
+                                .text(ac)
+                                .build();
 
-        createJiraRequest.acceptanceCriteria().forEach(ac -> {
-            TextContent acceptanceCriteriaItemTextContent = TextContent.type("text")
-                    .text(ac)
-                    .build();
+                        TextContent acceptanceCriteriaItemContent = TextContent.type(PARAGRAPH)
+                                .content(List.of(acceptanceCriteriaItemTextContent))
+                                .build();
 
-            TextContent acceptanceCriteriaItemContent = TextContent.type("paragraph")
-                    .content(List.of(acceptanceCriteriaItemTextContent))
-                    .build();
+                        TextContent listItemContent = TextContent.type(LIST_ITEM)
+                                .content(List.of(acceptanceCriteriaItemContent))
+                                .build();
 
-            TextContent listItemContent = TextContent.type("listItem")
-                    .content(List.of(acceptanceCriteriaItemContent))
-                    .build();
+                        acceptanceCriteria.add(listItemContent);
+                    });
 
-            acceptanceCriteria.add(listItemContent);
-        });
+                    Content bulletList = Content
+                            .content(acceptanceCriteria)
+                            .type(BULLET_LIST)
+                            .build();
 
-        Content bulletList = Content
-                .content(acceptanceCriteria)
-                .type("bulletList")
-                .build();
+                    Content descriptionContent = Content.content(List.of(descriptionText))
+                            .type(PARAGRAPH)
+                            .build();
 
-        Content descriptionContent = Content.content(List.of(descriptionText))
-                .type("paragraph")
-                .build();
+                    TextContent acceptanceCriteriaHeader = TextContent.text(ACCEPTANCE_CRITERIA)
+                            .type(TEXT)
+                            .build();
 
-        TextContent acceptanceCriteriaHeader = TextContent.text("Acceptance Criteria:")
-                .type("text")
-                .build();
+                    Content acceptanceCriteriaContent = Content
+                            .content(List.of(acceptanceCriteriaHeader))
+                            .type(PARAGRAPH)
+                            .build();
 
-        Content acceptanceCriteriaContent = Content
-                .content(List.of(acceptanceCriteriaHeader))
-                .type("paragraph")
-                .build();
+                    Description description = Description.content(List.of(descriptionContent, acceptanceCriteriaContent, bulletList))
+                            .type(DOC)
+                            .version(1)
+                            .build();
 
-        Description description = Description.content(List.of(descriptionContent, acceptanceCriteriaContent, bulletList))
-                .type("doc")
-                .version(1)
-                .build();
+                    IssueType issueType = IssueType.id(ISSUE_TYPE_ID).build();
+                    Project project = Project.id(PROJECT_ID).build();
+                    String assigneeId = createJiraRequest.assigneeId();
+                    User user = User.accountId(assigneeId).build();
 
-        IssueType issueType = IssueType.id(ISSUE_TYPE_ID).build();
+                    Fields fields = Fields.summary(createJiraRequest.summary())
+                            .project(project)
+                            .description(description)
+                            .issuetype(issueType)
+                            .assignee(user)
+                            .build();
 
-        Project project = Project.id(PROJECT_ID).build();
+                    JiraIssue jiraIssue = JiraIssue.fields(fields).build();
 
-        String assigneeId = createJiraRequest.assigneeId();
-        User user = User.accountId(assigneeId).build();
-
-        Fields fields = Fields.summary(createJiraRequest.summary())
-                .project(project)
-                .description(description)
-                .issuetype(issueType)
-                .assignee(user)
-                .build();
-
-        JiraIssue jiraIssue = JiraIssue.fields(fields).build();
-
-        JiraIssue created = jiraIssueService.create(jiraIssue);
-
-        log.debug("Created jira issue: {}", created);
-
-        String jiraUri = jiraUrlTemplate.replace("{key}", created.key());
-
-        log.debug("Using jira uri: {}", jiraUri);
-
-        return new CreateJiraResponse(created.id(), jiraUri, createJiraRequest.summary(), createJiraRequest.description(), user.displayName());
+                    return jiraIssueService.create(jiraIssue)
+                            .map(created -> {
+                                log.debug("Created jira issue: {}", created);
+                                String jiraUri = jiraUrlTemplate.replace("{key}", created.key());
+                                log.debug("Using jira uri: {}", jiraUri);
+                                return new CreateJiraResponse(created.id(), jiraUri, createJiraRequest.summary(), createJiraRequest.description(), user.displayName());
+                            });
+                });
     }
 
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-DELETE')")
     @McpTool(name = DELETE_JIRA_ISSUE, description = "Deletes a jira issue by its ID.")
-    public String deleteJiraIssue(
-            McpSyncRequestContext mcpSyncRequestContext,
+    public Mono<String> deleteJiraIssue(
+            McpAsyncRequestContext mcpAsyncRequestContext,
             @McpToolParam(description = "The key or id of the jira issue to delete.") String keyOrIssueId
     ) {
 
         log.info("Delete request for jira issue: {}", keyOrIssueId);
 
-        Map<String, Object> toolContext = mcpSyncRequestContext.requestMeta();
+        Map<String, Object> toolContext = mcpAsyncRequestContext.requestMeta();
 
         String chatId;
-        if(toolContext != null && toolContext.containsKey(CHAT_ID)) {
+        if (toolContext != null && toolContext.containsKey(CHAT_ID)) {
             chatId = toolContext.get(CHAT_ID).toString();
             log.info("Chat ID from ToolContext: {}", chatId);
         } else {
             chatId = UUID.randomUUID().toString();
         }
 
-        mcpSyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId));
-
         String finalChatId = chatId;
 
-        StructuredElicitResult<DeleteConfirmation> elicitation = mcpSyncRequestContext.elicit(
-                elicit -> elicit
-                        .message("Are you sure you want to delete Jira issue: " + keyOrIssueId + "?")
-                        .meta(Map.of(CHAT_ID, finalChatId)), DeleteConfirmation.class);
+        return mcpAsyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId))
+                .then(mcpAsyncRequestContext.elicit(
+                        elicit -> elicit
+                                .message("Are you sure you want to delete Jira issue: " + keyOrIssueId + "?")
+                                .meta(Map.of(CHAT_ID, finalChatId)),
+                        DeleteConfirmation.class
+                ))
+                .map(StructuredElicitResult::action)
+                .flatMap(action -> {
+                    log.info("Elicitation action: {}", action);
 
-        McpSchema.ElicitResult.Action action = elicitation.action();
+                    return switch (action) {
+                        case ACCEPT -> {
+                            yield jiraIssueService.delete(keyOrIssueId)
+                                    .then(mcpAsyncRequestContext.log(logging -> logging.message("Successfully deleted Jira issue: " + keyOrIssueId)))
+                                    .thenReturn("Successfully deleted Jira Issue: " + keyOrIssueId);
+                        }
+                        case DECLINE -> {
+                            log.info("Deletion declined by user for: {}", keyOrIssueId);
 
-        log.info("Elicitation action: {}", action);
+                            yield mcpAsyncRequestContext.log(logging -> logging.message("Deletion declined by user for: " + keyOrIssueId))
+                                    .thenReturn("Deletion declined for issue: " + keyOrIssueId);
+                        }
+                        case CANCEL -> {
+                            log.info("Deletion cancelled by user for: {}", keyOrIssueId);
 
-        return switch (action) {
-            case ACCEPT -> {
-                jiraIssueService.delete(keyOrIssueId);
-
-                mcpSyncRequestContext.log(logging -> logging.message("Successfully deleted Jira issue: " + keyOrIssueId));
-
-                log.info("Successfully deleted Jira issue: {}", keyOrIssueId);
-
-                yield "Successfully deleted Jira Issue: " + keyOrIssueId;
-            }
-            case DECLINE -> {
-                mcpSyncRequestContext.log(logging -> logging.message("Deletion declined by user for: " + keyOrIssueId));
-
-                log.info("Deletion declined by user for: {}", keyOrIssueId);
-
-                yield "Deletion declined for issue: " + keyOrIssueId;
-            }
-            case CANCEL -> {
-                mcpSyncRequestContext.log(logging -> logging.message("Deletion cancelled by user for: " + keyOrIssueId));
-
-                log.info("Deletion cancelled by user for: {}", keyOrIssueId);
-
-                yield "Deletion canceled for issue: " + keyOrIssueId;
-            }
-        };
+                            yield mcpAsyncRequestContext.log(logging -> logging.message("Deletion cancelled by user for: " + keyOrIssueId))
+                                    .thenReturn("Deletion canceled for issue: " + keyOrIssueId);
+                        }
+                    };
+                });
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-GET')")
     @McpTool(name = GET_JIRA_ISSUE, description = "Gets a jira issue by its `id` or by it's `key`")
-    public JiraIssue get(String issueId) {
+    public Mono<JiraIssue> get(String issueId) {
         log.info("Retrieving jira issue by ID: {}", issueId);
 
         return jiraIssueService.get(issueId);

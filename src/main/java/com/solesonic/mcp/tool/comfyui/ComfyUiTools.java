@@ -8,10 +8,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpResource;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
 import org.springframework.core.io.Resource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -51,8 +52,8 @@ public class ComfyUiTools {
 
     @PreAuthorize("hasAuthority('ROLE_MCP-GENERATE-IMAGE')")
     @McpTool(name = GENERATE_IMAGE, description = GENERATE_IMAGE_DESC)
-    public ComfyWorkflowResponse generateImage(
-            McpSyncRequestContext mcpContext,
+    public Mono<ComfyWorkflowResponse> generateImage(
+            McpAsyncRequestContext mcpContext,
             @McpToolParam(description = "The text prompt describing the image you want to generate. Be descriptive for better results.")
             String imagePrompt
     ) {
@@ -64,21 +65,17 @@ public class ComfyUiTools {
 
     @PreAuthorize("hasAuthority('ROLE_MCP-GENERATE-IMAGE')")
     @McpResource(name = GET_GENERATED_IMAGE, description =  GET_GENERATED_IMAGE_DESC, uri = "image://images/{promptId}", mimeType = "image/png")
-    public McpSchema.BlobResourceContents getGeneratedImage(
+    public Mono<McpSchema.BlobResourceContents> getGeneratedImage(
             @McpToolParam(description = "The prompt ID returned from generate_image")
             String promptId
     ) {
         log.info("Getting generated image for prompt: {}", promptId);
 
-        Resource image = comfyUiService.viewImageByPromptId(promptId);
-        String filename = image.getFilename();
-        byte[] bytes;
-        try {
-            bytes = image.getContentAsByteArray();
-            String encoded = Base64.getEncoder().encodeToString(bytes);
-            return new McpSchema.BlobResourceContents("image://images/"+promptId, "image/png", encoded);
-        } catch (IOException ioException) {
-            throw new RuntimeException(ioException);
-        }
+        return comfyUiService.viewImageByPromptId(promptId)
+                .flatMap(image -> Mono.fromCallable(() -> {
+                    byte[] bytes = image.getContentAsByteArray();
+                    String encoded = Base64.getEncoder().encodeToString(bytes);
+                    return new McpSchema.BlobResourceContents("image://images/" + promptId, "image/png", encoded);
+                }));
     }
 }

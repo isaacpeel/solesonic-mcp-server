@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 import static com.solesonic.mcp.service.atlassian.ConfluenceConstants.STORAGE_FORMAT;
 
@@ -61,7 +62,7 @@ public class CreateConfluenceTools {
 
     @SuppressWarnings("unused")
     @McpTool(name = CREATE_CONFLUENCE_PAGE, description = CREATE_CONFLUENCE_PAGE_DESCRIPTION)
-    public CreateConfluencePageResponse createConfluencePage(CreateConfluencePageRequest request) {
+    public Mono<CreateConfluencePageResponse> createConfluencePage(CreateConfluencePageRequest request) {
         log.debug("Invoking create confluence page function");
         log.debug("Title: {}", request.title);
         log.debug("Content length: {}", request.content != null ? request.content.length() : 0);
@@ -80,18 +81,14 @@ public class CreateConfluenceTools {
         body.setStorage(storage);
         page.setBody(body);
 
-        // Create the page in Confluence
-        Page createdPage = confluencePageService.createPage(page);
-        
-        log.debug("Created confluence page: {}", createdPage.getId());
-
-        // Generate the page URI
-        String pageUri = CONFLUENCE_URL_TEMPLATE
-                .replace("{spaceId}", DEFAULT_SPACE_ID)
-                .replace("{pageId}", createdPage.getId());
-
-        log.debug("Using page uri: {}", pageUri);
-
-        return new CreateConfluencePageResponse(createdPage.getId(), pageUri);
+        return confluencePageService.createPage(page)
+                .map(createdPage -> {
+                    log.debug("Created confluence page: {}", createdPage.getId());
+                    String pageUri = CONFLUENCE_URL_TEMPLATE
+                            .replace("{spaceId}", DEFAULT_SPACE_ID)
+                            .replace("{pageId}", createdPage.getId());
+                    log.debug("Using page uri: {}", pageUri);
+                    return new CreateConfluencePageResponse(createdPage.getId(), pageUri);
+                });
     }
 }

@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.chain.step;
 
+import com.solesonic.mcp.workflow.WeightedProgressCoordinator;
 import com.solesonic.mcp.workflow.chain.UserStoryChainContext;
 import com.solesonic.mcp.workflow.chain.UserStoryChainStep;
 import org.slf4j.Logger;
@@ -7,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -30,16 +30,15 @@ public class GenerateSummaryStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context, McpSyncRequestContext mcpSyncRequestContext) {
+    public void execute(UserStoryChainContext context, WeightedProgressCoordinator.TaskProgress taskProgress) {
         log.info("execute GenerateSummaryStep");
-        mcpSyncRequestContext.progress(p -> p.percentage(10).message("Creating story summary"));
+        taskProgress.update(0.55, "Creating story summary");
 
         String detailedStory = context.getDetailedStory();
         Map<String, Object> summaryInputs = Map.of(INPUT, detailedStory);
 
-        Prompt sunmmaryPrompt = summaryPromptTemplate.create(summaryInputs);
-
-        String summary = chatClient.prompt(sunmmaryPrompt).call().content();
+        Prompt summaryPrompt = summaryPromptTemplate.create(summaryInputs);
+        String summary = chatClient.prompt(summaryPrompt).call().content();
 
         context.setSummary(summary);
     }

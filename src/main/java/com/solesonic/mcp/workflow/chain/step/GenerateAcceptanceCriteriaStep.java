@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.chain.step;
 
+import com.solesonic.mcp.workflow.WeightedProgressCoordinator;
 import com.solesonic.mcp.workflow.chain.UserStoryChainContext;
 import com.solesonic.mcp.workflow.chain.UserStoryChainStep;
 import org.slf4j.Logger;
@@ -8,7 +9,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.ListOutputConverter;
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
@@ -36,9 +36,9 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context, McpSyncRequestContext mcpSyncRequestContext) {
+    public void execute(UserStoryChainContext context, WeightedProgressCoordinator.TaskProgress taskProgress) {
         log.info("execute GenerateAcceptanceCriteriaStep");
-        mcpSyncRequestContext.progress(p -> p.percentage(10).message("Generating acceptance criteria"));
+        taskProgress.update(0.85, "Generating acceptance criteria");
 
         String rawRequest = context.getRawRequest();
         String summary = context.getSummary();
@@ -50,9 +50,9 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
                 USER_STORY, summary,
                 FORMAT, listConverter.getFormat());
 
-        Prompt accaptanceCriteraPrompt = acceptanceCriteriaPromptTemplate.create(acceptanceCriteriaInputs);
+        Prompt acceptanceCriteriaPrompt = acceptanceCriteriaPromptTemplate.create(acceptanceCriteriaInputs);
 
-        List<String> acceptanceCriteria = chatClient.prompt(accaptanceCriteraPrompt)
+        List<String> acceptanceCriteria = chatClient.prompt(acceptanceCriteriaPrompt)
                 .call()
                 .entity(listConverter);
 

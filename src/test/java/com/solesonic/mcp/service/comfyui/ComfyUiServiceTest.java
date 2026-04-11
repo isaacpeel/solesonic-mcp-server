@@ -74,10 +74,12 @@ class ComfyUiServiceTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(ComfyWorkflowResponse.class)).thenReturn(Mono.just(expectedResponse));
 
-        ComfyWorkflowResponse actualResponse = comfyUiService.generateImage(userPrompt);
-
-        assertNotNull(actualResponse);
-        assertEquals("123", actualResponse.getPromptId());
+        StepVerifier.create(comfyUiService.generateImage(userPrompt))
+                .assertNext(actualResponse -> {
+                    assertNotNull(actualResponse);
+                    assertEquals("123", actualResponse.getPromptId());
+                })
+                .verifyComplete();
 
         ArgumentCaptor<ComfyWorkflow> workflowCaptor = ArgumentCaptor.forClass(ComfyWorkflow.class);
         verify(requestBodySpec).bodyValue(workflowCaptor.capture());
@@ -112,10 +114,12 @@ class ComfyUiServiceTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(ComfyWorkflowResponse.class)).thenReturn(Mono.just(expectedResponse));
 
-        ComfyWorkflowResponse actualResponse = comfyUiService.generateImage(userPrompt, clientId);
-
-        assertNotNull(actualResponse);
-        assertEquals("456", actualResponse.getPromptId());
+        StepVerifier.create(comfyUiService.generateImage(userPrompt, clientId))
+                .assertNext(actualResponse -> {
+                    assertNotNull(actualResponse);
+                    assertEquals("456", actualResponse.getPromptId());
+                })
+                .verifyComplete();
 
         ArgumentCaptor<ComfyWorkflow> workflowCaptor = ArgumentCaptor.forClass(ComfyWorkflow.class);
         verify(requestBodySpec).bodyValue(workflowCaptor.capture());
@@ -137,7 +141,9 @@ class ComfyUiServiceTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(ComfyWorkflowResponse.class)).thenReturn(Mono.just(expectedResponse));
 
-        comfyUiService.generateImage(userPrompt);
+        StepVerifier.create(comfyUiService.generateImage(userPrompt))
+                .expectNextCount(1)
+                .verifyComplete();
 
         ArgumentCaptor<ComfyWorkflow> workflowCaptor = ArgumentCaptor.forClass(ComfyWorkflow.class);
         verify(requestBodySpec).bodyValue(workflowCaptor.capture());
@@ -171,7 +177,9 @@ class ComfyUiServiceTest {
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(ComfyWorkflowResponse.class)).thenReturn(Mono.just(expectedResponse));
 
-        comfyUiService.generateImage("test prompt");
+        StepVerifier.create(comfyUiService.generateImage("test prompt"))
+                .expectNextCount(1)
+                .verifyComplete();
 
         ArgumentCaptor<ComfyWorkflow> workflowCaptor = ArgumentCaptor.forClass(ComfyWorkflow.class);
         verify(requestBodySpec).bodyValue(workflowCaptor.capture());

@@ -12,11 +12,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -46,10 +47,13 @@ class JiraAgileServiceTest {
                 .when(requestHeadersSpec).exchangeToMono(any());
 
         ListBoardsRequest listBoardsRequest = new ListBoardsRequest(0, 50, null, null, null);
-        Boards boards = service.listBoards(listBoardsRequest);
+        StepVerifier.create(service.listBoards(listBoardsRequest))
+                .assertNext(boards -> {
+                    org.junit.jupiter.api.Assertions.assertNotNull(boards);
+                    org.junit.jupiter.api.Assertions.assertTrue(CollectionUtils.isNotEmpty(boards.values()));
+                })
+                .verifyComplete();
 
-        assertNotNull(boards);
-        assertTrue(CollectionUtils.isNotEmpty(boards.values()));
         verify(requestHeadersUriSpec).uri(any(Function.class));
     }
 
@@ -60,10 +64,13 @@ class JiraAgileServiceTest {
         doReturn(Mono.just(new Board(1, "self", "Board", "scrum")))
                 .when(requestHeadersSpec).exchangeToMono(any());
 
-        Board board = service.getBoard("1");
+        StepVerifier.create(service.getBoard("1"))
+                .assertNext(board -> {
+                    org.junit.jupiter.api.Assertions.assertNotNull(board);
+                    assertEquals(1, board.id());
+                })
+                .verifyComplete();
 
-        assertNotNull(board);
-        assertEquals(1, board.id());
         verify(requestHeadersUriSpec).uri(any(Function.class));
     }
 }

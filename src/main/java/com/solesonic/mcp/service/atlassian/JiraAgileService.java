@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
@@ -42,12 +43,12 @@ public class JiraAgileService {
         this.webClient = webClient;
     }
 
-    public Boards listBoards(JiraAgileTools.ListBoardsRequest listBoardsRequest) {
+    public Mono<Boards> listBoards(JiraAgileTools.ListBoardsRequest listBoardsRequest) {
         log.info("Listing Jira boards");
 
         String[] baseUri = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH};
 
-        Boards boards = webClient.get()
+        return webClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(baseUri);
                     uriBuilder.queryParamIfPresent(START_AT, Optional.ofNullable(listBoardsRequest.startAt()));
@@ -59,13 +60,10 @@ public class JiraAgileService {
                     return uriBuilder.build();
                 })
                 .exchangeToMono(response -> response.bodyToMono(Boards.class))
-                .block();
-
-        log.info("Jira boards retrieved successfully");
-        return boards;
+                .doOnSuccess(boards -> log.info("Jira boards retrieved successfully"));
     }
 
-    public Board getBoard(String boardId) {
+    public Mono<Board> getBoard(String boardId) {
         log.debug("Getting Jira board: {}", boardId);
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId};
@@ -75,10 +73,10 @@ public class JiraAgileService {
                         .pathSegment(base)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Board.class))
-                .block();
+                .doOnSuccess(board -> log.info("Jira board retrieved successfully: {}", boardId));
     }
 
-    public String getBoardConfiguration(String boardId) {
+    public Mono<String> getBoardConfiguration(String boardId) {
         log.debug("Getting Jira board configuration: {}", boardId);
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, CONFIGURATION_PATH};
@@ -88,16 +86,16 @@ public class JiraAgileService {
                         .pathSegment(base)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(String.class))
-                .block();
+                .doOnSuccess(configuration -> log.info("Jira board configuration retrieved successfully: {}", boardId));
     }
 
-    public BoardIssues getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
+    public Mono<BoardIssues> getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
         String boardId = boardIssuesRequest.boardId();
         log.info("Getting Jira board issues for board ID: {}", boardId);
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, ISSUE_PATH};
 
-        BoardIssues boardIssues = webClient.get()
+        return webClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(base);
 
@@ -120,12 +118,10 @@ public class JiraAgileService {
                     return uriBuilder.build();
                 })
                 .exchangeToMono(response -> response.bodyToMono(BoardIssues.class))
-                .block();
-
-        assert boardIssues != null;
-        List<BoardIssue> issues = boardIssues.issues();
-        log.info("Found {} issues",  issues.size());
-
-        return boardIssues;
+                .doOnSuccess(boardIssues -> {
+                    assert boardIssues != null;
+                    List<BoardIssue> issues = boardIssues.issues();
+                    log.info("Found {} issues", issues.size());
+                });
     }
 }

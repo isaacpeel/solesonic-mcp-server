@@ -10,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
@@ -121,7 +122,7 @@ public class ComfyUiService {
      * @param userPrompt the text prompt for image generation
      * @return the workflow response containing the prompt ID
      */
-    public ComfyWorkflowResponse generateImage(String userPrompt) {
+    public Mono<ComfyWorkflowResponse> generateImage(String userPrompt) {
         return generateImage(userPrompt, null);
     }
 
@@ -133,7 +134,7 @@ public class ComfyUiService {
      * @param clientId the client identifier for WebSocket correlation (can be null)
      * @return the workflow response containing the prompt ID
      */
-    public ComfyWorkflowResponse generateImage(String userPrompt, UUID clientId) {
+    public Mono<ComfyWorkflowResponse> generateImage(String userPrompt, UUID clientId) {
         log.info("Submitting prompt to ComfyUI: {}", userPrompt);
 
         ComfyWorkflow comfyWorkflow = loadWorkflowTemplate();
@@ -162,17 +163,15 @@ public class ComfyUiService {
             comfyWorkflow.setClientId(clientId.toString());
         }
 
-        ComfyWorkflowResponse comfyWorkflowResponse = comfyUiWebClient.post()
+        return comfyUiWebClient.post()
                 .uri(uriBuilder -> uriBuilder.pathSegment(PROMPT).build())
                 .bodyValue(comfyWorkflow)
                 .retrieve()
                 .bodyToMono(ComfyWorkflowResponse.class)
-                .block();
-
-        assert comfyWorkflowResponse != null;
-        log.info("Successfully submitted prompt to ComfyUI with promptId: {}", comfyWorkflowResponse.getPromptId());
-
-        return comfyWorkflowResponse;
+                .doOnSuccess(comfyWorkflowResponse -> {
+                    assert comfyWorkflowResponse != null;
+                    log.info("Successfully submitted prompt to ComfyUI with promptId: {}", comfyWorkflowResponse.getPromptId());
+                });
     }
 
     /**
@@ -198,10 +197,10 @@ public class ComfyUiService {
         ) {}
     }
 
-    public Resource viewImageByPromptId(String promptId) {
+    public Mono<Resource> viewImageByPromptId(String promptId) {
         log.info("Fetching image by  prompt id: {}", promptId);
 
-        ComfyJobResponse comfyJobResponse =  comfyUiWebClient.get()
+        return comfyUiWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(API)
                         .pathSegment(JOBS)
@@ -209,18 +208,16 @@ public class ComfyUiService {
                         .build())
                 .retrieve()
                 .bodyToMono(ComfyJobResponse.class)
-                .block();
-
-        assert comfyJobResponse != null;
-        String filename = comfyJobResponse.preview_output().filename();
-
-        return comfyUiWebClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .queryParam(VIEW, filename)
-                        .build())
-                .retrieve()
-                .bodyToMono(Resource.class)
-                .block();
+                .flatMap(comfyJobResponse -> {
+                    assert comfyJobResponse != null;
+                    String filename = comfyJobResponse.preview_output().filename();
+                    return comfyUiWebClient.get()
+                            .uri(uriBuilder -> uriBuilder
+                                    .queryParam(VIEW, filename)
+                                    .build())
+                            .retrieve()
+                            .bodyToMono(Resource.class);
+                });
     }
 
     private ComfyWorkflow loadWorkflowTemplate() {

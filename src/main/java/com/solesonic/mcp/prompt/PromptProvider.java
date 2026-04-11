@@ -18,6 +18,7 @@ import org.springframework.ai.mcp.annotation.McpPrompt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -126,19 +127,22 @@ public class PromptProvider {
             title = "General Assistant",
             description = BASIC_PROMPT_DESCRIPTION,
             metaProvider = DefaultCommandProvider.class)
-    public McpSchema.GetPromptResult basicPrompt(@McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
-                                                 @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
-        log.info("Getting basic prompt.");
+    public Mono<McpSchema.GetPromptResult> basicPrompt(@McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
+                                                       @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
 
-        String availableTools = availableTools(WeatherService.class, WebSearchTools.class, DateTools.class);
+        return Mono.fromCallable(() -> {
+            log.info("Getting basic prompt.");
 
-        Map<String, Object> promptContext = Map.of(
-                AGENT_NAME, agentName,
-                USER_MESSAGE, userMessage,
-                AVAILABLE_TOOLS, availableTools
-        );
+            String availableTools = availableTools(WeatherService.class, WebSearchTools.class, DateTools.class);
 
-        return buildPromptResult("basic-prompt", this.basicPrompt, promptContext);
+            Map<String, Object> promptContext = Map.of(
+                    AGENT_NAME, agentName,
+                    USER_MESSAGE, userMessage,
+                    AVAILABLE_TOOLS, availableTools
+            );
+
+            return buildPromptResult("basic-prompt", this.basicPrompt, promptContext);
+        });
     }
 
     @McpPrompt(
@@ -147,21 +151,23 @@ public class PromptProvider {
             description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION,
             metaProvider = AgileCommandProvider.class
     )
-    public McpSchema.GetPromptResult jiraAgileBoardPrompt(
+    public Mono<McpSchema.GetPromptResult> jiraAgileBoardPrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing what they want to know or do with a Jira board.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
-        log.info("Getting Jira agile board prompt.");
+        return Mono.fromCallable(() -> {
+            log.info("Getting Jira agile board prompt.");
 
-        String availableTools = availableTools(JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
+            String availableTools = availableTools(JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
 
-        Map<String, Object> templateVariables = Map.of(
-                AGENT_NAME, agentName,
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableTools
-        );
+            Map<String, Object> templateVariables = Map.of(
+                    AGENT_NAME, agentName,
+                    INPUT, userMessage,
+                    AVAILABLE_TOOLS, availableTools
+            );
 
-        return buildPromptResult("jira-agile-board-prompt", this.jiraAgilePrompt, templateVariables);
+            return buildPromptResult("jira-agile-board-prompt", this.jiraAgilePrompt, templateVariables);
+        });
     }
 
     @McpPrompt(
@@ -170,21 +176,23 @@ public class PromptProvider {
             description = CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION,
             metaProvider = ConfluenceCommandProvider.class
     )
-    public McpSchema.GetPromptResult createConfluencePagePrompt(
+    public Mono<McpSchema.GetPromptResult> createConfluencePagePrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing the page to create in Confluence.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
-        log.info("Getting Confluence page creation prompt.");
+        return Mono.fromCallable(() -> {
+            log.info("Getting Confluence page creation prompt.");
 
-        String availableTools = availableTools(CreateConfluenceTools.class, WebSearchTools.class, DateTools.class);
+            String availableTools = availableTools(CreateConfluenceTools.class, WebSearchTools.class, DateTools.class);
 
-        Map<String, Object> templateVariables = Map.of(
-                AGENT_NAME, agentName,
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableTools
-        );
+            Map<String, Object> templateVariables = Map.of(
+                    AGENT_NAME, agentName,
+                    INPUT, userMessage,
+                    AVAILABLE_TOOLS, availableTools
+            );
 
-        return buildPromptResult("create-confluence-page-prompt", this.createConfluencePagePrompt, templateVariables);
+            return buildPromptResult("create-confluence-page-prompt", this.createConfluencePagePrompt, templateVariables);
+        });
     }
 
     @McpPrompt(
@@ -193,20 +201,22 @@ public class PromptProvider {
             description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION,
             metaProvider = CreateJiraCommandProvider.class
     )
-    public McpSchema.GetPromptResult createJiraIssuePrompt(
+    public Mono<McpSchema.GetPromptResult> createJiraIssuePrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing the issue to create in Jira.") String userMessage
     ) {
-        log.info("Getting Jira issue creation prompt.");
+        return Mono.fromCallable(() -> {
+            log.info("Getting Jira issue creation prompt.");
 
-        String availableTools = CREATE_JIRA_ISSUE;
+            String availableTools = CREATE_JIRA_ISSUE;
 
-        log.info("Available tools: {}", availableTools);
+            log.info("Available tools: {}", availableTools);
 
-        Map<String, Object> templateVariables = Map.of(
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableTools
-        );
+            Map<String, Object> templateVariables = Map.of(
+                    INPUT, userMessage,
+                    AVAILABLE_TOOLS, availableTools
+            );
 
-        return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);
+            return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);
+        });
     }
 }

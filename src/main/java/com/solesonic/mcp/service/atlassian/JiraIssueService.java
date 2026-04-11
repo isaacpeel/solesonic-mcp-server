@@ -9,8 +9,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.*;
@@ -22,7 +25,7 @@ public class JiraIssueService {
     @Value("${solesonic.llm.jira.cloud.id.path}")
     private String cloudIdPath;
 
-    private final ThreadLocal<String> jiraIssueHolder = ThreadLocal.withInitial(() -> null);
+    private final AtomicReference<String> jiraIssueHolder = new AtomicReference<>();
     private final WebClient webClient;
     private final JsonMapper jsonMapper;
 
@@ -31,97 +34,95 @@ public class JiraIssueService {
         this.jsonMapper = jsonMapper;
     }
 
-    public JiraIssue get(String issueId) {
+    public Mono<JiraIssue> get(String issueId) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
-        JiraIssue jiraIssue = webClient.get()
+        return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
-                .block();
-
-        log.info("Jira issue successfully retrieved: {}", issueId);
-
-        return jiraIssue;
+                .doOnSuccess(jiraIssue -> log.info("Jira issue successfully retrieved: {}", issueId));
     }
 
-    public JiraIssue create(JiraIssue jiraIssue) {
+    public Mono<JiraIssue> create(JiraIssue jiraIssue) {
         log.info("Creating jira issue.");
-
-        if (jiraIssueHolder.get() != null) {
-            throw new DuplicateJiraCreationException(jiraIssueHolder.get());
-        }
-
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH};
 
-        String jiraIssueJson = webClient.post()
-                .uri(uriBuilder -> uriBuilder
-                        .pathSegment(basePathSegments)
-                        .build())
-                .bodyValue(jiraIssue)
-                .exchangeToMono(response -> response.bodyToMono(String.class))
-                .block();
+        return Mono.defer(() -> {
+                    String existingIssueKey = jiraIssueHolder.get();
 
-        log.info("Jira create response JSON: {}", jiraIssueJson);
-
-        if (jiraIssueJson == null || jiraIssueJson.isBlank()) {
-            throw new JiraException("Jira issue creation failed: empty response from Jira.", jiraIssueJson);
-        }
-
-        // Detect Jira error structure in the JSON body and surface a helpful message to tool callers
-        JsonNode root = jsonMapper.readTree(jiraIssueJson);
-
-        boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
-        boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
-
-        if (hasErrorMessages || hasErrorsObject) {
-            StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
-
-            if (hasErrorMessages) {
-                for (JsonNode msgNode : root.get("errorMessages")) {
-                    if (messageBuilder.length() > 30) { // already has some content
-                        messageBuilder.append("; ");
+                    if (existingIssueKey != null) {
+                        return Mono.error(new DuplicateJiraCreationException(existingIssueKey));
                     }
-                    messageBuilder.append(msgNode.asString());
-                }
-            }
 
-            if (hasErrorsObject) {
-                root.get("errors").properties().forEach(entry -> {
-                    if (messageBuilder.length() > 30) {
-                        messageBuilder.append("; ");
+                    return webClient.post()
+                            .uri(uriBuilder -> uriBuilder
+                                    .pathSegment(basePathSegments)
+                                    .build())
+                            .bodyValue(jiraIssue)
+                            .exchangeToMono(response -> response.bodyToMono(String.class));
+                })
+                .flatMap(jiraIssueJson -> {
+                    log.info("Jira create response JSON: {}", jiraIssueJson);
+
+                    if (jiraIssueJson == null || jiraIssueJson.isBlank()) {
+                        return Mono.error(new JiraException("Jira issue creation failed: empty response from Jira.", jiraIssueJson));
                     }
-                    messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asString());
+
+                    JsonNode root = jsonMapper.readTree(jiraIssueJson);
+                    boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
+                    boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
+
+                    if (hasErrorMessages || hasErrorsObject) {
+                        StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
+
+                        if (hasErrorMessages) {
+
+                            for (JsonNode msgNode : root.get("errorMessages")) {
+                                if (messageBuilder.length() > 30) {
+                                    messageBuilder.append("; ");
+                                }
+
+                                messageBuilder.append(msgNode.asString());
+                            }
+                        }
+
+                        if (hasErrorsObject) {
+                            root.get("errors").properties().forEach(entry -> {
+                                if (messageBuilder.length() > 30) {
+                                    messageBuilder.append("; ");
+                                }
+
+                                messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asString());
+                            });
+                        }
+
+                        return Mono.error(new JiraException(messageBuilder.toString(), jiraIssueJson));
+                    }
+
+                    JiraIssue createdJiraIssue = jsonMapper.readValue(jiraIssueJson, JiraIssue.class);
+                    assert createdJiraIssue != null;
+
+                    String issueKey = createdJiraIssue.key();
+                    assert issueKey != null;
+                    jiraIssueHolder.set(issueKey);
+                    log.info("Created jira issue with key: {}", issueKey);
+
+                    return Mono.just(createdJiraIssue);
                 });
-            }
-
-            throw new JiraException(messageBuilder.toString(), jiraIssueJson);
-        }
-
-        jiraIssue = jsonMapper.readValue(jiraIssueJson, JiraIssue.class);
-
-        assert jiraIssue != null;
-
-        String issueKey = jiraIssue.key();
-        assert issueKey != null;
-
-        log.info("Created jira issue with key: {}", issueKey);
-        jiraIssueHolder.set(issueKey);
-
-        return jiraIssue;
     }
 
-    public void delete(String issueId) {
+    public Mono<Void> delete(String issueId) {
         log.info("Deleting jira issue.");
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
-        webClient.delete()
+        return webClient.delete()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
-                .block();
+                .then();
     }
 }

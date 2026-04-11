@@ -10,11 +10,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -75,13 +75,15 @@ class TavilySearchServiceTest {
                 .maxResults(5)
                 .build();
 
-        TavilySearchResponse response = tavilySearchService.search(request);
-
-        assertNotNull(response);
-        assertEquals("test query", response.query());
-        assertEquals("This is the answer", response.answer());
-        assertNotNull(response.results());
-        assertEquals(1, response.results().size());
-        assertEquals("Test Title", response.results().getFirst().title());
+        StepVerifier.create(tavilySearchService.search(request))
+                .assertNext(response -> {
+                    org.junit.jupiter.api.Assertions.assertNotNull(response);
+                    assertEquals("test query", response.query());
+                    assertEquals("This is the answer", response.answer());
+                    org.junit.jupiter.api.Assertions.assertNotNull(response.results());
+                    assertEquals(1, response.results().size());
+                    assertEquals("Test Title", response.results().getFirst().title());
+                })
+                .verifyComplete();
     }
 }

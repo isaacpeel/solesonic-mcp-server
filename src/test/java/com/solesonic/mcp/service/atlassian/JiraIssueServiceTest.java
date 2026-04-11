@@ -11,11 +11,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -46,11 +48,12 @@ class JiraIssueServiceTest {
 
         doReturn(Mono.just(expected)).when(requestHeadersSpec).exchangeToMono(any());
 
-        JiraIssue result = service.get("ISSUE-1");
-
-        assertNotNull(result);
-        assertEquals("123", result.id());
-        assertEquals("ISSUE-1", result.key());
+        StepVerifier.create(service.get("ISSUE-1"))
+                .assertNext(result -> {
+                    assertEquals("123", result.id());
+                    assertEquals("ISSUE-1", result.key());
+                })
+                .verifyComplete();
 
         // Verify that a URI builder was provided
         verify(requestHeadersUriSpec).uri(any(Function.class));
@@ -70,11 +73,12 @@ class JiraIssueServiceTest {
 
         doReturn(Mono.just(responseJson)).when(requestHeadersSpec).exchangeToMono(any());
 
-        JiraIssue created = service.create(input);
-
-        assertNotNull(created);
-        assertEquals("123", created.id());
-        assertEquals("ISSUE-2", created.key());
+        StepVerifier.create(service.create(input))
+                .assertNext(created -> {
+                    assertEquals("123", created.id());
+                    assertEquals("ISSUE-2", created.key());
+                })
+                .verifyComplete();
     }
 
     @Test
@@ -90,13 +94,13 @@ class JiraIssueServiceTest {
 
         doReturn(Mono.just(responseJson)).when(requestHeadersSpec).exchangeToMono(any());
 
-        // First creation sets the thread-local key
-        service.create(new JiraIssue.Builder().id("1").key("TEMP").build());
+        StepVerifier.create(service.create(new JiraIssue.Builder().id("1").key("TEMP").build()))
+                .expectNextCount(1)
+                .verifyComplete();
 
-        // Second creation should throw
-        assertThrows(DuplicateJiraCreationException.class, () ->
-                service.create(new JiraIssue.Builder().id("2").key("TEMP2").build())
-        );
+        StepVerifier.create(service.create(new JiraIssue.Builder().id("2").key("TEMP2").build()))
+                .expectError(DuplicateJiraCreationException.class)
+                .verify();
     }
 
     @Test
@@ -117,10 +121,13 @@ class JiraIssueServiceTest {
 
         JiraIssue input = new JiraIssue.Builder().id("1").key("TEMP").build();
 
-        JiraException ex = assertThrows(JiraException.class, () -> service.create(input));
-
-        assertTrue(ex.getMessage().contains("Jira issue creation failed"));
-        assertTrue(ex.getMessage().contains("summary: You must specify a summary of the issue."));
-        assertEquals(errorJson, ex.getResponseBody());
+        StepVerifier.create(service.create(input))
+                .expectErrorSatisfies(throwable -> {
+                    JiraException ex = (JiraException) throwable;
+                    assertTrue(ex.getMessage().contains("Jira issue creation failed"));
+                    assertTrue(ex.getMessage().contains("summary: You must specify a summary of the issue."));
+                    assertEquals(errorJson, ex.getResponseBody());
+                })
+                .verify();
     }
 }

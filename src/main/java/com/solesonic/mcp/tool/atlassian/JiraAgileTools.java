@@ -10,6 +10,7 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 @SuppressWarnings("unused")
 @Service
@@ -107,7 +108,7 @@ public class JiraAgileTools {
 
     @McpTool(name = LIST_JIRA_BOARDS, description = LIST_JIRA_BOARDS_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-LIST')")
-    public Boards listJiraBoards(@McpToolParam(description = LIST_JIRA_BOARDS_INPUT_DESCRIPTION) ListBoardsRequest listBoardsRequest) {
+    public Mono<Boards> listJiraBoards(@McpToolParam(description = LIST_JIRA_BOARDS_INPUT_DESCRIPTION) ListBoardsRequest listBoardsRequest) {
         log.info("Listing Jira boards: {}", listBoardsRequest);
 
         return jiraAgileService.listBoards(listBoardsRequest);
@@ -115,38 +116,35 @@ public class JiraAgileTools {
 
     @McpTool(name = GET_JIRA_BOARD, description = GET_JIRA_BOARD_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-GET')")
-    public Board getJiraBoard(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
+    public Mono<Board> getJiraBoard(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
         log.info("Getting Jira board: {}", boardId);
         return jiraAgileService.getBoard(boardId);
     }
 
     @McpTool(name = GET_JIRA_BOARD_CONFIGURATION, description = GET_JIRA_BOARD_CONFIGURATION_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-CONFIG')")
-    public String getJiraBoardConfiguration(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
+    public Mono<String> getJiraBoardConfiguration(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
         log.info("Fetching configuration for Jira board: {}", boardId);
         return jiraAgileService.getBoardConfiguration(boardId);
     }
 
     @McpTool(name = GET_JIRA_BOARD_ISSUES, description = GET_JIRA_BOARD_ISSUES_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-ISSUES')")
-    public BoardIssues getJiraBoardIssues(@McpToolParam(description = GET_JIRA_BOARD_INPUT_DESCRIPTION) BoardIssuesRequest boardIssuesRequest) {
+    public Mono<BoardIssues> getJiraBoardIssues(@McpToolParam(description = GET_JIRA_BOARD_INPUT_DESCRIPTION) BoardIssuesRequest boardIssuesRequest) {
         log.info("Getting Jira board issues");
 
-        if(boardIssuesRequest == null) {
+        if (boardIssuesRequest == null) {
             log.error("Board issues request is null.");
-            throw new IllegalArgumentException("Board issues request is null");
+            return Mono.error(new IllegalArgumentException("Board issues request is null"));
         }
 
-        if(boardIssuesRequest.boardId == null) {
+        if (boardIssuesRequest.boardId == null) {
             log.error("Board ID is null.");
-            throw new IllegalArgumentException("Board ID is null");
+            return Mono.error(new IllegalArgumentException("Board ID is null"));
         }
 
         log.info("Fetching issues for board: {}", boardIssuesRequest.boardId());
-        BoardIssues boardIssues = jiraAgileService.getBoardIssues(boardIssuesRequest);
-
-        log.info("Found Jira board issues");
-
-        return boardIssues;
+        return jiraAgileService.getBoardIssues(boardIssuesRequest)
+                .doOnSuccess(boardIssues -> log.info("Found Jira board issues"));
     }
 }

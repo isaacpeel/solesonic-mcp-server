@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class JiraUserService {
         this.webClient = webClient;
     }
 
-    public List<User> search(String userName) {
+    public Mono<List<User>> search(String userName) {
         log.info("Searching for user: {}", userName);
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, USER_PATH, ASSIGNABLE_PATH, SEARCH_PATH};
 
@@ -40,8 +41,7 @@ public class JiraUserService {
                 .exchangeToMono(response -> {
                     log.info("Request URI: {}", response.request().getURI());
                     return response.bodyToMono(new ParameterizedTypeReference<List<User>>() {});
-                })
-                .block();
+                });
 
     }
 }

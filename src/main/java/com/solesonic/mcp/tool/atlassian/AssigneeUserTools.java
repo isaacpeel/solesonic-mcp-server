@@ -10,6 +10,7 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 @Service
 public class AssigneeUserTools {
@@ -82,7 +83,7 @@ public class AssigneeUserTools {
     @SuppressWarnings("unused")
     @McpTool(name = ASSIGN_JIRA, description = TOOL_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-ASSIGNEE-LOOKUP')")
-    public AssigneeResponse assigneeLookup(
+    public Mono<AssigneeResponse> assigneeLookup(
             @McpToolParam(description = PARAM_DESCRIPTION)
             AssigneeRequest assigneeRequest) {
         log.debug("Invoking user search for: {}", assigneeRequest);
@@ -92,13 +93,13 @@ public class AssigneeUserTools {
             throw new JiraException("Empty jiraUserName name provided");
         }
 
-        User user = jiraUserService.search(assigneeRequest.jiraUserName())
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new JiraException("No assignable user found"));
-
-        log.debug("Found jiraUserName with ID: {}", user.accountId());
-
-        return new AssigneeResponse(user.accountId());
+        return jiraUserService.search(assigneeRequest.jiraUserName())
+                .flatMap(users -> users.stream()
+                        .findFirst()
+                        .map(user -> {
+                            log.debug("Found jiraUserName with ID: {}", user.accountId());
+                            return Mono.just(new AssigneeResponse(user.accountId()));
+                        })
+                        .orElseGet(() -> Mono.error(new JiraException("No assignable user found"))));
     }
 }
