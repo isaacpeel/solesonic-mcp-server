@@ -57,7 +57,7 @@ public class AssigneeResolutionService {
                                 log.info("Found assignee: {}", user.displayName());
                                 taskProgress.done("Found assignee: " + user.displayName());
 
-                                return Mono.just(new AssigneeLookupResult(true, user.accountId(), "RESOLVED"));
+                                return Mono.just(new AssigneeLookupResult(true, user.accountId(), "RESOLVED", user.displayName()));
                             });
                 });
     }

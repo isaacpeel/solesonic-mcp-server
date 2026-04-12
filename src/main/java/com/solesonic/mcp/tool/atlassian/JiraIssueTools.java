@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.mcp.model.atlassian.jira.*;
+import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
 import com.solesonic.mcp.tool.provider.DirectReturnMetaProvider;
 import com.solesonic.mcp.workflow.CreateJiraWorkflow;
@@ -16,13 +16,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static com.solesonic.mcp.service.atlassian.AtlassianConstants.ISSUE_TYPE_ID;
-import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
 
 /**
  * MCP tools service for Jira operations.
@@ -31,17 +27,28 @@ import static com.solesonic.mcp.service.atlassian.AtlassianConstants.PROJECT_ID;
 @SuppressWarnings("unused")
 @Service
 public class JiraIssueTools {
-    public static final String LIST_ITEM = "listItem";
-    public static final String ACCEPTANCE_CRITERIA = "Acceptance Criteria:";
+
+
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
     public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
     public static final String GET_JIRA_ISSUE = "get_jira_issue";
     public static final String CHAT_ID = "chatId";
-    public static final String TEXT = "text";
-    public static final String PARAGRAPH = "paragraph";
-    public static final String BULLET_LIST = "bulletList";
-    public static final String DOC = "doc";
+
+    public static final String JIRA_ISSUE_TEMPLATE = """
+            ## Jira Issue Created
+            
+            **[%s](%s)**
+            
+            **Summary:** %s
+            
+            **Description:**
+            %s
+            
+            **Acceptance Criteria:**
+            %s
+            **Assignee:** %s
+            """;
 
     private final JiraIssueService jiraIssueService;
     private final CreateJiraWorkflow createJiraWorkflow;
@@ -53,9 +60,6 @@ public class JiraIssueTools {
                           CreateJiraWorkflow createJiraWorkflow) {
         this.jiraIssueService = jiraIssueService;
         this.createJiraWorkflow = createJiraWorkflow;
-    }
-
-    public record CreateJiraResponse(String issueId, String issueUri, String summary, String description, String assignee) {
     }
 
     public static final String CREATE_JIRA_ISSUE_DESCRIPTION = """
@@ -102,7 +106,7 @@ public class JiraIssueTools {
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
     @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = DirectReturnMetaProvider.class)
-    public Mono<CreateJiraResponse> createJiraWorkflow(
+    public Mono<String> createJiraWorkflow(
             McpAsyncRequestContext mcpAsyncRequestContext,
             @McpToolParam(description = "The users request.") String userMessage
     ) {
@@ -114,78 +118,36 @@ public class JiraIssueTools {
                             jiraIssueCreatePayload.summary(),
                             jiraIssueCreatePayload.description(),
                             jiraIssueCreatePayload.acceptanceCriteria(),
-                            jiraIssueCreatePayload.assigneeId());
+                            jiraIssueCreatePayload.assigneeLookupResult().assigneeId());
 
                     log.info("Invoking create jira tool");
                     log.debug("Summary: {}", createJiraRequest.summary);
                     log.debug("Description: {}", createJiraRequest.description);
                     log.debug("Assignee ID: {}", createJiraRequest.assigneeId);
 
-                    TextContent descriptionText = TextContent.text(createJiraRequest.description())
-                            .type(TEXT)
-                            .build();
-
-                    List<TextContent> acceptanceCriteria = new ArrayList<>();
-
-                    createJiraRequest.acceptanceCriteria().forEach(ac -> {
-                        TextContent acceptanceCriteriaItemTextContent = TextContent.type(TEXT)
-                                .text(ac)
-                                .build();
-
-                        TextContent acceptanceCriteriaItemContent = TextContent.type(PARAGRAPH)
-                                .content(List.of(acceptanceCriteriaItemTextContent))
-                                .build();
-
-                        TextContent listItemContent = TextContent.type(LIST_ITEM)
-                                .content(List.of(acceptanceCriteriaItemContent))
-                                .build();
-
-                        acceptanceCriteria.add(listItemContent);
-                    });
-
-                    Content bulletList = Content
-                            .content(acceptanceCriteria)
-                            .type(BULLET_LIST)
-                            .build();
-
-                    Content descriptionContent = Content.content(List.of(descriptionText))
-                            .type(PARAGRAPH)
-                            .build();
-
-                    TextContent acceptanceCriteriaHeader = TextContent.text(ACCEPTANCE_CRITERIA)
-                            .type(TEXT)
-                            .build();
-
-                    Content acceptanceCriteriaContent = Content
-                            .content(List.of(acceptanceCriteriaHeader))
-                            .type(PARAGRAPH)
-                            .build();
-
-                    Description description = Description.content(List.of(descriptionContent, acceptanceCriteriaContent, bulletList))
-                            .type(DOC)
-                            .version(1)
-                            .build();
-
-                    IssueType issueType = IssueType.id(ISSUE_TYPE_ID).build();
-                    Project project = Project.id(PROJECT_ID).build();
-                    String assigneeId = createJiraRequest.assigneeId();
-                    User user = User.accountId(assigneeId).build();
-
-                    Fields fields = Fields.summary(createJiraRequest.summary())
-                            .project(project)
-                            .description(description)
-                            .issuetype(issueType)
-                            .assignee(user)
-                            .build();
-
-                    JiraIssue jiraIssue = JiraIssue.fields(fields).build();
+                    JiraIssue jiraIssue = jiraIssueService.convert(jiraIssueCreatePayload);
 
                     return jiraIssueService.create(jiraIssue)
                             .map(created -> {
                                 log.debug("Created jira issue: {}", created);
                                 String jiraUri = jiraUrlTemplate.replace("{key}", created.key());
                                 log.debug("Using jira uri: {}", jiraUri);
-                                return new CreateJiraResponse(created.id(), jiraUri, createJiraRequest.summary(), createJiraRequest.description(), user.displayName());
+
+                                StringBuilder acceptanceCriteriaLines = new StringBuilder();
+                                createJiraRequest.acceptanceCriteria().forEach(criterion ->
+                                        acceptanceCriteriaLines.append("- ").append(criterion).append("\n")
+                                );
+
+                                String assigneeDisplay = jiraIssueCreatePayload.assigneeLookupResult().assigneeName();
+
+                                return JIRA_ISSUE_TEMPLATE.formatted(
+                                        created.key(),
+                                        jiraUri,
+                                        createJiraRequest.summary(),
+                                        createJiraRequest.description(),
+                                        acceptanceCriteriaLines,
+                                        assigneeDisplay
+                                );
                             });
                 });
     }

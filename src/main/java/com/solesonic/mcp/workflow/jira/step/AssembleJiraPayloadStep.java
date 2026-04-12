@@ -5,7 +5,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.jira.CreateJiraWorkflowContext;
 import com.solesonic.mcp.workflow.jira.WorkflowStage;
-import com.solesonic.mcp.workflow.model.AssigneeLookupResult;
 import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -25,14 +24,11 @@ public class AssembleJiraPayloadStep implements WorkflowStep<CreateJiraWorkflowC
             context.setCurrentStage(WorkflowStage.ASSEMBLING_PAYLOAD);
             executionContext.progressTracker().step(name()).update(0.5, "Compiling workflow results");
 
-            AssigneeLookupResult assigneeLookupResult = context.getAssigneeLookupResult();
-            String assigneeId = assigneeLookupResult == null ? null : assigneeLookupResult.assigneeId();
-
             JiraIssueCreatePayload payload = new JiraIssueCreatePayload(
                     context.getStorySummary(),
                     context.getDetailedDescription(),
                     context.getAcceptanceCriteria(),
-                    assigneeId
+                    context.getAssigneeLookupResult()
             );
 
             context.setFinalPayload(payload);
