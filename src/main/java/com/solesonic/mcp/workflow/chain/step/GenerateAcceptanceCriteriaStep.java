@@ -9,6 +9,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.ListOutputConverter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+
+import static com.solesonic.mcp.workflow.chain.UserStoryChainConfig.USER_STORY_CHAT_CLIENT;
 
 @Component
 public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
@@ -28,7 +31,7 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
     private final ChatClient chatClient;
     private final PromptTemplate acceptanceCriteriaPromptTemplate;
 
-    public GenerateAcceptanceCriteriaStep(ChatClient chatClient,
+    public GenerateAcceptanceCriteriaStep(@Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
                                           @Value("classpath:prompt/user_story_acceptance_criteria_prompt.st")
                                           Resource userStorySummaryPrompt) {
         this.chatClient = chatClient;

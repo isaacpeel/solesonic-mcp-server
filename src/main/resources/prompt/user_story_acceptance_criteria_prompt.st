@@ -20,3 +20,6 @@ INSTRUCTIONS:
 - Do not combine multiple criteria in one item.
 - Do not use sub-bullets, numbered sub-items, or multi-part items separated by semicolons.
 - Keep each item to a single sentence when possible.
+
+OUTPUT FORMAT:
+{format}
