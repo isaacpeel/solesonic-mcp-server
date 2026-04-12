@@ -8,11 +8,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+
+import static com.solesonic.mcp.workflow.chain.UserStoryChainConfig.USER_STORY_CHAT_CLIENT;
 
 @Component
 public class GenerateSummaryStep implements UserStoryChainStep {
@@ -23,7 +26,7 @@ public class GenerateSummaryStep implements UserStoryChainStep {
     private final PromptTemplate summaryPromptTemplate;
     private final ChatClient chatClient;
 
-    public GenerateSummaryStep(ChatClient chatClient,
+    public GenerateSummaryStep(@Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
                                @Value("classpath:prompt/user_story_summary_prompt.st") Resource userStorySummaryPrompt) {
         this.chatClient = chatClient;
         this.summaryPromptTemplate = new PromptTemplate(userStorySummaryPrompt);
