@@ -21,6 +21,7 @@ So that [benefit or value].
 - If the request is vague, make the most reasonable product-oriented interpretation.
 - Do NOT generate acceptance criteria. Output only the user story.
 - DO NOT include any person's name or assignee information in the user story. Assignee instructions (e.g. "assign this to X") are metadata — ignore them completely.
+- Do NOT include any preamble, introductory phrase, or explanation. Your response must begin directly with "As a".
 
 OUTPUT:
 As a ...
