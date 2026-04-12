@@ -153,6 +153,7 @@ class ComfyUiServiceTest {
     }
 
     @Test
+    @SuppressWarnings("ReactiveStreamsUnusedPublisher")
     void generateImage_shouldThrowWhenWorkflowMissingRequiredNodes() {
         String invalidWorkflowJson = "{\"prompt\": {\"other\": {\"inputs\": {}}}}";
         Resource invalidResource = new ByteArrayResource(invalidWorkflowJson.getBytes()) {
@@ -193,6 +194,7 @@ class ComfyUiServiceTest {
         assertTrue((Long) seedValue > 0, "Seed should be a positive number");
     }
 
+    @SuppressWarnings("ReactiveStreamsUnusedPublisher")
     @Test
     void establishWebSocket_shouldDelegateToWebSocketClient() {
         UUID clientId = UUID.randomUUID();
