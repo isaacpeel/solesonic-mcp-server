@@ -12,6 +12,7 @@ INSTRUCTIONS:
 - Focus on the core user value/outcome.
 - Do not include prefixes like "Title:".
 - Do not include punctuation at the end.
+- Ignore any assignee or person names. Do not include them in the title.
 
 OUTPUT:
 Return only the title text.

@@ -135,7 +135,7 @@ public class JiraIssueTools {
 
                                 StringBuilder acceptanceCriteriaLines = new StringBuilder();
                                 createJiraRequest.acceptanceCriteria().forEach(criterion ->
-                                        acceptanceCriteriaLines.append("- ").append(criterion).append("\n")
+                                        acceptanceCriteriaLines.append("- ").append(criterion.strip().replace("\n", " ")).append("\n")
                                 );
 
                                 String assigneeDisplay = jiraIssueCreatePayload.assigneeLookupResult().assigneeName();
