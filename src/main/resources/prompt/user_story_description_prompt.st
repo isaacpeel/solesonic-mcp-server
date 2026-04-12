@@ -20,7 +20,7 @@ So that [benefit or value].
 - Focus on the problem being solved and the outcome the user needs.
 - If the request is vague, make the most reasonable product-oriented interpretation.
 - Do NOT generate acceptance criteria. Output only the user story.
-- Ignore any assignee information in the request (e.g. "assign this to X"). Assignees are metadata and must not appear in the user story.
+- DO NOT include any person's name or assignee information in the user story. Assignee instructions (e.g. "assign this to X") are metadata — ignore them completely.
 
 OUTPUT:
 As a ...

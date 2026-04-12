@@ -17,7 +17,7 @@ import java.util.List;
 
 @Configuration
 public class UserStoryChainConfig {
-    public static final String OLLAMA_MODEL = "mistral:7b";
+    public static final String OLLAMA_MODEL = "llama3.1:8b";
     public static final String USER_STORY_CHAT_CLIENT = "user-story-chat-client";
 
     private final OllamaApi ollamaApi;
