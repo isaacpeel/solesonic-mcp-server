@@ -53,7 +53,7 @@ class ProgressReporterTest {
     void emitRemainsMonotonicUnderConcurrentExecution() throws Exception {
         List<Integer> emitted = new ArrayList<>();
         Object lock = new Object();
-        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> {
+        ProgressReporter progressReporter = new ProgressReporter((percent, _) -> {
             synchronized (lock) {
                 emitted.add(percent);
             }

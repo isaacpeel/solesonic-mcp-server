@@ -30,6 +30,7 @@ public final class WorkflowDecision {
      * Distinct from {@link #continueWorkflow()} in intent: use this when the step is intentionally bypassed,
      * so the message is surfaced in observability logs rather than silently omitted.
      */
+    @SuppressWarnings("unused")
     public static WorkflowDecision skip(String message) {
         return new WorkflowDecision(WorkflowOutcome.COMPLETED, null, message);
     }
