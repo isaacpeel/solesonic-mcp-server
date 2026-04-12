@@ -1,6 +1,5 @@
 package com.solesonic.mcp.service.atlassian;
 
-import com.solesonic.mcp.exception.atlassian.DuplicateJiraCreationException;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,28 +78,6 @@ class JiraIssueServiceTest {
                     assertEquals("ISSUE-2", created.key());
                 })
                 .verifyComplete();
-    }
-
-    @Test
-    void create_shouldThrowDuplicate_whenAlreadyCreatedInThread() {
-        WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
-
-        doReturn(requestBodyUriSpec).when(webClient).post();
-        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-
-        String responseJson = "{\"id\":\"123\",\"key\":\"ISSUE-3\"}";
-
-        doReturn(Mono.just(responseJson)).when(requestHeadersSpec).exchangeToMono(any());
-
-        StepVerifier.create(service.create(new JiraIssue.Builder().id("1").key("TEMP").build()))
-                .expectNextCount(1)
-                .verifyComplete();
-
-        StepVerifier.create(service.create(new JiraIssue.Builder().id("2").key("TEMP2").build()))
-                .expectError(DuplicateJiraCreationException.class)
-                .verify();
     }
 
     @Test

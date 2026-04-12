@@ -120,6 +120,11 @@ class WorkflowRunnerTest {
 
     private record StaticWorkflowStep(String name, SupplierSupplier supplierSupplier) implements WorkflowStep<TestWorkflowContext> {
         @Override
+        public boolean isParallelSafe() {
+            return true;
+        }
+
+        @Override
         public Mono<WorkflowDecision> execute(TestWorkflowContext context, WorkflowExecutionContext executionContext) {
             return supplierSupplier.get();
         }

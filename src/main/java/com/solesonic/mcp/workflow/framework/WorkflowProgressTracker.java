@@ -93,7 +93,7 @@ public final class WorkflowProgressTracker {
                 .sum();
 
         int dynamicRange = DYNAMIC_BAND_END - DYNAMIC_BAND_START;
-        return DYNAMIC_BAND_START + (int) Math.round(weightedProgress * dynamicRange);
+        return DYNAMIC_BAND_START + (int) (weightedProgress * dynamicRange);
     }
 
     private final class StepProgressImpl implements StepProgress {
