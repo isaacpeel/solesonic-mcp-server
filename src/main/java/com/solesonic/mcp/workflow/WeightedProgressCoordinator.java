@@ -59,6 +59,7 @@ public final class WeightedProgressCoordinator {
         return new TaskProgressImpl(taskName);
     }
 
+    @SuppressWarnings("unused")
     public void startup(String message) {
         int next = startupPercent.updateAndGet(previous -> Math.min(previous + 1, STARTUP_BAND_END));
         progressReporter.emit(next, message);

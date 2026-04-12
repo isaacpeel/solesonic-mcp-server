@@ -209,7 +209,6 @@ public class ComfyUiService {
                 .retrieve()
                 .bodyToMono(ComfyJobResponse.class)
                 .flatMap(comfyJobResponse -> {
-                    assert comfyJobResponse != null;
                     String filename = comfyJobResponse.preview_output().filename();
                     return comfyUiWebClient.get()
                             .uri(uriBuilder -> uriBuilder

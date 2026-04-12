@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import static com.solesonic.mcp.api.ResourceMetadataController.WELL_KNOWN_OAUTH_PROTECTED_RESOURCE;
 import static org.springframework.http.HttpMethod.*;
 
+@SuppressWarnings("unused")
 @Configuration
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity

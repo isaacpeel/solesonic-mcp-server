@@ -30,7 +30,6 @@ public class JiraAgileService {
     public static final String TYPE = "type";
     public static final String NAME = "name";
     public static final String PROJECT_KEY_OR_ID = "projectKeyOrId";
-    public static final String ACCOUNT_ID = "accountId";
     public static final String JQL = "jql";
     public static final String VALIDATE_QUERY = "validateQuery";
 
@@ -60,7 +59,7 @@ public class JiraAgileService {
                     return uriBuilder.build();
                 })
                 .exchangeToMono(response -> response.bodyToMono(Boards.class))
-                .doOnSuccess(boards -> log.info("Jira boards retrieved successfully"));
+                .doOnSuccess(_ -> log.info("Jira boards retrieved successfully"));
     }
 
     public Mono<Board> getBoard(String boardId) {
@@ -73,7 +72,7 @@ public class JiraAgileService {
                         .pathSegment(base)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Board.class))
-                .doOnSuccess(board -> log.info("Jira board retrieved successfully: {}", boardId));
+                .doOnSuccess(_ -> log.info("Jira board retrieved successfully: {}", boardId));
     }
 
     public Mono<String> getBoardConfiguration(String boardId) {
@@ -86,7 +85,7 @@ public class JiraAgileService {
                         .pathSegment(base)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(String.class))
-                .doOnSuccess(configuration -> log.info("Jira board configuration retrieved successfully: {}", boardId));
+                .doOnSuccess(_ -> log.info("Jira board configuration retrieved successfully: {}", boardId));
     }
 
     public Mono<BoardIssues> getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {

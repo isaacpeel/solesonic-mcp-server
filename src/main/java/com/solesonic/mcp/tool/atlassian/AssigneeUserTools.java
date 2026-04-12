@@ -1,7 +1,6 @@
 package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
-import com.solesonic.mcp.model.atlassian.jira.User;
 import com.solesonic.mcp.service.atlassian.JiraUserService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -12,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+@SuppressWarnings("unused")
 @Service
 public class AssigneeUserTools {
     private static final Logger log = LoggerFactory.getLogger(AssigneeUserTools.class);

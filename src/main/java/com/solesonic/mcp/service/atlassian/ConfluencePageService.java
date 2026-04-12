@@ -30,7 +30,7 @@ public class ConfluencePageService {
                         .queryParam("body-format", STORAGE_FORMAT)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(ConfluencePagesResponse.class))
-                .doOnSuccess(response -> log.info("Confluence pages retrieved"));
+                .doOnSuccess(_ -> log.info("Confluence pages retrieved"));
     }
 
     public Mono<Page> get(String id) {
@@ -44,7 +44,7 @@ public class ConfluencePageService {
                         .queryParam("body-format", STORAGE_FORMAT)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Page.class))
-                .doOnSuccess(page -> log.info("Confluence document retrieved: {}", id));
+                .doOnSuccess(_ -> log.info("Confluence document retrieved: {}", id));
     }
 
     /**
@@ -94,6 +94,7 @@ public class ConfluencePageService {
      * @param page The Page object containing all the necessary information for the update
      * @return The updated page
      */
+    @SuppressWarnings("unused")
     public Mono<Page> updatePage(Page page) {
         String id = page.getId();
         log.info("Updating Confluence page: {}", id);
@@ -142,6 +143,7 @@ public class ConfluencePageService {
      * @param purge If true, permanently deletes the page (requires space admin permissions)
      * @param draft If true, deletes a draft page
      */
+    @SuppressWarnings("unused")
     public Mono<Void> deletePage(String id, boolean purge, boolean draft) {
         log.info("Deleting Confluence page: {}, purge: {}, draft: {}", id, purge, draft);
 

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@SuppressWarnings("unused")
 public class CreateJiraWorkflowContext implements WorkflowContext {
     private final String originalUserMessage;
 

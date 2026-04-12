@@ -40,7 +40,8 @@ public class JiraUserService {
                         .build())
                 .exchangeToMono(response -> {
                     log.info("Request URI: {}", response.request().getURI());
-                    return response.bodyToMono(new ParameterizedTypeReference<List<User>>() {});
+                    return response.bodyToMono(new ParameterizedTypeReference<>() {
+                    });
                 });
 
     }

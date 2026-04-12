@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 class JiraAgileServiceTest {
     @Mock
@@ -38,6 +39,7 @@ class JiraAgileServiceTest {
         service = new JiraAgileService(webClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
     }
+
 
     @Test
     void listBoards_shouldReturnJson_fromApi() {

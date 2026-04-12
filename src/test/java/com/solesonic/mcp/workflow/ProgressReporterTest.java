@@ -19,7 +19,7 @@ class ProgressReporterTest {
     @Test
     void emitClampsToZeroWhenRequestedPercentIsBelowZero() {
         AtomicInteger emittedPercent = new AtomicInteger(-1);
-        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> emittedPercent.set(percent));
+        ProgressReporter progressReporter = new ProgressReporter((percent, _) -> emittedPercent.set(percent));
 
         progressReporter.emit(-10, "below zero");
 
@@ -29,7 +29,7 @@ class ProgressReporterTest {
     @Test
     void emitClampsToOneHundredWhenRequestedPercentIsAboveOneHundred() {
         AtomicInteger emittedPercent = new AtomicInteger(-1);
-        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> emittedPercent.set(percent));
+        ProgressReporter progressReporter = new ProgressReporter((percent, _) -> emittedPercent.set(percent));
 
         progressReporter.emit(999, "above one hundred");
 
@@ -39,7 +39,7 @@ class ProgressReporterTest {
     @Test
     void emitIsMonotonicWhenLaterRequestedPercentIsLower() {
         List<Integer> emitted = new ArrayList<>();
-        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> emitted.add(percent));
+        ProgressReporter progressReporter = new ProgressReporter((percent, _) -> emitted.add(percent));
 
         progressReporter.emit(50, "first");
         progressReporter.emit(5, "second");

@@ -9,6 +9,8 @@ public record WorkflowEvent(
         String message,
         Throwable error
 ) {
+
+    @SuppressWarnings("unused")
     public static WorkflowEvent informational(
             String workflowName,
             String stepName,

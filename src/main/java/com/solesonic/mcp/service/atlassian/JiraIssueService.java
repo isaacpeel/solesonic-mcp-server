@@ -39,7 +39,7 @@ public class JiraIssueService {
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
-                .doOnSuccess(jiraIssue -> log.info("Jira issue successfully retrieved: {}", issueId));
+                .doOnSuccess(_ -> log.info("Jira issue successfully retrieved: {}", issueId));
     }
 
     public Mono<JiraIssue> create(JiraIssue jiraIssue) {

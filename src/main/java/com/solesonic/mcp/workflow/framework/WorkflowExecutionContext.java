@@ -42,6 +42,7 @@ public final class WorkflowExecutionContext {
         return progressTracker;
     }
 
+    @SuppressWarnings("unused")
     public Map<String, Object> requestMetadata() {
         return requestMetadata;
     }

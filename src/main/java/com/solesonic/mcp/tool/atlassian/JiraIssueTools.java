@@ -224,11 +224,9 @@ public class JiraIssueTools {
                     log.info("Elicitation action: {}", action);
 
                     return switch (action) {
-                        case ACCEPT -> {
-                            yield jiraIssueService.delete(keyOrIssueId)
-                                    .then(mcpAsyncRequestContext.log(logging -> logging.message("Successfully deleted Jira issue: " + keyOrIssueId)))
-                                    .thenReturn("Successfully deleted Jira Issue: " + keyOrIssueId);
-                        }
+                        case ACCEPT -> jiraIssueService.delete(keyOrIssueId)
+                                .then(mcpAsyncRequestContext.log(logging -> logging.message("Successfully deleted Jira issue: " + keyOrIssueId)))
+                                .thenReturn("Successfully deleted Jira Issue: " + keyOrIssueId);
                         case DECLINE -> {
                             log.info("Deletion declined by user for: {}", keyOrIssueId);
 

@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientRequest;
@@ -37,7 +38,7 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
         log.info("Filtering {}: {}", request.method().name(), request.url());
 
         return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> securityContext.getAuthentication())
+                .mapNotNull(SecurityContext::getAuthentication)
                 .flatMap(authentication -> {
                     if (authentication.getPrincipal() instanceof Jwt jwt) {
                         String userId = jwt.getSubject();

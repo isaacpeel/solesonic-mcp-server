@@ -65,7 +65,7 @@ class CreateJiraWorkflowServiceTest {
     }
 
     private WorkflowExecutionContext executionContext() {
-        WorkflowNotificationService notificationService = event -> {
+        WorkflowNotificationService notificationService = _ -> {
         };
 
         WorkflowProgressTracker workflowProgressTracker = new WorkflowProgressTracker(
