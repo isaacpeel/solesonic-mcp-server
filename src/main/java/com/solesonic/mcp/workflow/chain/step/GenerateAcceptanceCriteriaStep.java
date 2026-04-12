@@ -61,6 +61,6 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
 
     @Override
     public String name() {
-        return "";
+        return "GenerateAcceptanceCriteriaStep";
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +106,9 @@ public class JiraIssueTools {
             McpAsyncRequestContext mcpAsyncRequestContext,
             @McpToolParam(description = "The users request.") String userMessage
     ) {
-        return createJiraWorkflow.startWorkflow(mcpAsyncRequestContext, userMessage)
+        return mcpAsyncRequestContext.progress(progress -> progress.percentage(0).message(""))
+                .then(Mono.delay(Duration.ofMillis(300)))
+                .then(Mono.defer(() -> createJiraWorkflow.startWorkflow(mcpAsyncRequestContext, userMessage)))
                 .flatMap(jiraIssueCreatePayload -> {
                     CreateJiraRequest createJiraRequest = new CreateJiraRequest(
                             jiraIssueCreatePayload.summary(),

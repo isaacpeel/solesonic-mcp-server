@@ -45,6 +45,6 @@ public class GenerateSummaryStep implements UserStoryChainStep {
 
     @Override
     public String name() {
-        return "";
+        return "GenerateSummaryStep";
     }
 }
