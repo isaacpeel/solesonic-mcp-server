@@ -9,6 +9,7 @@ import com.solesonic.mcp.model.atlassian.jira.Description;
 import com.solesonic.mcp.model.atlassian.jira.Fields;
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import com.solesonic.mcp.model.atlassian.jira.TextContent;
+import com.solesonic.mcp.model.atlassian.jira.Transition;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.mcp.workflow.agile.AgileQueryResult;
 import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
@@ -37,6 +38,8 @@ public class JiraAgileService {
     private static final Logger log = LoggerFactory.getLogger(JiraAgileService.class);
 
     private static final int ISSUE_FETCH_CONCURRENCY = 5;
+    private static final int TRANSITION_CONCURRENCY = 5;
+    private static final int TRANSITION_FETCH_PAGE_SIZE = 50;
     private static final int DEFAULT_PAGE_SIZE = 15;
 
     private static final String ISSUE_ENRICHMENT_PROMPT_TEMPLATE = """
@@ -164,7 +167,6 @@ public class JiraAgileService {
     ) {
         List<Board> boards = workflowContext.getBoards();
         AgileQueryResult agileQueryResult = workflowContext.getAgileQueryResult();
-        String userMessage = workflowContext.getOriginalUserMessage();
 
         if (boards.isEmpty()) {
             return Mono.just("No accessible Jira boards were found.");
@@ -173,7 +175,7 @@ public class JiraAgileService {
         if (boards.size() == 1) {
             Board selectedBoard = boards.getFirst();
             log.info("Single board found, auto-selecting: {} (ID: {})", selectedBoard.name(), selectedBoard.id());
-            return executePagedBoardQuery(mcpAsyncRequestContext, selectedBoard, agileQueryResult, userMessage, agileQueryResult.resolvedStartAt());
+            return dispatchBoardAction(mcpAsyncRequestContext, selectedBoard, workflowContext);
         }
 
         String boardListMessage = buildBoardSelectionMessage(boards);
@@ -189,13 +191,139 @@ public class JiraAgileService {
                 yield boards.stream()
                         .filter(board -> String.valueOf(board.id()).equals(selectedBoardId))
                         .findFirst()
-                        .map(board -> executePagedBoardQuery(mcpAsyncRequestContext, board, agileQueryResult, userMessage, agileQueryResult.resolvedStartAt()))
+                        .map(board -> dispatchBoardAction(mcpAsyncRequestContext, board, workflowContext))
                         .orElseGet(() -> Mono.just(
                                 "Board with ID '" + selectedBoardId + "' was not found in the available boards."
                         ));
             }
             case DECLINE, CANCEL -> Mono.just("Board selection was cancelled.");
         });
+    }
+
+    private Mono<String> dispatchBoardAction(
+            McpAsyncRequestContext mcpAsyncRequestContext,
+            Board board,
+            AgileQueryWorkflowContext workflowContext
+    ) {
+        AgileQueryResult agileQueryResult = workflowContext.getAgileQueryResult();
+        String userMessage = workflowContext.getOriginalUserMessage();
+
+        if (agileQueryResult.isTransitionQuery()) {
+            return executeBulkTransition(mcpAsyncRequestContext, board, agileQueryResult);
+        }
+
+        return executePagedBoardQuery(mcpAsyncRequestContext, board, agileQueryResult, userMessage, agileQueryResult.resolvedStartAt());
+    }
+
+    private Mono<String> executeBulkTransition(
+            McpAsyncRequestContext mcpAsyncRequestContext,
+            Board board,
+            AgileQueryResult agileQueryResult
+    ) {
+        String targetStatus = agileQueryResult.targetStatus();
+        String jqlFilter = agileQueryResult.jqlFilter() == null ? "" : agileQueryResult.jqlFilter().strip();
+        log.info("Bulk transition requested on board '{}' to status '{}' with JQL: '{}'", board.name(), targetStatus, jqlFilter);
+
+        return collectAllMatchingIssueKeys(board, jqlFilter, 0)
+                .flatMap(issueKeys -> {
+                    if (issueKeys.isEmpty()) {
+                        return Mono.just("No issues found matching the filter on board **%s**.".formatted(board.name()));
+                    }
+
+                    return resolveTransitionId(issueKeys.getFirst(), targetStatus)
+                            .flatMap(transitionId -> {
+                                String confirmationMessage = "This will transition **%d** issue(s) on board **%s** to **%s**. Proceed?"
+                                        .formatted(issueKeys.size(), board.name(), targetStatus);
+
+                                return mcpAsyncRequestContext.elicit(
+                                        elicit -> elicit.message(confirmationMessage),
+                                        JiraAgileTools.TransitionConfirmInput.class
+                                ).flatMap(elicitResult -> switch (elicitResult.action()) {
+                                    case ACCEPT -> applyTransitions(issueKeys, transitionId, targetStatus, board);
+                                    case DECLINE, CANCEL -> Mono.just("Transition cancelled.");
+                                });
+                            });
+                });
+    }
+
+    private Mono<List<String>> collectAllMatchingIssueKeys(Board board, String jqlFilter, int startAt) {
+        JiraAgileTools.BoardIssuesRequest boardIssuesRequest = new JiraAgileTools.BoardIssuesRequest(
+                String.valueOf(board.id()),
+                jqlFilter.isEmpty() ? null : jqlFilter,
+                startAt == 0 ? null : startAt,
+                TRANSITION_FETCH_PAGE_SIZE,
+                false
+        );
+
+        return getBoardIssues(boardIssuesRequest)
+                .flatMap(boardIssues -> {
+                    List<String> issueKeys = boardIssues.issues().stream()
+                            .map(BoardIssue::key)
+                            .toList();
+
+                    int total = boardIssues.total() != null ? boardIssues.total() : issueKeys.size();
+                    int nextStartAt = startAt + issueKeys.size();
+
+                    if (nextStartAt >= total || issueKeys.isEmpty()) {
+                        return Mono.just(issueKeys);
+                    }
+
+                    return collectAllMatchingIssueKeys(board, jqlFilter, nextStartAt)
+                            .map(remainingKeys -> {
+                                List<String> allKeys = new java.util.ArrayList<>(issueKeys);
+                                allKeys.addAll(remainingKeys);
+                                return allKeys;
+                            });
+                });
+    }
+
+    private Mono<String> resolveTransitionId(String sampleIssueKey, String targetStatus) {
+        return jiraIssueService.getTransitions(sampleIssueKey)
+                .flatMap(transitions -> transitions.transitions().stream()
+                        .filter(transition -> transition.name().equalsIgnoreCase(targetStatus)
+                                || (transition.to() != null && transition.to().name().equalsIgnoreCase(targetStatus)))
+                        .findFirst()
+                        .map(transition -> Mono.just(transition.id()))
+                        .orElseGet(() -> {
+                            String availableTransitions = transitions.transitions().stream()
+                                    .map(Transition::name)
+                                    .reduce((first, second) -> first + ", " + second)
+                                    .orElse("none");
+                            return Mono.error(new IllegalStateException(
+                                    "No transition to status '%s' is available. Available transitions: %s"
+                                            .formatted(targetStatus, availableTransitions)));
+                        }));
+    }
+
+    private Mono<String> applyTransitions(List<String> issueKeys, String transitionId, String targetStatus, Board board) {
+        log.info("Applying transition '{}' to {} issues on board '{}'", transitionId, issueKeys.size(), board.name());
+
+        return Flux.fromIterable(issueKeys)
+                .flatMap(issueKey -> jiraIssueService.transitionIssue(issueKey, transitionId)
+                                .thenReturn(issueKey + ": transitioned")
+                                .onErrorResume(error -> {
+                                    log.warn("Failed to transition issue {}: {}", issueKey, error.getMessage());
+                                    return Mono.just(issueKey + ": failed — " + error.getMessage());
+                                }),
+                        TRANSITION_CONCURRENCY)
+                .collectList()
+                .map(results -> {
+                    long successCount = results.stream().filter(result -> result.endsWith("transitioned")).count();
+                    long failureCount = results.size() - successCount;
+
+                    StringBuilder summary = new StringBuilder();
+                    summary.append("**%s** — Transitioned **%d** of **%d** issues to **%s**."
+                            .formatted(board.name(), successCount, results.size(), targetStatus));
+
+                    if (failureCount > 0) {
+                        summary.append("\n\nFailed issues:\n");
+                        results.stream()
+                                .filter(result -> !result.endsWith("transitioned"))
+                                .forEach(result -> summary.append("- ").append(result).append("\n"));
+                    }
+
+                    return summary.toString();
+                });
     }
 
     private Mono<String> executePagedBoardQuery(

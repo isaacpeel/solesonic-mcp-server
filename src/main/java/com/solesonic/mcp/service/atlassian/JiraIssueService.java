@@ -17,6 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.*;
@@ -124,6 +125,44 @@ public class JiraIssueService {
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
                 .then();
+    }
+
+    public Mono<Transitions> getTransitions(String issueKey) {
+        log.info("Fetching available transitions for issue: {}", issueKey);
+
+        String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
+
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .build())
+                .exchangeToMono(response -> response.bodyToMono(Transitions.class))
+                .doOnSuccess(_ -> log.info("Transitions retrieved for issue: {}", issueKey));
+    }
+
+    public Mono<Void> transitionIssue(String issueKey, String transitionId) {
+        log.info("Transitioning issue {} with transition ID: {}", issueKey, transitionId);
+
+        String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
+
+        Map<String, Map<String, String>> transitionPayload = Map.of(
+                "transition", Map.of("id", transitionId)
+        );
+
+        return webClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .build())
+                .bodyValue(transitionPayload)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().is2xxSuccessful()) {
+                        log.info("Issue {} transitioned successfully", issueKey);
+                        return response.releaseBody();
+                    }
+                    return response.bodyToMono(String.class)
+                            .flatMap(body -> Mono.error(new JiraException(
+                                    "Failed to transition issue %s: %s".formatted(issueKey, body), body)));
+                });
     }
 
     public JiraIssue convert(JiraIssueCreatePayload jiraIssueCreatePayload) {

@@ -16,6 +16,7 @@ public class AtlassianConstants {
     public static final String EX = "ex";
     public static final String JIRA = "jira";
     public static final String ISSUE_PATH = "issue";
+    public static final String TRANSITIONS_PATH = "transitions";
 
     // Agile-specific constants (/rest/agile/1.0/...)
     public static final String AGILE_PATH = "agile";

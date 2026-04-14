@@ -23,18 +23,26 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
     // Prompt is built as a plain String to avoid Spring AI's ST4 template renderer,
     // which treats { and } as delimiters and cannot safely contain JSON literals.
     private static final String PROMPT_TEMPLATE = """
-            You are a Jira Query Language (JQL) expert.
+            You are a Jira Query Language (JQL) expert and issue management assistant.
 
             Analyze ONLY what the user explicitly asks for and return a single JSON object with
-            exactly three fields:
-              jqlFilter  - a JQL expression covering ONLY the conditions the user mentioned
-                           (use an empty string if the user wants all issues with no filter)
-              queryType  - exactly "COUNT" for quantitative questions ("how many", "count",
-                           "number of"), or "LIST" for everything else
-              startAt    - the 0-based index to start from. Extract ONLY when the user explicitly
-                           requests a page or offset (e.g. "next page" = 15, "page 2" = 15,
-                           "third page" = 30, "show me from issue 30" = 29). Use 0 if not mentioned.
-                           Assume a page size of 15 for page-based requests.
+            exactly four fields:
+              jqlFilter    - a JQL expression covering ONLY the conditions the user mentioned
+                             (use an empty string if the user wants all issues with no filter).
+                             For TRANSITION requests, this filters which issues to transition.
+              queryType    - exactly one of:
+                             "COUNT"      – for quantitative questions ("how many", "count", "number of")
+                             "LIST"       – for retrieval / display requests
+                             "TRANSITION" – for commands that change issue status ("set to Done",
+                                            "mark as In Progress", "move to closed", "transition to",
+                                            "change status to", "update status")
+              startAt      - the 0-based index to start from. Extract ONLY when the user explicitly
+                             requests a page or offset (e.g. "next page" = 15, "page 2" = 15,
+                             "third page" = 30, "show me from issue 30" = 29). Use 0 if not mentioned.
+                             Assume a page size of 15 for page-based requests.
+              targetStatus - the destination Jira status name when queryType is "TRANSITION"
+                             (e.g. "Done", "In Progress", "To Do"). Use null when queryType
+                             is not "TRANSITION".
 
             IMPORTANT: Only include JQL conditions for things the user explicitly mentions.
             Do NOT add conditions for assignee, issue type, priority, or anything else
@@ -97,7 +105,7 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
                     try {
                         String jsonContent = stripMarkdownCodeFences(responseContent);
                         AgileQueryResult agileQueryResult = jsonMapper.readValue(jsonContent, AgileQueryResult.class);
-                        log.info("Parsed agile intent: queryType={}, jqlFilter={}", agileQueryResult.queryType(), agileQueryResult.jqlFilter());
+                        log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}", agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
                         context.setAgileQueryResult(agileQueryResult);
                         executionContext.progressTracker().step(name()).done("Intent parsed");
                         return WorkflowDecision.continueWorkflow();

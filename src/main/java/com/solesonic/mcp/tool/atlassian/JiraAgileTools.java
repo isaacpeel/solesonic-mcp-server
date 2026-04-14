@@ -57,6 +57,10 @@ public class JiraAgileTools {
             @McpToolParam(description = "Confirm you would like to see the next page of issues") boolean confirmed
     ) {}
 
+    public record TransitionConfirmInput(
+            @McpToolParam(description = "Confirm you would like to proceed with transitioning the listed issues") boolean confirmed
+    ) {}
+
     public record ListBoardsRequest(@McpToolParam(required = false, description = START_AT_DESCRIPTION)
                                     Integer startAt,
                                     @McpToolParam(required = false, description = MAX_RESULTS_DESCRIPTION)
