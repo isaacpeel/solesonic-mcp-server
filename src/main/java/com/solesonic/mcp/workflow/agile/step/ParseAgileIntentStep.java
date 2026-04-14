@@ -26,11 +26,15 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
             You are a Jira Query Language (JQL) expert.
 
             Analyze ONLY what the user explicitly asks for and return a single JSON object with
-            exactly two fields:
+            exactly three fields:
               jqlFilter  - a JQL expression covering ONLY the conditions the user mentioned
                            (use an empty string if the user wants all issues with no filter)
               queryType  - exactly "COUNT" for quantitative questions ("how many", "count",
                            "number of"), or "LIST" for everything else
+              startAt    - the 0-based index to start from. Extract ONLY when the user explicitly
+                           requests a page or offset (e.g. "next page" = 15, "page 2" = 15,
+                           "third page" = 30, "show me from issue 30" = 29). Use 0 if not mentioned.
+                           Assume a page size of 15 for page-based requests.
 
             IMPORTANT: Only include JQL conditions for things the user explicitly mentions.
             Do NOT add conditions for assignee, issue type, priority, or anything else

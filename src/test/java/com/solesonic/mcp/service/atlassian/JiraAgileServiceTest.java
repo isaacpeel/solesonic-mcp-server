@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -27,6 +28,12 @@ class JiraAgileServiceTest {
     @Mock
     private WebClient webClient;
 
+    @Mock
+    private JiraIssueService jiraIssueService;
+
+    @Mock
+    private ChatClient chatClient;
+
     private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
     private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
@@ -36,8 +43,9 @@ class JiraAgileServiceTest {
     void setUp() {
         requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
         requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        service = new JiraAgileService(webClient);
+        service = new JiraAgileService(webClient, jiraIssueService, chatClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
+        ReflectionTestUtils.setField(service, "jiraUrlTemplate", "https://test.atlassian.net/browse/{key}");
     }
 
 

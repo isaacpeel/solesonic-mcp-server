@@ -63,38 +63,7 @@ public class JiraIssueTools {
         this.createJiraWorkflow = createJiraWorkflow;
     }
 
-    public static final String CREATE_JIRA_ISSUE_DESCRIPTION = """
-            A short, required title for the Jira issue (the “summary” field in Jira).
-            - Must not be empty.
-            - Should briefly describe the user story or task (for example: "Add password reset flow to login page").
-            """;
-
-    public static final String CREATE_JIRA_ISSUE_DESCRIPTION_DESCRIPTION = """
-            A required, detailed description of the Jira issue.
-            - Explain the background, goal, and any important details.
-            - Include any context that will help the assignee understand what to implement or fix.
-            - Do NOT leave this blank; always provide a meaningful description.
-            """;
-
-    public static final String CREATE_JIRA_ISSUE_ASSIGNEE_DESCRIPTION = """
-            The Jira account ID of the user to assign this issue to.
-            - This is NOT the display name or email.
-            - Before calling this tool, if the user specified an assignee by name or email, first call the `jira_assignee_search` tool to look up the user.
-            - Use the `accountId` returned by `jira_assignee_search` as this `assigneeId` value.
-            - Do NOT guess or invent an ID; always use a real `accountId` from `jira_assignee_search`, or omit this only if the user explicitly requests an unassigned issue.
-    """;
-
-    public static final String CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION = """
-            A required `String[]` of acceptance criteria for the Jira issue.
-             - This field is MANDATORY. You must NOT send an empty list.
-             - If the user did not provide specific criteria, you MUST generate at least 3 logical, testable conditions based on the description.
-    """;
-
-    public record CreateJiraRequest(
-            @McpToolParam(description = "A summary of the jira issue, this is a short title for the user story.") String summary,
-            @McpToolParam(description = "This is the main body of the jira ") String description,
-            @McpToolParam(description = CREATE_JIRA_ISSUE_ACCEPTANCE_CRITERIA_DESCRIPTION) List<String> acceptanceCriteria,
-            @McpToolParam(description = CREATE_JIRA_ISSUE_ASSIGNEE_DESCRIPTION) String assigneeId) {
+    public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {
     }
 
     public record DeleteConfirmation(McpSchema.ElicitResult.Action action, String chatId) {}
