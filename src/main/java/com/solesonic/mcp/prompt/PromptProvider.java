@@ -1,6 +1,5 @@
 package com.solesonic.mcp.prompt;
 
-import com.solesonic.mcp.command.AgileCommandProvider;
 import com.solesonic.mcp.command.ConfluenceCommandProvider;
 import com.solesonic.mcp.command.CreateJiraCommandProvider;
 import com.solesonic.mcp.command.DefaultCommandProvider;
@@ -148,8 +147,7 @@ public class PromptProvider {
     @McpPrompt(
             name = "jira-agile-board-prompt",
             title = "Jira Agile Board Analysis",
-            description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION,
-            metaProvider = AgileCommandProvider.class
+            description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION
     )
     public Mono<McpSchema.GetPromptResult> jiraAgileBoardPrompt(
             @McpArg(name = "userMessage", description = "The user’s natural language request describing what they want to know or do with a Jira board.") String userMessage,

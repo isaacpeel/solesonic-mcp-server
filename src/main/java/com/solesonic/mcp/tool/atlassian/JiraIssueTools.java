@@ -2,8 +2,9 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
-import com.solesonic.mcp.tool.provider.DirectReturnMetaProvider;
+import com.solesonic.mcp.tool.provider.CreateJiraMetaProvider;
 import com.solesonic.mcp.workflow.CreateJiraWorkflow;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -96,7 +97,7 @@ public class JiraIssueTools {
             @McpToolParam(description = CREATE_JIRA_ISSUE_ASSIGNEE_DESCRIPTION) String assigneeId) {
     }
 
-    public record DeleteConfirmation(boolean confirmed, String chatId) {}
+    public record DeleteConfirmation(McpSchema.ElicitResult.Action action, String chatId) {}
 
     /**
      * Creates a new Jira issue with the provided details.
@@ -105,7 +106,7 @@ public class JiraIssueTools {
      */
     @SuppressWarnings("unused")
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = DirectReturnMetaProvider.class)
+    @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = CreateJiraMetaProvider.class)
     public Mono<String> createJiraWorkflow(
             McpAsyncRequestContext mcpAsyncRequestContext,
             @McpToolParam(description = "The users request.") String userMessage
