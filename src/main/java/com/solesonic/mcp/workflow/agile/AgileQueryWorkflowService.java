@@ -23,9 +23,7 @@ public class AgileQueryWorkflowService {
             AgileQueryWorkflowContext workflowContext,
             WorkflowExecutionContext executionContext
     ) {
-        executionContext.progressTracker().startup("Parsing your request");
-        executionContext.progressTracker().startup("Fetching boards");
-        executionContext.progressTracker().startup("Workflow started");
+        executionContext.progressTracker().startup("Starting agile query workflow");
 
         return workflowRunner.run(agileQueryWorkflowDefinition.definition(), workflowContext, executionContext)
                 .doOnNext(outcome -> {

@@ -23,9 +23,7 @@ public class CreateJiraWorkflowService {
             CreateJiraWorkflowContext workflowContext,
             WorkflowExecutionContext executionContext
     ) {
-        executionContext.progressTracker().startup("Generating user story");
-        executionContext.progressTracker().startup("Preparing assignee lookup");
-        executionContext.progressTracker().startup("Workflow started");
+        executionContext.progressTracker().startup("Starting Jira issue creation workflow");
 
         return workflowRunner.run(createJiraWorkflowDefinition.definition(), workflowContext, executionContext)
                 .doOnNext(outcome -> {

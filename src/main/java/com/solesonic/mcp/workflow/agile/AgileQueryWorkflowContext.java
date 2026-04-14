@@ -16,8 +16,8 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
     private volatile AgileQueryResult agileQueryResult;
     private volatile List<Board> boards;
 
-    private AgileWorkflowStage currentStage;
-    private WorkflowOutcome workflowStatus;
+    private volatile AgileWorkflowStage currentStage;
+    private volatile WorkflowOutcome workflowStatus;
 
     public AgileQueryWorkflowContext(String originalUserMessage) {
         this.originalUserMessage = Objects.requireNonNull(originalUserMessage, "originalUserMessage must not be null");

@@ -16,13 +16,13 @@ public final class WorkflowExecutionContext {
             String workflowName,
             String correlationId,
             WorkflowNotificationService notificationService,
-            WorkflowProgressTracker progressTracker,
+            Map<String, Double> stepWeights,
             Map<String, Object> requestMetadata
     ) {
         this.workflowName = Objects.requireNonNull(workflowName, "workflowName must not be null");
         this.correlationId = Objects.requireNonNull(correlationId, "correlationId must not be null");
         this.notificationService = Objects.requireNonNull(notificationService, "notificationService must not be null");
-        this.progressTracker = Objects.requireNonNull(progressTracker, "progressTracker must not be null");
+        this.progressTracker = new WorkflowProgressTracker(workflowName, correlationId, notificationService, stepWeights);
         this.requestMetadata = requestMetadata == null ? Map.of() : Map.copyOf(requestMetadata);
     }
 

@@ -100,17 +100,11 @@ class WorkflowRunnerTest {
             WorkflowNotificationService notificationService,
             Map<String, Double> taskWeights
     ) {
-        WorkflowProgressTracker progressTracker = new WorkflowProgressTracker(
-                "test-workflow",
-                "correlation-id",
-                notificationService,
-                taskWeights
-        );
         return new WorkflowExecutionContext(
                 "test-workflow",
                 "correlation-id",
                 notificationService,
-                progressTracker,
+                taskWeights,
                 Map.of()
         );
     }

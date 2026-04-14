@@ -6,7 +6,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowNotificationService;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 import com.solesonic.mcp.workflow.framework.WorkflowPendingInput;
-import com.solesonic.mcp.workflow.framework.WorkflowProgressTracker;
 import com.solesonic.mcp.workflow.framework.WorkflowQuestion;
 import com.solesonic.mcp.workflow.framework.WorkflowRunner;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
@@ -68,18 +67,11 @@ class CreateJiraWorkflowServiceTest {
         WorkflowNotificationService notificationService = _ -> {
         };
 
-        WorkflowProgressTracker workflowProgressTracker = new WorkflowProgressTracker(
-                "create-jira",
-                "correlation-id",
-                notificationService,
-                Map.of("noop", 1.0)
-        );
-
         return new WorkflowExecutionContext(
                 "create-jira",
                 "correlation-id",
                 notificationService,
-                workflowProgressTracker,
+                Map.of("noop", 1.0),
                 Map.of()
         );
     }

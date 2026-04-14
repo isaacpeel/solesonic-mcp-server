@@ -6,6 +6,8 @@ import com.solesonic.mcp.workflow.jira.step.GenerateUserStoryStep;
 import com.solesonic.mcp.workflow.jira.step.ResolveAssigneeStep;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class CreateJiraWorkflowDefinition {
     public static final String WORKFLOW_NAME = "create-jira-workflow";
@@ -25,5 +27,13 @@ public class CreateJiraWorkflowDefinition {
 
     public WorkflowDefinition<CreateJiraWorkflowContext> definition() {
         return workflowDefinition;
+    }
+
+    public Map<String, Double> stepWeights() {
+        return Map.of(
+                GenerateUserStoryStep.STEP_NAME, 0.70,
+                ResolveAssigneeStep.STEP_NAME, 0.20,
+                AssembleJiraPayloadStep.STEP_NAME, 0.10
+        );
     }
 }
