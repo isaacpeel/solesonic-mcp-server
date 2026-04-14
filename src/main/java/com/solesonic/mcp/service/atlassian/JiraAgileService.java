@@ -122,19 +122,6 @@ public class JiraAgileService {
                 .doOnSuccess(_ -> log.info("Jira board retrieved successfully: {}", boardId));
     }
 
-    public Mono<String> getBoardConfiguration(String boardId) {
-        log.debug("Getting Jira board configuration: {}", boardId);
-
-        String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, CONFIGURATION_PATH};
-
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .pathSegment(base)
-                        .build())
-                .exchangeToMono(response -> response.bodyToMono(String.class))
-                .doOnSuccess(_ -> log.info("Jira board configuration retrieved successfully: {}", boardId));
-    }
-
     public Mono<BoardIssues> getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
         String boardId = boardIssuesRequest.boardId();
         log.info("Getting Jira board issues for board ID: {}", boardId);
