@@ -11,6 +11,7 @@ import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowNotificationService;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 import com.solesonic.mcp.workflow.framework.WorkflowProgressTracker;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
@@ -40,23 +41,7 @@ public class AgileQueryWorkflow {
             Map<String, Object> requestMetadata = mcpAsyncRequestContext.requestMeta();
             String correlationId = resolveCorrelationId(requestMetadata);
 
-            WorkflowProgressTracker workflowProgressTracker = new WorkflowProgressTracker(
-                    AgileQueryWorkflowDefinition.WORKFLOW_NAME,
-                    correlationId,
-                    notificationService,
-                    Map.of(
-                            ParseAgileIntentStep.STEP_NAME, 0.50,
-                            ListBoardsStep.STEP_NAME, 0.50
-                    )
-            );
-
-            WorkflowExecutionContext executionContext = new WorkflowExecutionContext(
-                    AgileQueryWorkflowDefinition.WORKFLOW_NAME,
-                    correlationId,
-                    notificationService,
-                    workflowProgressTracker,
-                    requestMetadata
-            );
+            WorkflowExecutionContext executionContext = getExecutionContext(correlationId, notificationService, requestMetadata);
 
             AgileQueryWorkflowContext workflowContext = new AgileQueryWorkflowContext(userMessage);
 
@@ -66,6 +51,26 @@ public class AgileQueryWorkflow {
             log.error("Agile query workflow failed", exception);
             return Mono.error(new JiraException("Agile query workflow failed: " + exception.getMessage(), exception));
         }
+    }
+
+    private static @NonNull WorkflowExecutionContext getExecutionContext(String correlationId, WorkflowNotificationService notificationService, Map<String, Object> requestMetadata) {
+        WorkflowProgressTracker workflowProgressTracker = new WorkflowProgressTracker(
+                AgileQueryWorkflowDefinition.WORKFLOW_NAME,
+                correlationId,
+                notificationService,
+                Map.of(
+                        ParseAgileIntentStep.STEP_NAME, 0.50,
+                        ListBoardsStep.STEP_NAME, 0.50
+                )
+        );
+
+        return new WorkflowExecutionContext(
+                AgileQueryWorkflowDefinition.WORKFLOW_NAME,
+                correlationId,
+                notificationService,
+                workflowProgressTracker,
+                requestMetadata
+        );
     }
 
     private Mono<AgileQueryWorkflowContext> mapOutcomeToContext(
