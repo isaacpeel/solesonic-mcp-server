@@ -177,7 +177,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message"),
-                new TypeReference<Map<String, Object>>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -214,7 +214,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Person> result = context.elicit(e -> e.message("Test message").meta(requestMeta),
-                new TypeReference<Person>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -256,7 +256,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message"),
-                new TypeReference<Map<String, Object>>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -285,7 +285,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<PersonWithAddress> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<PersonWithAddress>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -314,7 +314,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<Map<String, Object>>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -335,7 +335,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<Map<String, Object>>() {
+                new TypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
