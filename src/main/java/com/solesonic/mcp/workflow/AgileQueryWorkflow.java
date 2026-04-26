@@ -9,9 +9,8 @@ import com.solesonic.mcp.workflow.framework.WorkflowExecutionContextFactory;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 public class AgileQueryWorkflow {
@@ -31,36 +30,25 @@ public class AgileQueryWorkflow {
         this.executionContextFactory = executionContextFactory;
     }
 
-    public Mono<AgileQueryWorkflowContext> startWorkflow(McpAsyncRequestContext mcpAsyncRequestContext, String userMessage) {
-        try {
-            WorkflowExecutionContext executionContext = executionContextFactory.create(
-                    mcpAsyncRequestContext,
-                    AgileQueryWorkflowDefinition.WORKFLOW_NAME,
-                    agileQueryWorkflowDefinition.stepWeights()
-            );
+    public AgileQueryWorkflowContext startWorkflow(McpSyncRequestContext mcpSyncRequestContext, String userMessage) {
+        WorkflowExecutionContext executionContext = executionContextFactory.create(
+                mcpSyncRequestContext,
+                AgileQueryWorkflowDefinition.WORKFLOW_NAME,
+                agileQueryWorkflowDefinition.stepWeights()
+        );
 
-            AgileQueryWorkflowContext workflowContext = new AgileQueryWorkflowContext(userMessage);
+        AgileQueryWorkflowContext workflowContext = new AgileQueryWorkflowContext(userMessage);
 
-            return agileQueryWorkflowService.run(workflowContext, executionContext)
-                    .flatMap(outcome -> mapOutcomeToContext(outcome, workflowContext));
-        } catch (Exception exception) {
-            log.error("Agile query workflow failed", exception);
-            return Mono.error(new JiraException("Agile query workflow failed: " + exception.getMessage(), exception));
-        }
-    }
+        WorkflowOutcome outcome = agileQueryWorkflowService.run(workflowContext, executionContext);
 
-    private Mono<AgileQueryWorkflowContext> mapOutcomeToContext(
-            WorkflowOutcome workflowOutcome,
-            AgileQueryWorkflowContext workflowContext
-    ) {
-        if (workflowOutcome == WorkflowOutcome.USER_INPUT_REQUIRED) {
-            return Mono.error(new JiraException("Agile query workflow paused while waiting for user input"));
+        if (outcome == WorkflowOutcome.USER_INPUT_REQUIRED) {
+            throw new JiraException("Agile query workflow paused while waiting for user input");
         }
 
-        if (workflowOutcome == WorkflowOutcome.FAILED) {
-            return Mono.error(new JiraException("Agile query workflow failed"));
+        if (outcome == WorkflowOutcome.FAILED) {
+            throw new JiraException("Agile query workflow failed");
         }
 
-        return Mono.just(workflowContext);
+        return workflowContext;
     }
 }

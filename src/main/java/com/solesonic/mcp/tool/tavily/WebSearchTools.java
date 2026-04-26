@@ -10,7 +10,6 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -66,7 +65,7 @@ public class WebSearchTools {
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH, description = WEB_SEARCH_DESC)
-    public Mono<WebSearchResponse> webSearch(
+    public WebSearchResponse webSearch(
             @McpToolParam(description = "The search query. Be specific and include relevant keywords for best results.")
             String query,
             @McpToolParam(description = "Maximum number of results to return (1-10, default 5)")
@@ -86,13 +85,12 @@ public class WebSearchTools {
                 .includeImages(false)
                 .build();
 
-        return tavilySearchService.search(request)
-                .map(this::mapToWebSearchResponse);
+        return mapToWebSearchResponse(tavilySearchService.search(request));
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH_ADVANCED, description = WEB_SEARCH_ADVANCED_DESC)
-    public Mono<WebSearchResponse> webSearchAdvanced(
+    public WebSearchResponse webSearchAdvanced(
             @McpToolParam(description = "The search query. Be specific and include relevant keywords.")
             String query,
             @McpToolParam(description = "Maximum number of results to return (1-20, default 10)")
@@ -124,13 +122,12 @@ public class WebSearchTools {
                 .timeRange(timeRange)
                 .build();
 
-        return tavilySearchService.search(request)
-                .map(this::mapToWebSearchResponse);
+        return mapToWebSearchResponse(tavilySearchService.search(request));
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH_NEWS, description = WEB_SEARCH_NEWS_DESC)
-    public Mono<WebSearchResponse> webSearchNews(
+    public WebSearchResponse webSearchNews(
             @McpToolParam(description = "The news search query. Include topic, keywords, or entities.")
             String query,
             @McpToolParam(description = "Maximum number of results (1-10, default 5)")
@@ -153,26 +150,24 @@ public class WebSearchTools {
                 .timeRange(range)
                 .build();
 
-        return tavilySearchService.search(request)
-                .map(this::mapToWebSearchResponse);
+        return mapToWebSearchResponse(tavilySearchService.search(request));
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_EXTRACT_CONTENT, description = WEB_EXTRACT_DESC)
-    public Mono<WebExtractResponse> webExtractContent(
+    public WebExtractResponse webExtractContent(
             @McpToolParam(description = "List of URLs to extract content from. Maximum 5 URLs recommended.")
             List<String> urls
     ) {
         log.info("Executing content extraction for {} URLs", urls != null ? urls.size() : 0);
 
         if (urls == null || urls.isEmpty()) {
-            return Mono.just(new WebExtractResponse(List.of(), List.of("No URLs provided")));
+            return new WebExtractResponse(List.of(), List.of("No URLs provided"));
         }
 
         List<String> limitedUrls = urls.size() > 5 ? urls.subList(0, 5) : urls;
 
-        return tavilySearchService.extract(limitedUrls)
-                .map(this::mapToWebExtractResponse);
+        return mapToWebExtractResponse(tavilySearchService.extract(limitedUrls));
     }
 
     private WebSearchResponse mapToWebSearchResponse(TavilySearchResponse response) {

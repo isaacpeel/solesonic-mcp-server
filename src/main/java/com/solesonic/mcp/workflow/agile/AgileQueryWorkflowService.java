@@ -4,7 +4,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 import com.solesonic.mcp.workflow.framework.WorkflowRunner;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 @Service
 public class AgileQueryWorkflowService {
@@ -19,23 +18,25 @@ public class AgileQueryWorkflowService {
         this.agileQueryWorkflowDefinition = agileQueryWorkflowDefinition;
     }
 
-    public Mono<WorkflowOutcome> run(
+    public WorkflowOutcome run(
             AgileQueryWorkflowContext workflowContext,
             WorkflowExecutionContext executionContext
     ) {
         executionContext.progressTracker().startup("Starting agile query workflow");
 
-        return workflowRunner.run(agileQueryWorkflowDefinition.definition(), workflowContext, executionContext)
-                .doOnNext(outcome -> {
-                    workflowContext.setWorkflowStatus(outcome);
+        WorkflowOutcome outcome = workflowRunner.run(
+                agileQueryWorkflowDefinition.definition(), workflowContext, executionContext);
 
-                    if (outcome == WorkflowOutcome.FAILED) {
-                        workflowContext.setCurrentStage(AgileWorkflowStage.FAILED);
-                    }
+        workflowContext.setWorkflowStatus(outcome);
 
-                    if (outcome == WorkflowOutcome.COMPLETED) {
-                        workflowContext.setCurrentStage(AgileWorkflowStage.COMPLETED);
-                    }
-                });
+        if (outcome == WorkflowOutcome.FAILED) {
+            workflowContext.setCurrentStage(AgileWorkflowStage.FAILED);
+        }
+
+        if (outcome == WorkflowOutcome.COMPLETED) {
+            workflowContext.setCurrentStage(AgileWorkflowStage.COMPLETED);
+        }
+
+        return outcome;
     }
 }

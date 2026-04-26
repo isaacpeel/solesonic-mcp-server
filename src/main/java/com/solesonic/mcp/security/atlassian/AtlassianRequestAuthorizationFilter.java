@@ -2,13 +2,14 @@ package com.solesonic.mcp.security.atlassian;
 
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
+import com.solesonic.mcp.model.atlassian.auth.TokenResponse;
 import com.solesonic.mcp.service.atlassian.AtlassianTokenBrokerService;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientRequest;
@@ -37,35 +38,32 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
     public Mono<ClientResponse> filter(ClientRequest request, @Nonnull ExchangeFunction next) {
         log.info("Filtering {}: {}", request.method().name(), request.url());
 
-        return ReactiveSecurityContextHolder.getContext()
-                .mapNotNull(SecurityContext::getAuthentication)
-                .flatMap(authentication -> {
-                    if (authentication.getPrincipal() instanceof Jwt jwt) {
-                        String userId = jwt.getSubject();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-                        return atlassianTokenBrokerService.atlassianAccessToken(UUID.fromString(userId))
-                                .flatMap(atlassianAccessToken -> {
-                                    log.info("Token received");
-                                    String accessToken = atlassianAccessToken.accessToken();
+        if (authentication != null) {
+            if (authentication.getPrincipal() instanceof Jwt jwt) {
+                String userId = jwt.getSubject();
 
-                                    if (StringUtils.isBlank(accessToken)) {
-                                        return Mono.error(new JiraException("Access Token is `null`"));
-                                    }
+                TokenResponse atlassianAccessToken = atlassianTokenBrokerService.atlassianAccessToken(UUID.fromString(userId));
 
-                                    ClientRequest authorizedRequest = ClientRequest.from(request)
-                                            .header(AUTHORIZATION, BEARER + accessToken)
-                                            .build();
+                log.info("Token received");
 
-                                    return next.exchange(authorizedRequest);
-                                });
-                    }
+                String accessToken = atlassianAccessToken.accessToken();
 
-                    log.warn("No JWT principal found in authentication");
-                    return next.exchange(request);
-                })
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("No authentication found in SecurityContext");
-                    return next.exchange(request);
-                }));
+                if(StringUtils.isBlank(accessToken)) {
+                    throw new JiraException("Access Token is `null`");
+                }
+
+                ClientRequest authorizedRequest = ClientRequest.from(request)
+                        .header(AUTHORIZATION, BEARER + accessToken)
+                        .build();
+
+                return next.exchange(authorizedRequest);
+            }
+        } else {
+            log.warn("No authentication found in SecurityContext");
+        }
+
+        return next.exchange(request);
     }
 }

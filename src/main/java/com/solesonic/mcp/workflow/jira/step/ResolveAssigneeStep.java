@@ -7,7 +7,6 @@ import com.solesonic.mcp.workflow.jira.CreateJiraWorkflowContext;
 import com.solesonic.mcp.workflow.jira.WorkflowStage;
 import com.solesonic.mcp.workflow.jira.skill.AssigneeResolutionSkill;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 public class ResolveAssigneeStep implements WorkflowStep<CreateJiraWorkflowContext> {
@@ -30,16 +29,15 @@ public class ResolveAssigneeStep implements WorkflowStep<CreateJiraWorkflowConte
     }
 
     @Override
-    public Mono<WorkflowDecision> execute(CreateJiraWorkflowContext context, WorkflowExecutionContext executionContext) {
+    public WorkflowDecision execute(CreateJiraWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(WorkflowStage.RESOLVING_ASSIGNEE);
 
-        return assigneeResolutionSkill.resolve(
-                        context.getOriginalUserMessage(),
-                        executionContext.progressTracker().step(name())
-                )
-                .map(assigneeLookupResult -> {
-                    context.setAssigneeLookupResult(assigneeLookupResult);
-                    return WorkflowDecision.continueWorkflow();
-                });
+        var assigneeLookupResult = assigneeResolutionSkill.resolve(
+                context.getOriginalUserMessage(),
+                executionContext.progressTracker().step(name())
+        );
+
+        context.setAssigneeLookupResult(assigneeLookupResult);
+        return WorkflowDecision.continueWorkflow();
     }
 }

@@ -10,7 +10,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 public class ListBoardsStep implements WorkflowStep<AgileQueryWorkflowContext> {
@@ -35,7 +34,7 @@ public class ListBoardsStep implements WorkflowStep<AgileQueryWorkflowContext> {
     }
 
     @Override
-    public Mono<WorkflowDecision> execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
+    public WorkflowDecision execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(AgileWorkflowStage.LISTING_BOARDS);
         executionContext.progressTracker().step(name()).update(0.1, "Fetching available boards");
 
@@ -43,12 +42,10 @@ public class ListBoardsStep implements WorkflowStep<AgileQueryWorkflowContext> {
                 null, null, null, null, null
         );
 
-        return jiraAgileService.listBoards(listBoardsRequest)
-                .map(boards -> {
-                    log.info("Found {} accessible boards", boards.values().size());
-                    context.setBoards(boards.values());
-                    executionContext.progressTracker().step(name()).done("Boards fetched");
-                    return WorkflowDecision.continueWorkflow();
-                });
+        var boards = jiraAgileService.listBoards(listBoardsRequest);
+        log.info("Found {} accessible boards", boards.values().size());
+        context.setBoards(boards.values());
+        executionContext.progressTracker().step(name()).done("Boards fetched");
+        return WorkflowDecision.continueWorkflow();
     }
 }

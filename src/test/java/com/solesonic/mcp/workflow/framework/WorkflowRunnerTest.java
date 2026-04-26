@@ -1,8 +1,6 @@
 package com.solesonic.mcp.workflow.framework;
 
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.Map;
@@ -29,15 +27,15 @@ class WorkflowRunnerTest {
 
         WorkflowStep<TestWorkflowContext> stepOne = new StaticWorkflowStep("step-one", () -> {
             executionCounter.incrementAndGet();
-            return Mono.just(WorkflowDecision.continueWorkflow());
+            return WorkflowDecision.continueWorkflow();
         });
         WorkflowStep<TestWorkflowContext> stepTwo = new StaticWorkflowStep("step-two", () -> {
             executionCounter.incrementAndGet();
-            return Mono.just(WorkflowDecision.continueWorkflow());
+            return WorkflowDecision.continueWorkflow();
         });
         WorkflowStep<TestWorkflowContext> stepThree = new StaticWorkflowStep("step-three", () -> {
             executionCounter.incrementAndGet();
-            return Mono.just(WorkflowDecision.continueWorkflow());
+            return WorkflowDecision.continueWorkflow();
         });
 
         WorkflowDefinition<TestWorkflowContext> workflowDefinition = WorkflowDefinition.<TestWorkflowContext>builder("test-workflow")
@@ -45,10 +43,9 @@ class WorkflowRunnerTest {
                 .sequential(stepThree)
                 .build();
 
-        StepVerifier.create(workflowRunner.run(workflowDefinition, workflowContext, executionContext))
-                .expectNext(WorkflowOutcome.COMPLETED)
-                .verifyComplete();
+        WorkflowOutcome outcome = workflowRunner.run(workflowDefinition, workflowContext, executionContext);
 
+        assertEquals(WorkflowOutcome.COMPLETED, outcome);
         assertEquals(3, executionCounter.get());
         assertTrue(notificationService.containsEventType(WorkflowEventType.WORKFLOW_STARTED));
         assertTrue(notificationService.containsEventType(WorkflowEventType.WORKFLOW_COMPLETED));
@@ -74,22 +71,21 @@ class WorkflowRunnerTest {
 
         WorkflowStep<TestWorkflowContext> stepOne = new StaticWorkflowStep(
                 "step-one",
-                () -> Mono.just(WorkflowDecision.userInputRequired("Need clarification", pendingInput))
+                () -> WorkflowDecision.userInputRequired("Need clarification", pendingInput)
         );
 
         WorkflowStep<TestWorkflowContext> stepTwo = new StaticWorkflowStep("step-two", () -> {
             secondStepExecuted.set(true);
-            return Mono.just(WorkflowDecision.continueWorkflow());
+            return WorkflowDecision.continueWorkflow();
         });
 
         WorkflowDefinition<TestWorkflowContext> workflowDefinition = WorkflowDefinition.<TestWorkflowContext>builder("test-workflow")
                 .sequential(stepOne, stepTwo)
                 .build();
 
-        StepVerifier.create(workflowRunner.run(workflowDefinition, workflowContext, executionContext))
-                .expectNext(WorkflowOutcome.USER_INPUT_REQUIRED)
-                .verifyComplete();
+        WorkflowOutcome outcome = workflowRunner.run(workflowDefinition, workflowContext, executionContext);
 
+        assertEquals(WorkflowOutcome.USER_INPUT_REQUIRED, outcome);
         assertFalse(secondStepExecuted.get());
         assertNotNull(executionContext.pendingInput());
         assertEquals("resume-token", executionContext.pendingInput().resumeToken());
@@ -112,20 +108,20 @@ class WorkflowRunnerTest {
     private static final class TestWorkflowContext implements WorkflowContext {
     }
 
-    private record StaticWorkflowStep(String name, SupplierSupplier supplierSupplier) implements WorkflowStep<TestWorkflowContext> {
+    private record StaticWorkflowStep(String name, DecisionSupplier decisionSupplier) implements WorkflowStep<TestWorkflowContext> {
         @Override
         public boolean isParallelSafe() {
             return true;
         }
 
         @Override
-        public Mono<WorkflowDecision> execute(TestWorkflowContext context, WorkflowExecutionContext executionContext) {
-            return supplierSupplier.get();
+        public WorkflowDecision execute(TestWorkflowContext context, WorkflowExecutionContext executionContext) {
+            return decisionSupplier.get();
         }
     }
 
-    private interface SupplierSupplier {
-        Mono<WorkflowDecision> get();
+    private interface DecisionSupplier {
+        WorkflowDecision get();
     }
 
     private static final class CapturingWorkflowNotificationService implements WorkflowNotificationService {

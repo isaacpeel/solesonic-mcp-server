@@ -10,9 +10,8 @@ import com.solesonic.mcp.workflow.jira.CreateJiraWorkflowService;
 import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 public class CreateJiraWorkflow {
@@ -32,42 +31,31 @@ public class CreateJiraWorkflow {
         this.executionContextFactory = executionContextFactory;
     }
 
-    public Mono<JiraIssueCreatePayload> startWorkflow(McpAsyncRequestContext mcpAsyncRequestContext, String userMessage) {
-        try {
-            WorkflowExecutionContext executionContext = executionContextFactory.create(
-                    mcpAsyncRequestContext,
-                    CreateJiraWorkflowDefinition.WORKFLOW_NAME,
-                    createJiraWorkflowDefinition.stepWeights()
-            );
+    public JiraIssueCreatePayload startWorkflow(McpSyncRequestContext mcpSyncRequestContext, String userMessage) {
+        WorkflowExecutionContext executionContext = executionContextFactory.create(
+                mcpSyncRequestContext,
+                CreateJiraWorkflowDefinition.WORKFLOW_NAME,
+                createJiraWorkflowDefinition.stepWeights()
+        );
 
-            CreateJiraWorkflowContext workflowContext = new CreateJiraWorkflowContext(userMessage);
+        CreateJiraWorkflowContext workflowContext = new CreateJiraWorkflowContext(userMessage);
 
-            return createJiraWorkflowService.run(workflowContext, executionContext)
-                    .flatMap(outcome -> mapOutcomeToPayload(outcome, workflowContext));
-        } catch (Exception exception) {
-            log.error("Create Jira workflow failed", exception);
-            return Mono.error(new JiraException("Create Jira workflow failed: " + exception.getMessage(), exception));
-        }
-    }
+        WorkflowOutcome outcome = createJiraWorkflowService.run(workflowContext, executionContext);
 
-    private Mono<JiraIssueCreatePayload> mapOutcomeToPayload(
-            WorkflowOutcome workflowOutcome,
-            CreateJiraWorkflowContext workflowContext
-    ) {
-        if (workflowOutcome == WorkflowOutcome.USER_INPUT_REQUIRED) {
-            return Mono.error(new JiraException("Create Jira workflow paused while waiting for user input"));
+        if (outcome == WorkflowOutcome.USER_INPUT_REQUIRED) {
+            throw new JiraException("Create Jira workflow paused while waiting for user input");
         }
 
-        if (workflowOutcome == WorkflowOutcome.FAILED) {
-            return Mono.error(new JiraException("Create Jira workflow failed"));
+        if (outcome == WorkflowOutcome.FAILED) {
+            throw new JiraException("Create Jira workflow failed");
         }
 
         JiraIssueCreatePayload payload = workflowContext.getFinalPayload();
 
         if (payload == null) {
-            return Mono.error(new JiraException("Create Jira workflow completed without payload"));
+            throw new JiraException("Create Jira workflow completed without payload");
         }
 
-        return Mono.just(payload);
+        return payload;
     }
 }

@@ -3,16 +3,14 @@ package com.solesonic.mcp.tool.atlassian;
 import com.solesonic.mcp.service.atlassian.JiraAgileService;
 import com.solesonic.mcp.tool.provider.AgileMetaProvider;
 import com.solesonic.mcp.workflow.AgileQueryWorkflow;
+import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
-import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @SuppressWarnings("unused")
 @Service
@@ -49,17 +47,6 @@ public class JiraAgileTools {
         this.agileQueryWorkflow = agileQueryWorkflow;
     }
 
-    public record BoardSelectionInput(
-            @McpToolParam(description = "The numeric ID of the Jira board to query") String boardId
-    ) {}
-
-    public record LoadMoreInput(
-            @McpToolParam(description = "Confirm you would like to see the next page of issues") boolean confirmed
-    ) {}
-
-    public record TransitionConfirmInput(
-            @McpToolParam(description = "Confirm you would like to proceed with transitioning the listed issues") boolean confirmed
-    ) {}
 
     public record ListBoardsRequest(@McpToolParam(required = false, description = START_AT_DESCRIPTION)
                                     Integer startAt,
@@ -87,13 +74,11 @@ public class JiraAgileTools {
 
     @McpTool(name = AGILE_WORKFLOW, description = AGILE_WORKFLOW_DESCRIPTION, metaProvider = AgileMetaProvider.class)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-LIST')")
-    public Mono<String> agileWorkflow(
-            McpAsyncRequestContext mcpAsyncRequestContext,
+    public String agileWorkflow(
+            McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The user's natural language question about their agile boards or issues.") String userMessage
     ) {
-        return mcpAsyncRequestContext.progress(progress -> progress.percentage(0).message(""))
-                .then(Mono.delay(Duration.ofMillis(300)))
-                .then(Mono.defer(() -> agileQueryWorkflow.startWorkflow(mcpAsyncRequestContext, userMessage)))
-                .flatMap(workflowContext -> jiraAgileService.handleBoardSelection(mcpAsyncRequestContext, workflowContext));
+        AgileQueryWorkflowContext workflowContext = agileQueryWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
+        return jiraAgileService.handleBoardSelection(mcpSyncRequestContext, workflowContext);
     }
 }

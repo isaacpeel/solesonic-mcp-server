@@ -10,8 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
@@ -91,28 +89,26 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
     }
 
     @Override
-    public Mono<WorkflowDecision> execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
+    public WorkflowDecision execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(AgileWorkflowStage.PARSING_INTENT);
         executionContext.progressTracker().step(name()).update(0.1, "Parsing your request");
 
         String promptText = PROMPT_TEMPLATE.formatted(context.getOriginalUserMessage());
+        String responseContent = chatClient.prompt().user(promptText).call().content();
 
-        return Mono.fromCallable(() -> chatClient.prompt().user(promptText).call().content())
-                .subscribeOn(Schedulers.boundedElastic())
-                .map(responseContent -> {
-                    log.debug("Intent parse LLM response: {}", responseContent);
+        log.debug("Intent parse LLM response: {}", responseContent);
 
-                    try {
-                        String jsonContent = stripMarkdownCodeFences(responseContent);
-                        AgileQueryResult agileQueryResult = jsonMapper.readValue(jsonContent, AgileQueryResult.class);
-                        log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}", agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
-                        context.setAgileQueryResult(agileQueryResult);
-                        executionContext.progressTracker().step(name()).done("Intent parsed");
-                        return WorkflowDecision.continueWorkflow();
-                    } catch (Exception exception) {
-                        log.error("Failed to parse agile intent from LLM response: {}", responseContent, exception);
-                        return WorkflowDecision.failed("Could not parse intent from user request: " + exception.getMessage());
-                    }
-                });
+        try {
+            String jsonContent = stripMarkdownCodeFences(responseContent);
+            AgileQueryResult agileQueryResult = jsonMapper.readValue(jsonContent, AgileQueryResult.class);
+            log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}",
+                    agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
+            context.setAgileQueryResult(agileQueryResult);
+            executionContext.progressTracker().step(name()).done("Intent parsed");
+            return WorkflowDecision.continueWorkflow();
+        } catch (Exception exception) {
+            log.error("Failed to parse agile intent from LLM response: {}", responseContent, exception);
+            return WorkflowDecision.failed("Could not parse intent from user request: " + exception.getMessage());
+        }
     }
 }

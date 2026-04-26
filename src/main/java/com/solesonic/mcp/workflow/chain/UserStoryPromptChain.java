@@ -1,8 +1,6 @@
 package com.solesonic.mcp.workflow.chain;
 
 import com.solesonic.mcp.workflow.WeightedProgressCoordinator;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -13,17 +11,14 @@ public class UserStoryPromptChain {
         this.steps = steps;
     }
 
-    public Mono<UserStoryChainContext> run(String rawRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
-        return Mono.fromCallable(() -> {
-                    UserStoryChainContext context = new UserStoryChainContext(rawRequest);
+    public UserStoryChainContext run(String rawRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
+        UserStoryChainContext context = new UserStoryChainContext(rawRequest);
 
-                    for (UserStoryChainStep step : steps) {
-                        step.execute(context, taskProgress);
-                    }
+        for (UserStoryChainStep step : steps) {
+            step.execute(context, taskProgress);
+        }
 
-                    taskProgress.done("User story generated");
-                    return context;
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+        taskProgress.done("User story generated");
+        return context;
     }
 }

@@ -1,7 +1,7 @@
 package com.solesonic.mcp.workflow.framework;
 
 import com.solesonic.mcp.workflow.ProgressReporter;
-import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -13,7 +13,7 @@ public class WorkflowExecutionContextFactory {
     private static final String CHAT_ID_KEY = "chatId";
 
     public WorkflowExecutionContext create(
-            McpAsyncRequestContext mcpAsyncRequestContext,
+            McpSyncRequestContext mcpAsyncRequestContext,
             String workflowName,
             Map<String, Double> stepWeights
     ) {

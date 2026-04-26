@@ -1,7 +1,5 @@
 package com.solesonic.mcp.workflow.framework;
 
-import reactor.core.publisher.Mono;
-
 public interface WorkflowStep<C extends WorkflowContext> {
     String name();
 
@@ -9,5 +7,5 @@ public interface WorkflowStep<C extends WorkflowContext> {
         return false;
     }
 
-    Mono<WorkflowDecision> execute(C context, WorkflowExecutionContext executionContext);
+    WorkflowDecision execute(C context, WorkflowExecutionContext executionContext);
 }

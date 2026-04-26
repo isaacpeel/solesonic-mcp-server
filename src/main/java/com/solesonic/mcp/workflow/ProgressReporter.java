@@ -2,7 +2,7 @@ package com.solesonic.mcp.workflow;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.mcp.annotation.context.McpAsyncRequestContext;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,11 +14,10 @@ public final class ProgressReporter {
     private final BiConsumer<Integer, String> emitter;
     private final AtomicInteger lastPercent;
 
-    public ProgressReporter(McpAsyncRequestContext mcpAsyncRequestContext) {
-        Objects.requireNonNull(mcpAsyncRequestContext, "mcpSyncRequestContext must not be null");
-        this.emitter = (percent, message) -> mcpAsyncRequestContext
-                .progress(progress -> progress.percentage(percent).message(message))
-                .subscribe();
+    public ProgressReporter(McpSyncRequestContext mcpSyncRequestContext) {
+        Objects.requireNonNull(mcpSyncRequestContext, "mcpSyncRequestContext must not be null");
+        this.emitter = (percent, message) ->
+                mcpSyncRequestContext.progress(progress -> progress.percentage(percent).message(message));
         this.lastPercent = new AtomicInteger(0);
     }
 

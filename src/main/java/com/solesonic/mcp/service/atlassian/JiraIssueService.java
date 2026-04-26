@@ -44,103 +44,111 @@ public class JiraIssueService {
         this.jsonMapper = jsonMapper;
     }
 
-    public Mono<JiraIssue> get(String issueId) {
+    public JiraIssue get(String issueId) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
-        return webClient.get()
+        JiraIssue jiraIssue = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
-                .doOnSuccess(_ -> log.info("Jira issue successfully retrieved: {}", issueId));
+                .block();
+
+        log.info("Jira issue successfully retrieved: {}", issueId);
+
+        return jiraIssue;
     }
 
-    public Mono<JiraIssue> create(JiraIssue jiraIssue) {
+    public JiraIssue create(JiraIssue jiraIssue) {
         log.info("Creating jira issue.");
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH};
 
-        return Mono.defer(() -> webClient.post()
-                        .uri(uriBuilder -> uriBuilder
-                                .pathSegment(basePathSegments)
-                                .build())
-                        .bodyValue(jiraIssue)
-                        .exchangeToMono(response -> response.bodyToMono(String.class)))
-                .flatMap(jiraIssueJson -> {
-                    log.info("Jira create response JSON: {}", jiraIssueJson);
+        String jiraIssueJson = webClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .build())
+                .bodyValue(jiraIssue)
+                .exchangeToMono(response -> response.bodyToMono(String.class))
+                .block();
 
-                    if (StringUtils.isEmpty(jiraIssueJson)) {
-                        return Mono.error(new JiraException("Jira issue creation failed: empty response from Jira.", jiraIssueJson));
+        log.info("Jira create response JSON: {}", jiraIssueJson);
+
+        if (StringUtils.isEmpty(jiraIssueJson)) {
+            throw new JiraException("Jira issue creation failed: empty response from Jira.", jiraIssueJson);
+        }
+
+        // Detect Jira error structure in the JSON body and surface a helpful message to tool callers
+        JsonNode root = jsonMapper.readTree(jiraIssueJson);
+
+        boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
+        boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
+
+        if (hasErrorMessages || hasErrorsObject) {
+            StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
+
+            if (hasErrorMessages) {
+                for (JsonNode msgNode : root.get("errorMessages")) {
+                    if (messageBuilder.length() > 30) { // already has some content
+                        messageBuilder.append("; ");
                     }
+                    messageBuilder.append(msgNode.asString());
+                }
+            }
 
-                    JsonNode root = jsonMapper.readTree(jiraIssueJson);
-                    boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
-                    boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
-
-                    if (hasErrorMessages || hasErrorsObject) {
-                        StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
-
-                        if (hasErrorMessages) {
-
-                            for (JsonNode msgNode : root.get("errorMessages")) {
-                                if (messageBuilder.length() > 30) {
-                                    messageBuilder.append("; ");
-                                }
-
-                                messageBuilder.append(msgNode.asString());
-                            }
-                        }
-
-                        if (hasErrorsObject) {
-                            root.get("errors").properties().forEach(entry -> {
-                                if (messageBuilder.length() > 30) {
-                                    messageBuilder.append("; ");
-                                }
-
-                                messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asString());
-                            });
-                        }
-
-                        return Mono.error(new JiraException(messageBuilder.toString(), jiraIssueJson));
+            if (hasErrorsObject) {
+                root.get("errors").properties().forEach(entry -> {
+                    if (messageBuilder.length() > 30) {
+                        messageBuilder.append("; ");
                     }
-
-                    JiraIssue createdJiraIssue = jsonMapper.readValue(jiraIssueJson, JiraIssue.class);
-                    assert createdJiraIssue != null;
-
-                    String issueKey = createdJiraIssue.key();
-                    assert issueKey != null;
-                    log.info("Created jira issue with key: {}", issueKey);
-
-                    return Mono.just(createdJiraIssue);
+                    messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asString());
                 });
+            }
+
+            throw new JiraException(messageBuilder.toString(), jiraIssueJson);
+        }
+
+        JiraIssue createdJiraIssue = jsonMapper.readValue(jiraIssueJson, JiraIssue.class);
+        assert createdJiraIssue != null;
+
+        String issueKey = createdJiraIssue.key();
+        assert issueKey != null;
+        log.info("Created jira issue with key: {}", issueKey);
+
+        return createdJiraIssue;
     }
 
-    public Mono<Void> delete(String issueId) {
+    public void delete(String issueId) {
         log.info("Deleting jira issue.");
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
-        return webClient.delete()
+        webClient.delete()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
-                .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
-                .then();
+                .exchangeToMono(response -> response.bodyToMono(Void.class))
+                .block();
+
+        log.info("Jira issue deleted: {}", issueId);
     }
 
-    public Mono<Transitions> getTransitions(String issueKey) {
+    public Transitions getTransitions(String issueKey) {
         log.info("Fetching available transitions for issue: {}", issueKey);
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
 
-        return webClient.get()
+        Transitions transitions = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Transitions.class))
-                .doOnSuccess(_ -> log.info("Transitions retrieved for issue: {}", issueKey));
+                .block();
+
+        log.info("Transitions retrieved for issue: {}", issueKey);
+        return transitions;
     }
 
-    public Mono<Void> transitionIssue(String issueKey, String transitionId) {
+    public void transitionIssue(String issueKey, String transitionId) {
         log.info("Transitioning issue {} with transition ID: {}", issueKey, transitionId);
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
@@ -149,20 +157,24 @@ public class JiraIssueService {
                 "transition", Map.of("id", transitionId)
         );
 
-        return webClient.post()
+        webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
                 .bodyValue(transitionPayload)
                 .exchangeToMono(response -> {
-                    if (response.statusCode().is2xxSuccessful()) {
-                        log.info("Issue {} transitioned successfully", issueKey);
-                        return response.releaseBody();
+                    if (response.statusCode().isError()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(errorBody -> Mono.error(new JiraException(
+                                        "Failed to transition issue %s: %s".formatted(issueKey, errorBody),
+                                        errorBody)));
                     }
-                    return response.bodyToMono(String.class)
-                            .flatMap(body -> Mono.error(new JiraException(
-                                    "Failed to transition issue %s: %s".formatted(issueKey, body), body)));
-                });
+                    return response.bodyToMono(Void.class);
+                })
+                .block();
+
+        log.info("Issue {} transitioned successfully", issueKey);
     }
 
     public JiraIssue convert(JiraIssueCreatePayload jiraIssueCreatePayload) {

@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.ConfluenceConstants.*;
@@ -21,7 +20,7 @@ public class ConfluencePageService {
         this.webClient = webClient;
     }
 
-    public Mono<ConfluencePagesResponse> pages() {
+    public ConfluencePagesResponse pages() {
         log.info("Getting Confluence documents.");
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -30,10 +29,10 @@ public class ConfluencePageService {
                         .queryParam("body-format", STORAGE_FORMAT)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(ConfluencePagesResponse.class))
-                .doOnSuccess(_ -> log.info("Confluence pages retrieved"));
+                .block();
     }
 
-    public Mono<Page> get(String id) {
+    public Page get(String id) {
         log.info("Getting Confluence document: {}", id);
 
         return webClient.get()
@@ -44,7 +43,7 @@ public class ConfluencePageService {
                         .queryParam("body-format", STORAGE_FORMAT)
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Page.class))
-                .doOnSuccess(_ -> log.info("Confluence document retrieved: {}", id));
+                .block();
     }
 
     /**
@@ -53,7 +52,7 @@ public class ConfluencePageService {
      * @param page The Page object containing all the necessary information
      * @return The created page
      */
-    public Mono<Page> createPage(Page page) {
+    public Page createPage(Page page) {
         log.info("Creating Confluence page: {} in space: {}", page.getTitle(), page.getSpaceId());
 
         // Ensure the body and storage are properly set up
@@ -85,7 +84,7 @@ public class ConfluencePageService {
                         .build())
                 .bodyValue(page)
                 .exchangeToMono(response -> response.bodyToMono(Page.class))
-                .doOnSuccess(createdPage -> log.info("Confluence page created: {}", createdPage != null ? createdPage.getId() : null));
+                .block();
     }
 
     /**
@@ -94,8 +93,7 @@ public class ConfluencePageService {
      * @param page The Page object containing all the necessary information for the update
      * @return The updated page
      */
-    @SuppressWarnings("unused")
-    public Mono<Page> updatePage(Page page) {
+    public Page updatePage(Page page) {
         String id = page.getId();
         log.info("Updating Confluence page: {}", id);
 
@@ -116,24 +114,24 @@ public class ConfluencePageService {
             page.getBody().getStorage().setRepresentation(STORAGE_FORMAT);
         }
 
-        Mono<Page> preparedPageMono = page.getVersion() == null
-                ? get(id).map(currentPage -> {
-                    Version version = new Version();
-                    version.setNumber(currentPage.getVersion().getNumber() + 1);
-                    page.setVersion(version);
-                    return page;
-                })
-                : Mono.just(page);
+        // Ensure version is set
+        if (page.getVersion() == null) {
+            // Get the current page to get the version
+            Page currentPage = get(id);
+            Version version = new Version();
+            version.setNumber(currentPage.getVersion().getNumber() + 1);
+            page.setVersion(version);
+        }
 
-        return preparedPageMono.flatMap(preparedPage -> webClient.put()
-                        .uri(uriBuilder -> uriBuilder
-                                .pathSegment(basePathSegments)
-                                .pathSegment(PAGES_PATH)
-                                .pathSegment(id)
-                                .build())
-                        .bodyValue(preparedPage)
-                        .exchangeToMono(response -> response.bodyToMono(Page.class)))
-                .doOnSuccess(updatedPage -> log.info("Confluence page updated: {}", id));
+        return webClient.put()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .pathSegment(PAGES_PATH)
+                        .pathSegment(id)
+                        .build())
+                .bodyValue(page)
+                .exchangeToMono(response -> response.bodyToMono(Page.class))
+                .block();
     }
 
     /**
@@ -143,11 +141,10 @@ public class ConfluencePageService {
      * @param purge If true, permanently deletes the page (requires space admin permissions)
      * @param draft If true, deletes a draft page
      */
-    @SuppressWarnings("unused")
-    public Mono<Void> deletePage(String id, boolean purge, boolean draft) {
+    public void deletePage(String id, boolean purge, boolean draft) {
         log.info("Deleting Confluence page: {}, purge: {}, draft: {}", id, purge, draft);
 
-        return webClient.delete()
+        webClient.delete()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .pathSegment(PAGES_PATH)
@@ -156,6 +153,6 @@ public class ConfluencePageService {
                         .queryParamIfPresent("draft", draft ? java.util.Optional.of(true) : java.util.Optional.empty())
                         .build())
                 .exchangeToMono(response -> response.bodyToMono(Void.class))
-                .then();
+                .block();
     }
 }

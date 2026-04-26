@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -23,7 +22,7 @@ public class AtlassianTokenBrokerService {
         this.tokenBrokerWebClient = tokenBrokerWebClient;
     }
 
-    public Mono<TokenResponse> atlassianAccessToken(UUID userId) {
+    public TokenResponse atlassianAccessToken(UUID userId) {
         log.info("Exchanging an atlassian access token for user {}", userId);
 
         TokenExchange tokenExchange = new TokenExchange(userId, ATLASSIAN);
@@ -31,6 +30,7 @@ public class AtlassianTokenBrokerService {
         return tokenBrokerWebClient.post()
                 .bodyValue(tokenExchange)
                 .retrieve()
-                .bodyToMono(TokenResponse.class);
+                .bodyToMono(TokenResponse.class)
+                .block();
     }
 }

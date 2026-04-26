@@ -9,7 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.function.Function;
@@ -24,42 +23,38 @@ class JiraUserServiceTest {
 
     @Mock
     private WebClient webClient;
+
+    @Mock
     private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+
+    @Mock
     private WebClient.RequestHeadersSpec requestHeadersSpec;
 
     private JiraUserService service;
 
     @BeforeEach
-
     void setUp() {
-        requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
-        requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
         service = new JiraUserService(webClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
     }
 
     @Test
     void search_shouldReturnUsers_andBuildExpectedUri() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
-
         List<User> users = List.of(
                 User.accountId("acc-1").displayName("Bob").active(true).timeZone("UTC").accountType("atlassian").build(),
                 User.accountId("acc-2").displayName("Alice").active(true).timeZone("UTC").accountType("atlassian").build()
         );
 
-        when(requestHeadersSpec.exchangeToMono(any()))
-                .thenReturn(Mono.just(users));
+        when(webClient.get()).thenReturn(requestHeadersUriSpec);
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
+        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(users));
 
-        StepVerifier.create(service.search("bob"))
-                .assertNext(result -> {
-                    assertEquals(2, result.size());
-                    assertEquals("acc-1", result.getFirst().accountId());
-                    assertEquals("Bob", result.getFirst().displayName());
-                })
-                .verifyComplete();
+        List<User> result = service.search("bob");
 
-        // Verify that uri builder function was provided
+        assertEquals(2, result.size());
+        assertEquals("acc-1", result.getFirst().accountId());
+        assertEquals("Bob", result.getFirst().displayName());
+
         verify(requestHeadersUriSpec).uri(any(Function.class));
     }
 }

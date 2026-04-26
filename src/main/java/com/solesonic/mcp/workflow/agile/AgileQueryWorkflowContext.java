@@ -16,6 +16,10 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
     private volatile AgileQueryResult agileQueryResult;
     private volatile List<Board> boards;
 
+    private volatile int estimatedItemCount;
+    private volatile boolean requiresBatching;
+    private volatile int batchSize;
+
     private volatile AgileWorkflowStage currentStage;
     private volatile WorkflowOutcome workflowStatus;
 
@@ -60,5 +64,29 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
 
     public void setWorkflowStatus(WorkflowOutcome workflowStatus) {
         this.workflowStatus = workflowStatus;
+    }
+
+    public int getEstimatedItemCount() {
+        return estimatedItemCount;
+    }
+
+    public void setEstimatedItemCount(int estimatedItemCount) {
+        this.estimatedItemCount = estimatedItemCount;
+    }
+
+    public boolean isRequiresBatching() {
+        return requiresBatching;
+    }
+
+    public void setRequiresBatching(boolean requiresBatching) {
+        this.requiresBatching = requiresBatching;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
     }
 }

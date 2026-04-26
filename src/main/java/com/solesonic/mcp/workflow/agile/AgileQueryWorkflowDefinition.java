@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.agile;
 
+import com.solesonic.mcp.workflow.agile.step.AssessOperationScopeStep;
 import com.solesonic.mcp.workflow.agile.step.ListBoardsStep;
 import com.solesonic.mcp.workflow.agile.step.ParseAgileIntentStep;
 import com.solesonic.mcp.workflow.framework.WorkflowDefinition;
@@ -15,10 +16,12 @@ public class AgileQueryWorkflowDefinition {
 
     public AgileQueryWorkflowDefinition(
             ParseAgileIntentStep parseAgileIntentStep,
-            ListBoardsStep listBoardsStep
+            ListBoardsStep listBoardsStep,
+            AssessOperationScopeStep assessOperationScopeStep
     ) {
         workflowDefinition = WorkflowDefinition.<AgileQueryWorkflowContext>builder(WORKFLOW_NAME)
                 .parallel(parseAgileIntentStep, listBoardsStep)
+                .sequential(assessOperationScopeStep)
                 .build();
     }
 
@@ -28,8 +31,9 @@ public class AgileQueryWorkflowDefinition {
 
     public Map<String, Double> stepWeights() {
         return Map.of(
-                ParseAgileIntentStep.STEP_NAME, 0.50,
-                ListBoardsStep.STEP_NAME, 0.50
+                ParseAgileIntentStep.STEP_NAME, 0.40,
+                ListBoardsStep.STEP_NAME, 0.40,
+                AssessOperationScopeStep.STEP_NAME, 0.20
         );
     }
 }

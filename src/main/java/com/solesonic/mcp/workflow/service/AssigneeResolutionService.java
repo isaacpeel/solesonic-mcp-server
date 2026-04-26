@@ -13,9 +13,8 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -35,7 +34,7 @@ public class AssigneeResolutionService {
         this.chatClient = chatClient;
     }
 
-    public Mono<AssigneeLookupResult> resolve(String userRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
+    public AssigneeLookupResult resolve(String userRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
         log.info("resolve AssigneeResolutionService");
         taskProgress.update(0.20, "Looking up assignee");
 
@@ -43,22 +42,18 @@ public class AssigneeResolutionService {
         Map<String, Object> inputs = Map.of(INPUT, userRequest);
         Prompt assigneeLookup = assigneeLookupTemplate.create(inputs);
 
-        return Mono.fromCallable(() -> chatClient.prompt(assigneeLookup).call().content())
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(assigneeToLookup -> {
-                    taskProgress.update(0.55, "Searching assignable users");
+        String assigneeToLookup = chatClient.prompt(assigneeLookup).call().content();
+        taskProgress.update(0.55, "Searching assignable users");
 
-                    return jiraUserService.search(assigneeToLookup)
-                            .flatMap(users -> {
-                                User user = users.stream()
-                                        .findFirst()
-                                        .orElseThrow(() -> new JiraException("Assignee lookup failed for required assignee: " + assigneeToLookup));
+        List<User> users = jiraUserService.search(assigneeToLookup);
 
-                                log.info("Found assignee: {}", user.displayName());
-                                taskProgress.done("Found assignee: " + user.displayName());
+        User user = users.stream()
+                .findFirst()
+                .orElseThrow(() -> new JiraException("Assignee lookup failed for required assignee: " + assigneeToLookup));
 
-                                return Mono.just(new AssigneeLookupResult(true, user.accountId(), "RESOLVED", user.displayName()));
-                            });
-                });
+        log.info("Found assignee: {}", user.displayName());
+        taskProgress.done("Found assignee: " + user.displayName());
+
+        return new AssigneeLookupResult(true, user.accountId(), "RESOLVED", user.displayName());
     }
 }

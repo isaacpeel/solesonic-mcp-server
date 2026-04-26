@@ -1,16 +1,17 @@
 package com.solesonic.mcp.workflow.framework;
 
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 public class WorkflowRunner {
 
-    public <C extends WorkflowContext> Mono<WorkflowOutcome> run(
+    public <C extends WorkflowContext> WorkflowOutcome run(
             WorkflowDefinition<C> definition,
             C context,
             WorkflowExecutionContext executionContext
@@ -23,69 +24,81 @@ public class WorkflowRunner {
                 WorkflowEvent.workflowStarted(definition.name(), executionContext.correlationId(), "Workflow started")
         );
 
-        return executeStepGroups(definition.stepGroups(), context, executionContext)
-                .doOnSuccess(outcome -> handleWorkflowCompletion(definition, executionContext, outcome))
-                .onErrorResume(error -> {
-                    executionContext.notificationService().publish(
-                            WorkflowEvent.workflowFailed(definition.name(), executionContext.correlationId(), "Workflow failed", error)
-                    );
-                    return Mono.error(error);
-                });
+        try {
+            WorkflowOutcome outcome = executeStepGroups(definition.stepGroups(), context, executionContext);
+            handleWorkflowCompletion(definition, executionContext, outcome);
+            return outcome;
+        } catch (Exception exception) {
+            executionContext.notificationService().publish(
+                    WorkflowEvent.workflowFailed(definition.name(), executionContext.correlationId(), "Workflow failed", exception)
+            );
+            throw exception;
+        }
     }
 
-    private <C extends WorkflowContext> Mono<WorkflowOutcome> executeStepGroups(
+    private <C extends WorkflowContext> WorkflowOutcome executeStepGroups(
             List<WorkflowDefinition.StepGroup<C>> stepGroups,
             C context,
             WorkflowExecutionContext executionContext
     ) {
-        Mono<WorkflowOutcome> outcome = Mono.just(WorkflowOutcome.COMPLETED);
+        WorkflowOutcome currentOutcome = WorkflowOutcome.COMPLETED;
 
         for (WorkflowDefinition.StepGroup<C> stepGroup : stepGroups) {
-            outcome = outcome.flatMap(currentOutcome -> {
-                if (currentOutcome != WorkflowOutcome.COMPLETED) {
-                    return Mono.just(currentOutcome);
-                }
+            if (currentOutcome != WorkflowOutcome.COMPLETED) {
+                break;
+            }
 
-                if (stepGroup.executionMode() == WorkflowDefinition.ExecutionMode.PARALLEL) {
-                    return executeParallelStepGroup(stepGroup.steps(), context, executionContext);
-                }
-
-                return executeSequentialStepGroup(stepGroup.steps(), context, executionContext);
-            });
+            if (stepGroup.executionMode() == WorkflowDefinition.ExecutionMode.PARALLEL) {
+                currentOutcome = executeParallelStepGroup(stepGroup.steps(), context, executionContext);
+            } else {
+                currentOutcome = executeSequentialStepGroup(stepGroup.steps(), context, executionContext);
+            }
         }
 
-        return outcome;
+        return currentOutcome;
     }
 
-    private <C extends WorkflowContext> Mono<WorkflowOutcome> executeSequentialStepGroup(
+    private <C extends WorkflowContext> WorkflowOutcome executeSequentialStepGroup(
             List<WorkflowStep<C>> steps,
             C context,
             WorkflowExecutionContext executionContext
     ) {
-        Mono<WorkflowOutcome> outcome = Mono.just(WorkflowOutcome.COMPLETED);
+        WorkflowOutcome currentOutcome = WorkflowOutcome.COMPLETED;
 
         for (WorkflowStep<C> step : steps) {
-            outcome = outcome.flatMap(currentOutcome -> {
-                if (currentOutcome != WorkflowOutcome.COMPLETED) {
-                    return Mono.just(currentOutcome);
-                }
-
-                return executeStep(step, context, executionContext).map(WorkflowDecision::outcome);
-            });
+            if (currentOutcome != WorkflowOutcome.COMPLETED) {
+                break;
+            }
+            currentOutcome = executeStep(step, context, executionContext).outcome();
         }
 
-        return outcome;
+        return currentOutcome;
     }
 
-    private <C extends WorkflowContext> Mono<WorkflowOutcome> executeParallelStepGroup(
+    private <C extends WorkflowContext> WorkflowOutcome executeParallelStepGroup(
             List<WorkflowStep<C>> steps,
             C context,
             WorkflowExecutionContext executionContext
     ) {
-        return Flux.fromIterable(steps)
-                .flatMap(step -> executeStep(step, context, executionContext))
-                .collectList()
-                .map(decisions -> resolveParallelGroupOutcome(decisions, executionContext));
+        ExecutorService parallelStepExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+        try {
+            List<CompletableFuture<WorkflowDecision>> futures = steps.stream()
+                    .map(step -> CompletableFuture.supplyAsync(
+                            () -> executeStep(step, context, executionContext),
+                            parallelStepExecutor))
+                    .toList();
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+            List<WorkflowDecision> decisions = futures.stream()
+                    .map(CompletableFuture::join)
+                    .toList();
+
+            return resolveParallelGroupOutcome(decisions, executionContext);
+        } finally {
+            parallelStepExecutor.shutdown();
+        }
     }
 
     private WorkflowOutcome resolveParallelGroupOutcome(
@@ -108,7 +121,7 @@ public class WorkflowRunner {
         return WorkflowOutcome.COMPLETED;
     }
 
-    private <C extends WorkflowContext> Mono<WorkflowDecision> executeStep(
+    private <C extends WorkflowContext> WorkflowDecision executeStep(
             WorkflowStep<C> step,
             C context,
             WorkflowExecutionContext executionContext
@@ -122,21 +135,24 @@ public class WorkflowRunner {
                 )
         );
 
-        return step.execute(context, executionContext)
-                .defaultIfEmpty(WorkflowDecision.continueWorkflow())
-                .map(decision -> handleStepDecision(step, executionContext, decision))
-                .onErrorResume(error -> {
-                    executionContext.notificationService().publish(
-                            WorkflowEvent.stepFailed(
-                                    executionContext.workflowName(),
-                                    step.name(),
-                                    executionContext.correlationId(),
-                                    "Step failed",
-                                    error
-                            )
-                    );
-                    return Mono.error(error);
-                });
+        try {
+            WorkflowDecision decision = step.execute(context, executionContext);
+            if (decision == null) {
+                decision = WorkflowDecision.continueWorkflow();
+            }
+            return handleStepDecision(step, executionContext, decision);
+        } catch (Exception exception) {
+            executionContext.notificationService().publish(
+                    WorkflowEvent.stepFailed(
+                            executionContext.workflowName(),
+                            step.name(),
+                            executionContext.correlationId(),
+                            "Step failed",
+                            exception
+                    )
+            );
+            throw exception;
+        }
     }
 
     private WorkflowDecision handleStepDecision(
@@ -209,7 +225,6 @@ public class WorkflowRunner {
         if (message == null || message.isBlank()) {
             return fallback;
         }
-
         return message;
     }
 }

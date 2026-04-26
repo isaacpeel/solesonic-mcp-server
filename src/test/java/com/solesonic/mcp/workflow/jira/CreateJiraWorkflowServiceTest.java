@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.Map;
@@ -50,14 +48,13 @@ class CreateJiraWorkflowServiceTest {
 
         when(createJiraWorkflowDefinition.definition()).thenReturn(workflowDefinition);
         when(workflowRunner.run(eq(workflowDefinition), eq(workflowContext), eq(executionContext)))
-                .thenReturn(Mono.just(WorkflowOutcome.USER_INPUT_REQUIRED));
+                .thenReturn(WorkflowOutcome.USER_INPUT_REQUIRED);
 
         CreateJiraWorkflowService createJiraWorkflowService = new CreateJiraWorkflowService(workflowRunner, createJiraWorkflowDefinition);
 
-        StepVerifier.create(createJiraWorkflowService.run(workflowContext, executionContext))
-                .expectNext(WorkflowOutcome.USER_INPUT_REQUIRED)
-                .verifyComplete();
+        WorkflowOutcome outcome = createJiraWorkflowService.run(workflowContext, executionContext);
 
+        assertEquals(WorkflowOutcome.USER_INPUT_REQUIRED, outcome);
         assertTrue(workflowContext.isRequiresUserInput());
         assertEquals(WorkflowStage.USER_INPUT_REQUIRED, workflowContext.getCurrentStage());
         assertEquals("resume-token", workflowContext.getPendingInput().resumeToken());
@@ -83,11 +80,11 @@ class CreateJiraWorkflowServiceTest {
         }
 
         @Override
-        public Mono<WorkflowDecision> execute(
+        public WorkflowDecision execute(
                 CreateJiraWorkflowContext context,
                 WorkflowExecutionContext executionContext
         ) {
-            return Mono.just(WorkflowDecision.continueWorkflow());
+            return WorkflowDecision.continueWorkflow();
         }
     }
 }
