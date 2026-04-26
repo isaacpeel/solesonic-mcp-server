@@ -8,13 +8,13 @@ import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.mcp.workflow.agile.AgileQueryResult;
 import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
+import com.solesonic.mcp.tool.McpConfirmations;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
-import org.springframework.ai.mcp.annotation.context.StructuredElicitResult;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -59,7 +59,7 @@ public class JiraAgileService {
             - Do not include a preamble or closing remarks, just the formatted issue list
             """;
 
-    private record PagedQueryResult(String formattedContent, boolean hasMorePages, int nextStartAt) {}
+    private record PagedQueryResult(List<BoardIssue> issues, int total, boolean hasMorePages, int nextStartAt) {}
 
     public static final String START_AT = "startAt";
     public static final String MAX_RESULTS = "maxResults";
@@ -232,15 +232,15 @@ public class JiraAgileService {
             return "No issues found matching the filter on board **%s**.".formatted(board.name());
         }
 
-        Map<String, Object> elicitationMetadata = resolveElicitationMetadata(mcpSyncRequestContext);
         String transitionId = resolveTransitionId(issueKeys.getFirst(), targetStatus);
 
         String confirmationMessage = "This will transition **%d** issue(s) on board **%s** to **%s**. Proceed?"
                 .formatted(issueKeys.size(), board.name(), targetStatus);
 
-        StructuredElicitResult<McpSchema.ElicitResult.Action> elicitResult = mcpSyncRequestContext.elicit(
-                elicit -> elicit.message(confirmationMessage).meta(elicitationMetadata),
-                McpSchema.ElicitResult.Action.class
+        McpSchema.ElicitResult elicitResult = McpConfirmations.confirm(
+                mcpSyncRequestContext,
+                confirmationMessage,
+                resolveElicitationMetadata(mcpSyncRequestContext)
         );
 
         return switch (elicitResult.action()) {
@@ -264,11 +264,10 @@ public class JiraAgileService {
         String confirmationMessage = "This will transition approximately **%d** issue(s) on board **%s** to **%s** in **%d** batches of %d. Proceed?"
                 .formatted(estimatedCount, board.name(), targetStatus, totalBatches, batchSize);
 
-        Map<String, Object> elicitationMetadata = resolveElicitationMetadata(mcpSyncRequestContext);
-
-        StructuredElicitResult<McpSchema.ElicitResult.Action> elicitResult = mcpSyncRequestContext.elicit(
-                elicit -> elicit.message(confirmationMessage).meta(elicitationMetadata),
-                McpSchema.ElicitResult.Action.class
+        McpSchema.ElicitResult elicitResult = McpConfirmations.confirm(
+                mcpSyncRequestContext,
+                confirmationMessage,
+                resolveElicitationMetadata(mcpSyncRequestContext)
         );
 
         return switch (elicitResult.action()) {
@@ -475,41 +474,51 @@ public class JiraAgileService {
             String userMessage,
             int startAt
     ) {
-        PagedQueryResult pagedResult = fetchAndFormatPage(board, agileQueryResult, userMessage, startAt);
-
-        if (!pagedResult.hasMorePages()) {
-            return pagedResult.formattedContent();
+        if (agileQueryResult.isCountQuery()) {
+            PagedQueryResult firstPage = fetchPage(board, agileQueryResult, startAt);
+            return formatCountResult(board, firstPage, agileQueryResult);
         }
-
-        String elicitMessage = "Showing issues %d–%d. Would you like to load the next page?"
-                .formatted(startAt + 1, pagedResult.nextStartAt());
-
-        Map<String, Object> elicitationMetadata = resolveElicitationMetadata(mcpSyncRequestContext);
-
-        try {
-            StructuredElicitResult<McpSchema.ElicitResult.Action> elicitResult = mcpSyncRequestContext.elicit(
-                    elicit -> elicit.message(elicitMessage).meta(elicitationMetadata),
-                    McpSchema.ElicitResult.Action.class
-            );
-
-            return switch (elicitResult.action()) {
-                case ACCEPT -> executePagedBoardQuery(
-                        mcpSyncRequestContext, board, agileQueryResult, userMessage, pagedResult.nextStartAt()
-                );
-                case DECLINE, CANCEL -> pagedResult.formattedContent();
-            };
-        } catch (Exception exception) {
-            log.warn("Load more elicitation unavailable, returning current page: {}", exception.getMessage());
-            return pagedResult.formattedContent();
-        }
+        return collectAndFormatPages(mcpSyncRequestContext, board, agileQueryResult, userMessage, startAt, new ArrayList<>());
     }
 
-    private PagedQueryResult fetchAndFormatPage(
+    private String collectAndFormatPages(
+            McpSyncRequestContext mcpSyncRequestContext,
             Board board,
             AgileQueryResult agileQueryResult,
             String userMessage,
-            int startAt
+            int startAt,
+            List<BoardIssue> accumulatedIssues
     ) {
+        PagedQueryResult pagedResult = fetchPage(board, agileQueryResult, startAt);
+        accumulatedIssues.addAll(pagedResult.issues());
+
+        if (!pagedResult.hasMorePages()) {
+            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+        }
+
+        String elicitMessage = "Loaded issues %d–%d of %d. Would you like to load the next page?"
+                .formatted(startAt + 1, pagedResult.nextStartAt(), pagedResult.total());
+
+        try {
+            McpSchema.ElicitResult elicitResult = McpConfirmations.confirm(
+                    mcpSyncRequestContext,
+                    elicitMessage,
+                    resolveElicitationMetadata(mcpSyncRequestContext)
+            );
+
+            return switch (elicitResult.action()) {
+                case ACCEPT -> collectAndFormatPages(
+                        mcpSyncRequestContext, board, agileQueryResult, userMessage, pagedResult.nextStartAt(), accumulatedIssues
+                );
+                case DECLINE, CANCEL -> enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+            };
+        } catch (Exception exception) {
+            log.warn("Load more elicitation unavailable, returning current accumulated results: {}", exception.getMessage());
+            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+        }
+    }
+
+    private PagedQueryResult fetchPage(Board board, AgileQueryResult agileQueryResult, int startAt) {
         String jqlFilter = agileQueryResult.jqlFilter() == null ? "" : agileQueryResult.jqlFilter().strip();
         log.info("Fetching page for board '{}' (ID: {}) startAt={} with JQL: '{}'", board.name(), board.id(), startAt, jqlFilter);
 
@@ -523,38 +532,26 @@ public class JiraAgileService {
 
         BoardIssues boardIssues = getBoardIssues(boardIssuesRequest);
 
-        if (agileQueryResult.isCountQuery()) {
-            return new PagedQueryResult(formatCountResult(board, boardIssues, agileQueryResult), false, 0);
-        }
-
         int total = boardIssues.total() != null ? boardIssues.total() : boardIssues.issues().size();
         int fetchedCount = boardIssues.issues().size();
         int nextStartAt = startAt + fetchedCount;
         boolean hasMorePages = nextStartAt < total;
 
-        String formattedContent = enrichAndFormatIssueList(board, boardIssues, userMessage, fetchedCount, total);
-
-        if (hasMorePages) {
-            String pageNote = "\n\n> Showing issues %d–%d of %d. Ask to see more to continue."
-                    .formatted(startAt + 1, nextStartAt, total);
-            return new PagedQueryResult(formattedContent + pageNote, true, nextStartAt);
-        }
-
-        return new PagedQueryResult(formattedContent, false, 0);
+        return new PagedQueryResult(boardIssues.issues(), total, hasMorePages, nextStartAt);
     }
 
     private String enrichAndFormatIssueList(
             Board board,
-            BoardIssues boardIssues,
+            List<BoardIssue> boardIssues,
             String userMessage,
             int shownCount,
             int total
     ) {
-        if (boardIssues.issues().isEmpty()) {
+        if (boardIssues.isEmpty()) {
             return "**%s** — No issues found.".formatted(board.name());
         }
 
-        List<String> issueKeys = boardIssues.issues().stream()
+        List<String> issueKeys = boardIssues.stream()
                 .map(BoardIssue::key)
                 .toList();
 
@@ -658,8 +655,8 @@ public class JiraAgileService {
         }
     }
 
-    private String formatCountResult(Board board, BoardIssues boardIssues, AgileQueryResult agileQueryResult) {
-        int total = boardIssues.total() != null ? boardIssues.total() : boardIssues.issues().size();
+    private String formatCountResult(Board board, PagedQueryResult pagedResult, AgileQueryResult agileQueryResult) {
+        int total = pagedResult.total();
         boolean noFilter = agileQueryResult.jqlFilter() == null || agileQueryResult.jqlFilter().isBlank();
         String jqlDescription = noFilter
                 ? "all issues"

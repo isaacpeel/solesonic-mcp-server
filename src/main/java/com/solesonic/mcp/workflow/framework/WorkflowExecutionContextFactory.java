@@ -13,13 +13,13 @@ public class WorkflowExecutionContextFactory {
     private static final String CHAT_ID_KEY = "chatId";
 
     public WorkflowExecutionContext create(
-            McpSyncRequestContext mcpAsyncRequestContext,
+            McpSyncRequestContext mcpSyncRequestContext,
             String workflowName,
             Map<String, Double> stepWeights
     ) {
-        ProgressReporter progressReporter = new ProgressReporter(mcpAsyncRequestContext);
+        ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         WorkflowNotificationService notificationService = new LoggingWorkflowNotificationService(progressReporter);
-        Map<String, Object> requestMetadata = mcpAsyncRequestContext.requestMeta();
+        Map<String, Object> requestMetadata = mcpSyncRequestContext.requestMeta();
         String correlationId = resolveCorrelationId(requestMetadata);
 
         return new WorkflowExecutionContext(

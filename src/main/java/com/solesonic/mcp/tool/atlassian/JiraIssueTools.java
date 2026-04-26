@@ -4,7 +4,8 @@ import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
 import com.solesonic.mcp.tool.provider.CreateJiraMetaProvider;
 import com.solesonic.mcp.workflow.CreateJiraWorkflow;
-import io.modelcontextprotocol.spec.McpSchema;
+import com.solesonic.mcp.tool.McpConfirmations;
+import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -109,6 +110,7 @@ public class JiraIssueTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The key or id of the jira issue to delete.") String keyOrIssueId
     ) {
+        mcpSyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId));
         log.info("Delete request for jira issue: {}", keyOrIssueId);
 
         Map<String, Object> toolContext = mcpSyncRequestContext.requestMeta();
@@ -121,18 +123,15 @@ public class JiraIssueTools {
             chatId = UUID.randomUUID().toString();
         }
 
-        mcpSyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId));
+        log.info("Prompting user to confirm deletion of Jira issue: {}", keyOrIssueId);
 
-        String finalChatId = chatId;
+        ElicitResult elicitResult = McpConfirmations.confirm(
+                mcpSyncRequestContext,
+                "Are you sure you want to delete Jira issue: " + keyOrIssueId + "?",
+                Map.of(CHAT_ID, chatId)
+        );
 
-        McpSchema.ElicitResult elicitResult = mcpSyncRequestContext.elicit(
-                McpSchema.ElicitRequest.builder()
-                        .message("Are you sure you want to delete Jira issue: " + keyOrIssueId + "?")
-                        .requestedSchema(Map.of("type", "object", "properties", Map.of()))
-                        .meta(Map.of(CHAT_ID, finalChatId))
-                        .build());
-
-        McpSchema.ElicitResult.Action action = elicitResult.action();
+        ElicitResult.Action action = elicitResult.action();
 
         log.info("Elicitation action: {}", action);
 
