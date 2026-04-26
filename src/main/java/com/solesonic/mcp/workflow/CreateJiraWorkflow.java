@@ -32,6 +32,8 @@ public class CreateJiraWorkflow {
     }
 
     public JiraIssueCreatePayload startWorkflow(McpSyncRequestContext mcpSyncRequestContext, String userMessage) {
+        log.info("Starting Create Jira workflow");
+
         WorkflowExecutionContext executionContext = executionContextFactory.create(
                 mcpSyncRequestContext,
                 CreateJiraWorkflowDefinition.WORKFLOW_NAME,

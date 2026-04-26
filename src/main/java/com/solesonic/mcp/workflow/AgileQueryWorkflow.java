@@ -31,6 +31,7 @@ public class AgileQueryWorkflow {
     }
 
     public AgileQueryWorkflowContext startWorkflow(McpSyncRequestContext mcpSyncRequestContext, String userMessage) {
+        log.info("Starting Agile workflow");
         WorkflowExecutionContext executionContext = executionContextFactory.create(
                 mcpSyncRequestContext,
                 AgileQueryWorkflowDefinition.WORKFLOW_NAME,

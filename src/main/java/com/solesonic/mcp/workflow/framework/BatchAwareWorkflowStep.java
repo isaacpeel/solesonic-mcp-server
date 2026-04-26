@@ -3,6 +3,7 @@ package com.solesonic.mcp.workflow.framework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("unused")
 public interface BatchAwareWorkflowStep<C extends WorkflowContext> extends WorkflowStep<C> {
     Logger log = LoggerFactory.getLogger(BatchAwareWorkflowStep.class);
 
