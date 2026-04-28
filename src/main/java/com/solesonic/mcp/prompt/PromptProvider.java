@@ -165,7 +165,7 @@ public class PromptProvider {
     @McpPrompt(
             name = "create-confluence-page-prompt",
             title = "Create Confluence Page",
-            description = CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION,
+            description = "A specialized prompt for drafting and creating Confluence pages.",
             metaProvider = ConfluenceCommandProvider.class
     )
     public McpSchema.GetPromptResult createConfluencePagePrompt(

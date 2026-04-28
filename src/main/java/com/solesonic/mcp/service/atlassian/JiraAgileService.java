@@ -9,6 +9,8 @@ import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.mcp.workflow.agile.AgileQueryResult;
 import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
 import com.solesonic.mcp.tool.McpConfirmations;
+import com.solesonic.mcp.workflow.framework.WorkflowEvent;
+import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -123,6 +125,7 @@ public class JiraAgileService {
                 .block();
     }
 
+    @SuppressWarnings("unused")
     public String getBoardConfiguration(String boardId) {
         log.debug("Getting Jira board configuration: {}", boardId);
 
@@ -187,10 +190,25 @@ public class JiraAgileService {
         if (boards.size() == 1) {
             Board selectedBoard = boards.getFirst();
             log.info("Single board found, auto-selecting: {} (ID: {})", selectedBoard.name(), selectedBoard.id());
+            emitProgress(workflowContext, "Using board: %s".formatted(selectedBoard.name()));
             return dispatchBoardAction(mcpSyncRequestContext, selectedBoard, workflowContext);
         } else {
             throw new IllegalStateException("Board should be selected by agent workflow.");
         }
+    }
+
+    private void emitProgress(AgileQueryWorkflowContext workflowContext, String message) {
+        WorkflowExecutionContext executionContext = workflowContext.getExecutionContext();
+        if (executionContext == null) return;
+        executionContext.notificationService().publish(
+                WorkflowEvent.stepProgress(
+                        executionContext.workflowName(),
+                        "dispatch",
+                        executionContext.correlationId(),
+                        100,
+                        message
+                )
+        );
     }
 
     private String dispatchBoardAction(
@@ -205,7 +223,7 @@ public class JiraAgileService {
             return executeBulkTransition(mcpSyncRequestContext, board, workflowContext);
         }
 
-        return executePagedBoardQuery(mcpSyncRequestContext, board, agileQueryResult, userMessage, agileQueryResult.resolvedStartAt());
+        return executePagedBoardQuery(mcpSyncRequestContext, board, agileQueryResult, userMessage, agileQueryResult.resolvedStartAt(), workflowContext);
     }
 
     private String executeBulkTransition(
@@ -226,6 +244,7 @@ public class JiraAgileService {
             return executeBatchedTransition(mcpSyncRequestContext, board, workflowContext);
         }
 
+        emitProgress(workflowContext, "Collecting issues to transition on board '%s'…".formatted(board.name()));
         List<String> issueKeys = collectAllMatchingIssueKeys(board, jqlFilter, 0);
 
         if (issueKeys.isEmpty()) {
@@ -244,7 +263,10 @@ public class JiraAgileService {
         );
 
         return switch (elicitResult.action()) {
-            case ACCEPT -> applyTransitions(issueKeys, transitionId, targetStatus, board);
+            case ACCEPT -> {
+                emitProgress(workflowContext, "Transitioning %d issue(s) to '%s'…".formatted(issueKeys.size(), targetStatus));
+                yield applyTransitions(issueKeys, transitionId, targetStatus, board);
+            }
             case DECLINE, CANCEL -> "Transition cancelled.";
         };
     }
@@ -271,7 +293,7 @@ public class JiraAgileService {
         );
 
         return switch (elicitResult.action()) {
-            case ACCEPT -> executeTransitionBatches(board, jqlFilter, targetStatus, batchSize, estimatedCount);
+            case ACCEPT -> executeTransitionBatches(board, jqlFilter, targetStatus, batchSize, estimatedCount, workflowContext);
             case DECLINE, CANCEL -> "Transition cancelled.";
         };
     }
@@ -281,7 +303,8 @@ public class JiraAgileService {
             String jqlFilter,
             String targetStatus,
             int batchSize,
-            int estimatedCount
+            int estimatedCount,
+            AgileQueryWorkflowContext workflowContext
     ) {
         int totalBatches = (int) Math.ceil((double) estimatedCount / batchSize);
         log.info("Starting batched transition: {} estimated items in {} batches of {}", estimatedCount, totalBatches, batchSize);
@@ -293,6 +316,7 @@ public class JiraAgileService {
         while (true) {
             int currentBatchNumber = (startAt / batchSize) + 1;
             log.info("Processing transition batch {}/{} (startAt={})", currentBatchNumber, totalBatches, startAt);
+            emitProgress(workflowContext, "Transitioning batch %d of %d to '%s'…".formatted(currentBatchNumber, totalBatches, targetStatus));
 
             JiraAgileTools.BoardIssuesRequest batchRequest = new JiraAgileTools.BoardIssuesRequest(
                     String.valueOf(board.id()),
@@ -472,13 +496,16 @@ public class JiraAgileService {
             Board board,
             AgileQueryResult agileQueryResult,
             String userMessage,
-            int startAt
+            int startAt,
+            AgileQueryWorkflowContext workflowContext
     ) {
         if (agileQueryResult.isCountQuery()) {
+            emitProgress(workflowContext, "Counting issues on board '%s'…".formatted(board.name()));
             PagedQueryResult firstPage = fetchPage(board, agileQueryResult, startAt);
             return formatCountResult(board, firstPage, agileQueryResult);
         }
-        return collectAndFormatPages(mcpSyncRequestContext, board, agileQueryResult, userMessage, startAt, new ArrayList<>());
+        emitProgress(workflowContext, "Fetching issues from board '%s'…".formatted(board.name()));
+        return collectAndFormatPages(mcpSyncRequestContext, board, agileQueryResult, userMessage, startAt, new ArrayList<>(), workflowContext);
     }
 
     private String collectAndFormatPages(
@@ -487,13 +514,14 @@ public class JiraAgileService {
             AgileQueryResult agileQueryResult,
             String userMessage,
             int startAt,
-            List<BoardIssue> accumulatedIssues
+            List<BoardIssue> accumulatedIssues,
+            AgileQueryWorkflowContext workflowContext
     ) {
         PagedQueryResult pagedResult = fetchPage(board, agileQueryResult, startAt);
         accumulatedIssues.addAll(pagedResult.issues());
 
         if (!pagedResult.hasMorePages()) {
-            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total(), workflowContext);
         }
 
         String elicitMessage = "Loaded issues %d–%d of %d. Would you like to load the next page?"
@@ -508,13 +536,13 @@ public class JiraAgileService {
 
             return switch (elicitResult.action()) {
                 case ACCEPT -> collectAndFormatPages(
-                        mcpSyncRequestContext, board, agileQueryResult, userMessage, pagedResult.nextStartAt(), accumulatedIssues
+                        mcpSyncRequestContext, board, agileQueryResult, userMessage, pagedResult.nextStartAt(), accumulatedIssues, workflowContext
                 );
-                case DECLINE, CANCEL -> enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+                case DECLINE, CANCEL -> enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total(), workflowContext);
             };
         } catch (Exception exception) {
             log.warn("Load more elicitation unavailable, returning current accumulated results: {}", exception.getMessage());
-            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total());
+            return enrichAndFormatIssueList(board, accumulatedIssues, userMessage, accumulatedIssues.size(), pagedResult.total(), workflowContext);
         }
     }
 
@@ -545,7 +573,8 @@ public class JiraAgileService {
             List<BoardIssue> boardIssues,
             String userMessage,
             int shownCount,
-            int total
+            int total,
+            AgileQueryWorkflowContext workflowContext
     ) {
         if (boardIssues.isEmpty()) {
             return "**%s** — No issues found.".formatted(board.name());
@@ -556,6 +585,7 @@ public class JiraAgileService {
                 .toList();
 
         log.info("Fetching full details for {} issue(s) on board '{}'", issueKeys.size(), board.name());
+        emitProgress(workflowContext, "Loading details for %d issue(s)…".formatted(issueKeys.size()));
 
         int concurrency = Math.min(ISSUE_FETCH_CONCURRENCY, issueKeys.size());
         ExecutorService fetchExecutor = Executors.newFixedThreadPool(concurrency);
@@ -585,6 +615,7 @@ public class JiraAgileService {
             );
 
             log.info("Requesting LLM enrichment for {} issue(s)", fullIssues.size());
+            emitProgress(workflowContext, "Formatting results…");
             return chatClient.prompt().user(prompt).call().content();
         } finally {
             fetchExecutor.shutdown();
@@ -664,6 +695,7 @@ public class JiraAgileService {
         return "**%s** — %d %s (%s)".formatted(board.name(), total, total == 1 ? "issue" : "issues", jqlDescription);
     }
 
+    @SuppressWarnings("unused")
     public String buildBoardSelectionMessage(List<Board> boards) {
         StringBuilder message = new StringBuilder();
         message.append("Multiple Jira boards are available. Please enter the ID of the board you'd like to query:\n\n");

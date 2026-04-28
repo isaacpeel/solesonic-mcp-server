@@ -99,12 +99,18 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
         log.debug("Intent parse LLM response: {}", responseContent);
 
         try {
+            assert responseContent != null;
             String jsonContent = stripMarkdownCodeFences(responseContent);
             AgileQueryResult agileQueryResult = jsonMapper.readValue(jsonContent, AgileQueryResult.class);
             log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}",
                     agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
             context.setAgileQueryResult(agileQueryResult);
-            executionContext.progressTracker().step(name()).done("Intent parsed");
+            String filterDescription = agileQueryResult.jqlFilter() != null && !agileQueryResult.jqlFilter().isBlank()
+                    ? ", filter: " + agileQueryResult.jqlFilter()
+                    : "";
+            executionContext.progressTracker().step(name()).done(
+                    "Query type: %s%s".formatted(agileQueryResult.queryType(), filterDescription)
+            );
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
             log.error("Failed to parse agile intent from LLM response: {}", responseContent, exception);

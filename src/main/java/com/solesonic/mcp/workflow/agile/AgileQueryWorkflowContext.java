@@ -2,6 +2,7 @@ package com.solesonic.mcp.workflow.agile;
 
 import com.solesonic.mcp.model.atlassian.agile.Board;
 import com.solesonic.mcp.workflow.framework.WorkflowContext;
+import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
 
     private volatile AgileWorkflowStage currentStage;
     private volatile WorkflowOutcome workflowStatus;
+    private volatile WorkflowExecutionContext executionContext;
 
     public AgileQueryWorkflowContext(String originalUserMessage) {
         this.originalUserMessage = Objects.requireNonNull(originalUserMessage, "originalUserMessage must not be null");
@@ -88,5 +90,13 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
 
     public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
+    }
+
+    public WorkflowExecutionContext getExecutionContext() {
+        return executionContext;
+    }
+
+    public void setExecutionContext(WorkflowExecutionContext executionContext) {
+        this.executionContext = executionContext;
     }
 }

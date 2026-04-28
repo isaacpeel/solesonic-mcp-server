@@ -43,9 +43,10 @@ public class ListBoardsStep implements WorkflowStep<AgileQueryWorkflowContext> {
         );
 
         var boards = jiraAgileService.listBoards(listBoardsRequest);
-        log.info("Found {} accessible boards", boards.values().size());
+        int boardCount = boards.values().size();
+        log.info("Found {} accessible boards", boardCount);
         context.setBoards(boards.values());
-        executionContext.progressTracker().step(name()).done("Boards fetched");
+        executionContext.progressTracker().step(name()).done("Found %d accessible board(s)".formatted(boardCount));
         return WorkflowDecision.continueWorkflow();
     }
 }

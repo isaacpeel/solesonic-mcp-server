@@ -36,12 +36,11 @@ public class AssessOperationScopeStep implements WorkflowStep<AgileQueryWorkflow
     @Override
     public WorkflowDecision execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(AgileWorkflowStage.ASSESSING_SCOPE);
-        executionContext.progressTracker().step(name()).update(0.1, "Assessing operation scope");
 
         AgileQueryResult agileQueryResult = context.getAgileQueryResult();
         if (agileQueryResult == null || !agileQueryResult.isTransitionQuery()) {
             log.debug("Scope assessment skipped — not a transition query");
-            executionContext.progressTracker().step(name()).done("Scope assessment not needed");
+            executionContext.progressTracker().step(name()).done("Scope assessment skipped");
             return WorkflowDecision.skip("Non-transition query — scope assessment not required");
         }
 
@@ -53,6 +52,8 @@ public class AssessOperationScopeStep implements WorkflowStep<AgileQueryWorkflow
 
         Board board = context.getBoards().getFirst();
         String jqlFilter = agileQueryResult.jqlFilter() == null ? "" : agileQueryResult.jqlFilter().strip();
+
+        executionContext.progressTracker().step(name()).update(0.3, "Counting matching issues on board '%s'".formatted(board.name()));
 
         JiraAgileTools.BoardIssuesRequest countRequest = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
@@ -72,7 +73,7 @@ public class AssessOperationScopeStep implements WorkflowStep<AgileQueryWorkflow
 
         log.info("Scope assessment: {} items found, batching={}", totalCount, needsBatching);
         executionContext.progressTracker().step(name()).done(
-                "Scope assessed: %d items%s".formatted(totalCount, needsBatching ? " (batching enabled)" : "")
+                "Found %d issue(s)%s".formatted(totalCount, needsBatching ? " — batching required" : "")
         );
 
         return WorkflowDecision.continueWorkflow();

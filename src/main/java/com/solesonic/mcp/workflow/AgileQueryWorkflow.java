@@ -39,6 +39,7 @@ public class AgileQueryWorkflow {
         );
 
         AgileQueryWorkflowContext workflowContext = new AgileQueryWorkflowContext(userMessage);
+        workflowContext.setExecutionContext(executionContext);
 
         WorkflowOutcome outcome = agileQueryWorkflowService.run(workflowContext, executionContext);
 
