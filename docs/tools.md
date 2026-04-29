@@ -8,25 +8,33 @@ Overview
 Categories
 
 - Jira Tools
-  - assignee_id_lookup
-    - Description: Look up a Jira accountId for a given assignee string
-    - Auth: ROLE_MCP-CREATE-JIRA
-    - Input: "<string>" (name or email)
-    - Output: accountId string
   - create_jira_issue
-    - Description: Creates a Jira issue. Use responsibly and avoid duplicate submissions; if an assignee is needed, resolve via assignee_id_lookup first.
-    - Auth: ROLE_MCP-CREATE-JIRA
-    - Input (CreateJiraRequest):
-      - summary: string
-      - description: string
-      - acceptanceCriteria: array of strings
-      - assigneeId: string (Jira accountId)
-    - Output (CreateJiraResponse): { "issueId": "...", "issueUri": "..." }
+    - Description: Guided workflow that creates a Jira issue from a plain-language request. Generates a summary, description, and acceptance criteria; resolves the assignee; then submits to Jira.
+    - Auth: ROLE_MCP-JIRA-CREATE
+    - Input: { "userMessage": "<string>" }
+    - Output: Formatted Markdown block with the new issue key, link, summary, description, acceptance criteria, and assignee
+  - get_jira_issue
+    - Description: Retrieves a Jira issue by its key or numeric ID.
+    - Auth: ROLE_MCP-JIRA-GET
+    - Input: { "issueId": "<string>" }
+    - Output: JiraIssue object
+  - delete_jira_issue
+    - Description: Deletes a Jira issue by its key or ID. Uses MCP elicitation to ask the user to confirm before the deletion is carried out.
+    - Auth: ROLE_MCP-JIRA-DELETE
+    - Input: { "keyOrIssueId": "<string>" }
+    - Output: Confirmation, decline, or cancellation message
 
-- Confluence Tools (scaffolding)
+- Jira Agile Tools
+  - agile-workflow
+    - Description: Guided workflow for interacting with agile boards. Interprets a natural language question, identifies the relevant board, and returns board or issue data.
+    - Auth: ROLE_MCP-JIRA-AGILE-LIST
+    - Input: { "userMessage": "<string>" }
+    - Output: Board or issue data as text
+
+- Confluence Tools
   - create_confluence_page
-    - Description: Create a documentation page from structured content
-    - Auth: ROLE_MCP-CREATE-CONFLUENCE (subject to change if feature flag disabled)
+    - Description: Creates a new Confluence page with a specified title and content.
+    - Auth: controlled by Atlassian Token Broker scopes; no additional role required at the tool level
     - Input/Output: see feature-specific docs when enabled
 
 - Web Search Tools
@@ -36,7 +44,7 @@ Categories
     - Input: { "query": "<string>", "maxResults": <int, optional> }
     - Output: WebSearchResponse
   - web_search_advanced
-    - Description: Advanced search with domain/time filters
+    - Description: Advanced search with domain and time filters
     - Auth: ROLE_MCP-WEB-SEARCH
     - Input: { "query": "<string>", "includeDomains": ["<string>"], "excludeDomains": ["<string>"], "timeRange": "<string>", "maxResults": <int> }
     - Output: WebSearchResponse
@@ -51,6 +59,23 @@ Categories
     - Input: { "urls": ["<string>"] }
     - Output: WebExtractResponse
   - Details: See Web Search docs: ./web-search.md
+
+- Date and Time Tools
+  - get_current_date
+    - Description: Returns the current date in ISO format (YYYY-MM-DD). Defaults to UTC if no timezone is provided.
+    - Auth: ROLE_MCP-TIME
+    - Input: { "timezone": "<string, optional>" } (e.g., "America/New_York", "Europe/London")
+    - Output: { "date": "<string>", "timezone": "<string>" }
+  - get_current_time
+    - Description: Returns the current time in ISO format (HH:mm:ss.SSS). Defaults to UTC if no timezone is provided.
+    - Auth: ROLE_MCP-TIME
+    - Input: { "timezone": "<string, optional>" }
+    - Output: { "time": "<string>", "timezone": "<string>" }
+  - get_current_date_time
+    - Description: Returns the current date and time in ISO format (YYYY-MM-DDTHH:mm:ss.SSS). Defaults to UTC if no timezone is provided.
+    - Auth: ROLE_MCP-TIME
+    - Input: { "timezone": "<string, optional>" }
+    - Output: { "dateTime": "<string>", "timezone": "<string>" }
 
 - Utility Tools
   - weather_lookup
@@ -73,9 +98,14 @@ Atlassian Token Broker exchange (used by Jira tools)
 
 Operational guidance
 - Idempotency: The create_jira_issue tool should not be called repeatedly for the same request; consider upstream guards to prevent duplicates
-- Authorization: Ensure callers have required ROLE_ authorities (e.g., ROLE_MCP-CREATE-JIRA, ROLE_MCP-WEB-SEARCH, ROLE_MCP-GET-WEATHER)
+- Authorization: Ensure callers have the required ROLE_ authorities:
+  - Jira: ROLE_MCP-JIRA-CREATE, ROLE_MCP-JIRA-GET, ROLE_MCP-JIRA-DELETE
+  - Agile: ROLE_MCP-JIRA-AGILE-LIST
+  - Web Search: ROLE_MCP-WEB-SEARCH
+  - Date/Time: ROLE_MCP-TIME
+  - Weather (demo): ROLE_MCP-GET-WEATHER
 - Error handling: Jira-related errors surface as descriptive messages; verify role membership and Token Broker configuration if failures persist
- 
+
 See also
 - Web Search: ./web-search.md
 - Prompts: ./prompts.md

@@ -2,13 +2,15 @@
 
 > A Spring Boot HTTP MCP (Model Context Protocol) server powered by Spring AI. Secured as an OAuth2 Resource Server (JWT) with group- and scope-based authorization, built-in Jira tooling, and an external Atlassian Token Broker integration.
 
-[![Java](https://img.shields.io/badge/Java-24-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
+[![Java](https://img.shields.io/badge/Java-25-blue.svg)](https://www.oracle.com/java/technologies/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](docs/license.md)
 
 ## Features
 
 - HTTP MCP Endpoint — JSON-RPC over HTTP at `POST /mcp`
-- Built‑in Jira tools — create issues, assign, and look up assignees; note: includes a simple example tool `weather_lookup`
+- Built-in Jira tools — create, get, and delete issues; guided agile board workflow
+- Date and Time tools — current date, time, and combined datetime with optional timezone
+- Demo utility tool — `weather_lookup` as a simple example
 - OAuth2 Resource Server (JWT) — JWT validation; group claims mapped to authorities
 - MCP Authorization & Dynamic Client Registration — see [Authorization](docs/authorization.md)
 - Group & Role Authorization — `groups` → `GROUP_<name>` `roles` → `ROLE_<role>`
@@ -84,7 +86,7 @@ On JDK 25+, Netty requires native access for optimal performance. To suppress wa
 
 **JAR execution:**
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar target/solesonic-mcp-server-1.1.0.jar
+java --enable-native-access=ALL-UNNAMED -jar target/solesonic-mcp-server-1.2.0.jar
 ```
 
 ### 3) Verify Setup
