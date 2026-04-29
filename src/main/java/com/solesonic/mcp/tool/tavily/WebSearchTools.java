@@ -4,10 +4,12 @@ import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
 import com.solesonic.mcp.model.tavily.TavilySearchRequest;
 import com.solesonic.mcp.model.tavily.TavilySearchResponse;
 import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.mcp.workflow.ProgressReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -66,12 +68,16 @@ public class WebSearchTools {
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH, description = WEB_SEARCH_DESC)
     public WebSearchResponse webSearch(
+            McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The search query. Be specific and include relevant keywords for best results.")
             String query,
             @McpToolParam(description = "Maximum number of results to return (1-10, default 5)")
             Integer maxResults
     ) {
         log.info("Executing basic web search for: {}", query);
+
+        ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
+        progressReporter.emit(10, "Searching the web for: " + query);
 
         int resultCount = (maxResults != null && maxResults >= 1 && maxResults <= 10) ? maxResults : 5;
 
@@ -85,12 +91,15 @@ public class WebSearchTools {
                 .includeImages(false)
                 .build();
 
-        return mapToWebSearchResponse(tavilySearchService.search(request));
+        WebSearchResponse response = mapToWebSearchResponse(tavilySearchService.search(request));
+        progressReporter.emit(100, "Found " + response.results().size() + " results for: " + query);
+        return response;
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH_ADVANCED, description = WEB_SEARCH_ADVANCED_DESC)
     public WebSearchResponse webSearchAdvanced(
+            McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The search query. Be specific and include relevant keywords.")
             String query,
             @McpToolParam(description = "Maximum number of results to return (1-20, default 10)")
@@ -105,6 +114,9 @@ public class WebSearchTools {
             Boolean includeRawContent
     ) {
         log.info("Executing advanced web search for: {}", query);
+
+        ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
+        progressReporter.emit(10, "Running advanced search for: " + query);
 
         int resultCount = (maxResults != null && maxResults >= 1 && maxResults <= 20) ? maxResults : 10;
         boolean rawContent = includeRawContent != null && includeRawContent;
@@ -122,12 +134,15 @@ public class WebSearchTools {
                 .timeRange(timeRange)
                 .build();
 
-        return mapToWebSearchResponse(tavilySearchService.search(request));
+        WebSearchResponse response = mapToWebSearchResponse(tavilySearchService.search(request));
+        progressReporter.emit(100, "Found " + response.results().size() + " results for: " + query);
+        return response;
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_SEARCH_NEWS, description = WEB_SEARCH_NEWS_DESC)
     public WebSearchResponse webSearchNews(
+            McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The news search query. Include topic, keywords, or entities.")
             String query,
             @McpToolParam(description = "Maximum number of results (1-10, default 5)")
@@ -136,6 +151,9 @@ public class WebSearchTools {
             String timeRange
     ) {
         log.info("Executing news search for: {}", query);
+
+        ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
+        progressReporter.emit(10, "Searching recent news for: " + query);
 
         int resultCount = (maxResults != null && maxResults >= 1 && maxResults <= 10) ? maxResults : 5;
         String range = (timeRange != null && List.of(TIME_DAY, TIME_WEEK, TIME_MONTH, TIME_YEAR).contains(timeRange))
@@ -150,24 +168,36 @@ public class WebSearchTools {
                 .timeRange(range)
                 .build();
 
-        return mapToWebSearchResponse(tavilySearchService.search(request));
+        WebSearchResponse response = mapToWebSearchResponse(tavilySearchService.search(request));
+        progressReporter.emit(100, "Found " + response.results().size() + " news results for: " + query);
+        return response;
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
     @McpTool(name = WEB_EXTRACT_CONTENT, description = WEB_EXTRACT_DESC)
     public WebExtractResponse webExtractContent(
+            McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "List of URLs to extract content from. Maximum 5 URLs recommended.")
             List<String> urls
     ) {
         log.info("Executing content extraction for {} URLs", urls != null ? urls.size() : 0);
 
+        ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
+
         if (urls == null || urls.isEmpty()) {
+            progressReporter.emit(100, "No URLs provided for extraction");
             return new WebExtractResponse(List.of(), List.of("No URLs provided"));
         }
 
         List<String> limitedUrls = urls.size() > 5 ? urls.subList(0, 5) : urls;
+        progressReporter.emit(10, "Extracting content from " + limitedUrls.size() + " URL" + (limitedUrls.size() == 1 ? "" : "s"));
 
-        return mapToWebExtractResponse(tavilySearchService.extract(limitedUrls));
+        WebExtractResponse response = mapToWebExtractResponse(tavilySearchService.extract(limitedUrls));
+        int successCount = response.extractedContent().size();
+        int errorCount = response.errors().size();
+        progressReporter.emit(100, "Extracted " + successCount + " page" + (successCount == 1 ? "" : "s") +
+                (errorCount > 0 ? ", " + errorCount + " error" + (errorCount == 1 ? "" : "s") : ""));
+        return response;
     }
 
     private WebSearchResponse mapToWebSearchResponse(TavilySearchResponse response) {
