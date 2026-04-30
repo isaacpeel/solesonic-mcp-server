@@ -6,6 +6,7 @@ import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
+import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU1;
 
@@ -62,6 +64,12 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
             (Write "No schedule data" if ESPN schedule data was not fetched)
             """;
 
+    private static final Set<SportsQuestionType> VALIDATION_RELEVANT_TYPES = Set.of(
+            SportsQuestionType.GAME_PREVIEW,
+            SportsQuestionType.PLAYER_ANALYSIS,
+            SportsQuestionType.TRADE_NEWS
+    );
+
     private final ChatClient chatClient;
 
     public ValidateRosterAndDatesStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU1) ChatClient chatClient) {
@@ -74,7 +82,21 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
     }
 
     @Override
+    public boolean isParallelSafe() {
+        return true;
+    }
+
+    @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
+        SportsQuestionType questionType = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().resolvedQuestionType()
+                : SportsQuestionType.GENERAL_NEWS;
+
+        if (!VALIDATION_RELEVANT_TYPES.contains(questionType)) {
+            log.info("Skipping roster validation for question type: {}", questionType);
+            return WorkflowDecision.skip("Roster validation not needed for question type: " + questionType);
+        }
+
         context.setCurrentStage(SportsWorkflowStage.VALIDATING_ROSTER);
         executionContext.progressTracker().step(name()).update(0.1, "Validating roster status and schedule dates");
 

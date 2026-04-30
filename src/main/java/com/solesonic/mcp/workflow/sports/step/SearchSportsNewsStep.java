@@ -58,6 +58,12 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
         SportsQuestionType questionType = intent != null
                 ? intent.resolvedQuestionType()
                 : SportsQuestionType.GENERAL_NEWS;
+
+        if (questionType == SportsQuestionType.SCHEDULE_LOOKUP) {
+            log.info("Skipping news search for SCHEDULE_LOOKUP — schedule data is sufficient");
+            return WorkflowDecision.skip("News search not needed for schedule lookup");
+        }
+
         String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
         StringBuilder summary = new StringBuilder();

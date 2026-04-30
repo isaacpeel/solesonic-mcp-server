@@ -38,19 +38,28 @@ public class SportsResearchWorkflowDefinition {
                 .sequential(parseSportsIntentStep)
                 // [No LLM] Map team names to authoritative ESPN URL profiles
                 .sequential(resolveEspnTeamUrlsStep)
-                // [No GPU] Parallel: fetch authoritative ESPN data + news search
+                // [No GPU] Parallel: each step gates itself to the question types that need it
+                //   SCHEDULE_LOOKUP  → schedule only
+                //   GAME_PREVIEW     → schedule + roster + stats + standings + news
+                //   PLAYER_ANALYSIS  → schedule + roster + stats + news
+                //   STANDINGS        → standings + news
+                //   TRADE_NEWS       → roster + news (with transactions)
+                //   GENERAL_NEWS     → news only
                 .parallel(
-                        fetchEspnScheduleStep,    // extract ESPN schedule page
-                        fetchEspnRosterStep,      // extract ESPN roster page
-                        fetchEspnStatsStep,       // extract ESPN team stats page
-                        fetchEspnStandingsStep,   // extract ESPN standings page
-                        searchSportsNewsStep      // Tavily search for news/injuries/trades
+                        fetchEspnScheduleStep,    // SCHEDULE_LOOKUP, GAME_PREVIEW, PLAYER_ANALYSIS
+                        fetchEspnRosterStep,      // GAME_PREVIEW, PLAYER_ANALYSIS, TRADE_NEWS
+                        fetchEspnStatsStep,       // GAME_PREVIEW, PLAYER_ANALYSIS
+                        fetchEspnStandingsStep,   // STANDINGS, GAME_PREVIEW
+                        searchSportsNewsStep      // all except SCHEDULE_LOOKUP
                 )
-                // [GPU1] Validate player roster status using ESPN data as authoritative source
-                .sequential(validateRosterAndDatesStep)
-                // [GPU1] Optional deep-dive — only runs for PLAYER_ANALYSIS with a named player
-                .sequential(deepPlayerAnalysisStep)
-                // [GPU0] Synthesize all data into the final analyst response
+                // [GPU1] Parallel: validate and deep-dive run concurrently where both are needed
+                //   ValidateRoster → GAME_PREVIEW, PLAYER_ANALYSIS, TRADE_NEWS
+                //   DeepPlayer     → PLAYER_ANALYSIS only (Tavily searches first, then GPU1 call)
+                .parallel(
+                        validateRosterAndDatesStep,
+                        deepPlayerAnalysisStep
+                )
+                // [GPU0] Synthesize all collected data into the final analyst response
                 .sequential(synthesizeSportsAnalysisStep)
                 .build();
     }

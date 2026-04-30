@@ -8,17 +8,25 @@ import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.EspnTeamProfile;
+import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class FetchEspnScheduleStep implements WorkflowStep<SportsResearchWorkflowContext> {
     public static final String STEP_NAME = "fetch-espn-schedule";
 
     private static final Logger log = LoggerFactory.getLogger(FetchEspnScheduleStep.class);
+
+    private static final Set<SportsQuestionType> SCHEDULE_RELEVANT_TYPES = Set.of(
+            SportsQuestionType.SCHEDULE_LOOKUP,
+            SportsQuestionType.GAME_PREVIEW,
+            SportsQuestionType.PLAYER_ANALYSIS
+    );
 
     private final TavilySearchService tavilySearchService;
 
@@ -38,6 +46,15 @@ public class FetchEspnScheduleStep implements WorkflowStep<SportsResearchWorkflo
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
+        SportsQuestionType questionType = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().resolvedQuestionType()
+                : SportsQuestionType.GENERAL_NEWS;
+
+        if (!SCHEDULE_RELEVANT_TYPES.contains(questionType)) {
+            log.info("Skipping schedule fetch for question type: {}", questionType);
+            return WorkflowDecision.skip("Schedule not needed for question type: " + questionType);
+        }
+
         List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();
         if (resolvedTeams == null || resolvedTeams.isEmpty()) {
             log.info("No resolved teams — skipping ESPN schedule fetch");
@@ -55,7 +72,7 @@ public class FetchEspnScheduleStep implements WorkflowStep<SportsResearchWorkflo
 
         try {
             TavilyExtractResponse response = tavilySearchService.extract(scheduleUrls);
-            String scheduleData = formatExtractResults(response, "schedule");
+            String scheduleData = formatExtractResults(response);
             context.setEspnScheduleData(scheduleData);
             executionContext.progressTracker().step(name()).done("ESPN schedule data fetched");
             return WorkflowDecision.continueWorkflow();
@@ -66,15 +83,18 @@ public class FetchEspnScheduleStep implements WorkflowStep<SportsResearchWorkflo
         }
     }
 
-    private String formatExtractResults(TavilyExtractResponse response, String label) {
+    private String formatExtractResults(TavilyExtractResponse response) {
         if (response == null || response.results() == null || response.results().isEmpty()) {
-            return "No ESPN %s data retrieved.".formatted(label);
+            return "No ESPN %s data retrieved.".formatted("schedule");
         }
+
         StringBuilder builder = new StringBuilder();
+
         for (var result : response.results()) {
             builder.append("=== ESPN Schedule: ").append(result.url()).append(" ===\n");
             builder.append(result.rawContent()).append("\n\n");
         }
+
         return builder.toString();
     }
 }

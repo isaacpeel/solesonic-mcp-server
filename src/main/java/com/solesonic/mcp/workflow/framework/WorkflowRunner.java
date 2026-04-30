@@ -105,11 +105,13 @@ public class WorkflowRunner {
             List<WorkflowDecision> decisions,
             WorkflowExecutionContext executionContext
     ) {
-        if (decisions.stream().anyMatch(decision -> decision.outcome() == WorkflowOutcome.USER_INPUT_REQUIRED)) {
+        if (decisions.stream()
+                .anyMatch(decision -> decision.outcome() == WorkflowOutcome.USER_INPUT_REQUIRED)) {
             WorkflowDecision userInputDecision = decisions.stream()
                     .filter(decision -> decision.outcome() == WorkflowOutcome.USER_INPUT_REQUIRED)
                     .findFirst()
                     .orElseThrow();
+
             executionContext.setPendingInput(userInputDecision.pendingInput());
             return WorkflowOutcome.USER_INPUT_REQUIRED;
         }
