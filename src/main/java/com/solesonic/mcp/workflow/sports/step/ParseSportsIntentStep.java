@@ -66,7 +66,7 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(SportsWorkflowStage.PARSING_INTENT);
-        executionContext.progressTracker().step(name()).update(0.1, "Analyzing your sports question");
+        executionContext.progressTracker().step(name()).update(0.1, "Analyzing your sportsball question");
 
         String formattedDate = context.getCurrentDateTime().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
         String promptText = PROMPT_TEMPLATE.formatted(formattedDate, context.getOriginalUserMessage());
