@@ -88,6 +88,11 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
     }
 
     @Override
+    public boolean isParallelSafe() {
+        return true;
+    }
+
+    @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
         String playerName = resolvePlayerName(context);
         if (playerName == null) {
