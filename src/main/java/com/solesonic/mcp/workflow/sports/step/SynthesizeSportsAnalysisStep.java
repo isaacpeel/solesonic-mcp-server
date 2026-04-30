@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
+import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0;
 import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 
 @Component
@@ -109,7 +109,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     private final ChatClient chatClient;
 
-    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT) ChatClient chatClient) {
+    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0) ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 

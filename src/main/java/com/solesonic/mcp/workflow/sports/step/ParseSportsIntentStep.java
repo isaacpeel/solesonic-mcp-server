@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.format.DateTimeFormatter;
 
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
+import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0;
 
 @Component
 public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -56,7 +56,7 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
     private final ChatClient chatClient;
     private final JsonMapper jsonMapper;
 
-    public ParseSportsIntentStep(@Qualifier(SPORTS_CHAT_CLIENT) ChatClient chatClient,
+    public ParseSportsIntentStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0) ChatClient chatClient,
                                  JsonMapper jsonMapper) {
         this.chatClient = chatClient;
         this.jsonMapper = jsonMapper;

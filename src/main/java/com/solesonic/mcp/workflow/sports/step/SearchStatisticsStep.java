@@ -78,7 +78,7 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
                         .query(query)
                         .searchDepth(DEPTH_ADVANCED)
                         .topic(TOPIC_GENERAL)
-                        .maxResults(5)
+                        .maxResults(10)
                         .includeAnswer(true)
                         .includeDomains(STATS_DOMAINS)
                         .build();
@@ -130,7 +130,7 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
     private String buildSeasonString(LocalDateTime currentDateTime) {
         int year = currentDateTime.getYear();
         int month = currentDateTime.getMonthValue();
-        // NBA season runs October – June. July–September is the off-season.
+        // NBA season runs from October – June. July–September is the off-season.
         if (month >= 7) {
             return year + "-" + (year + 1);
         } else {
