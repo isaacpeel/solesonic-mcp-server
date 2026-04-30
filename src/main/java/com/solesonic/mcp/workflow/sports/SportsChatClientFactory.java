@@ -69,7 +69,7 @@ public class SportsChatClientFactory {
                     .numThread(NUM_THREADS)
                     .numGPU(ALL_GPU_LAYERS)
                     .mainGPU(GPU_1)
-                    .numCtx(32_768)
+                    .numCtx(65_536)
                     .numBatch(512)
                     .temperature(0.0)
                     .topK(1)
