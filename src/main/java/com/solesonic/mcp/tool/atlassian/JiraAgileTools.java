@@ -72,7 +72,9 @@ public class JiraAgileTools {
 
     public record BoardBacklogIssuesRequest(String boardId, String jql, Integer startAt, Integer maxResults, Boolean validateQuery) {}
 
-    @McpTool(name = AGILE_WORKFLOW, description = AGILE_WORKFLOW_DESCRIPTION, metaProvider = AgileMetaProvider.class)
+    @McpTool(name = AGILE_WORKFLOW,
+            description = AGILE_WORKFLOW_DESCRIPTION,
+            metaProvider = AgileMetaProvider.class)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-LIST')")
     public String agileWorkflow(
             McpSyncRequestContext mcpSyncRequestContext,

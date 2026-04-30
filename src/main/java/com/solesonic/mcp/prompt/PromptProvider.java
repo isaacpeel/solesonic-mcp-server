@@ -1,12 +1,9 @@
 package com.solesonic.mcp.prompt;
 
 import com.solesonic.mcp.command.ConfluenceCommandProvider;
-import com.solesonic.mcp.command.CreateJiraCommandProvider;
 import com.solesonic.mcp.command.DefaultCommandProvider;
 import com.solesonic.mcp.service.WeatherService;
 import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
-import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
-import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
 import com.solesonic.mcp.tool.general.DateTools;
 import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -22,7 +19,6 @@ import java.util.Map;
 
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
-import static com.solesonic.mcp.tool.atlassian.JiraIssueTools.CREATE_JIRA_ISSUE;
 
 @SuppressWarnings("unused")
 @Service
@@ -38,14 +34,8 @@ public class PromptProvider {
     @Value("classpath:prompt/basic-prompt.st")
     private Resource basicPrompt;
 
-    @Value("classpath:prompt/jira_agile_prompt.st")
-    private Resource jiraAgilePrompt;
-
     @Value("classpath:prompt/create_confluence_page_prompt.st")
     private Resource createConfluencePagePrompt;
-
-    @Value("classpath:prompt/create_jira_issue_prompt.st")
-    private Resource createJiraIssuePrompt;
 
     private static final String BASIC_PROMPT_DESCRIPTION = """
             A general-purpose assistant prompt for any topic that is not clearly about Jira or Confluence. Use this when the user is asking for explanations,
@@ -60,26 +50,6 @@ public class PromptProvider {
 
             Do not use this prompt when the user is clearly asking to create or modify Jira issues, analyze Jira agile boards,
             or create Confluence pages. In those cases, prefer the more specific Jira or Confluence prompts.
-            """;
-
-    private static final String JIRA_AGILE_BOARD_PROMPT_DESCRIPTION = """
-            A specialized prompt for analyzing and managing Jira agile boards (Scrum or Kanban). Use this when the user's
-            primary intent is to understand, summarize, or manage the state of a Jira board, sprint, or backlog, especially
-            when they mention a Jira board, sprint, or board ID. The agent is focused on reading board data, understanding
-            issue distribution, surfacing blockers, and helping with agile workflows.
-
-            Typical use cases:
-            - "Show me the current status of our Sprint 5 board."
-            - "Summarize the in-progress work on board 123."
-            - "Identify bottlenecks and blocked issues on this Jira board."
-            - "Help me plan the next sprint using the issues on board 42."
-            - "Show me all issues in board 1."
-
-            This prompt is appropriate when the agent should use a Jira board ID and tools like `get_jira_board_issues`
-            to inspect or reason about the content of a board.
-
-            Do not use this prompt when the user is mainly asking to create a new Jira issue from scratch (e.g., "Create a
-            bug ticket for login failures") or to write a user story; in those cases, prefer the Jira issue creation prompt.
             """;
 
     private static final String CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION = """
@@ -98,26 +68,6 @@ public class PromptProvider {
 
             Do not use this prompt when the user is just asking for a short explanation or text snippet that is not intended
             to live as a Confluence page, or when they are clearly working with Jira tickets instead of documentation.
-            """;
-
-    private static final String CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION = """
-            A specialized prompt for creating well-structured Jira issues based on natural language user requests. Use this
-            when the user asks to create a new Jira ticket (story, task, bug, epic, etc.) or user story, especially when
-            they provide requirements, scenarios, or acceptance criteria. The agent will extract a clear summary, write
-            a detailed description (often in user-story format), derive acceptance criteria, and create the issue using `create_jira_issue`.
-
-            Typical use cases:
-            - "Create a Jira ticket for a login authentication bug with these details…"
-            - "Write a user story for password reset and create it in Jira."
-            - "Create a Jira task assigned to john.doe to add metrics to the billing service."
-            - "Turn these requirements into a Jira story with acceptance criteria."
-
-            This prompt is appropriate when the goal is to end up with a new Jira issue in the system, including
-            optional assignee and acceptance criteria.
-
-            Do not use this prompt when the user only wants to analyze or summarize existing Jira boards or
-            sprints without creating new issues; in those cases, prefer the Jira agile board prompt.
-            Also do not use it for non-Jira general tasks or for creating Confluence pages.
             """;
 
     @McpPrompt(
@@ -141,28 +91,6 @@ public class PromptProvider {
     }
 
     @McpPrompt(
-            name = "jira-agile-board-prompt",
-            title = "Jira Agile Board Analysis",
-            description = JIRA_AGILE_BOARD_PROMPT_DESCRIPTION
-    )
-    public McpSchema.GetPromptResult jiraAgileBoardPrompt(
-            @McpArg(name = "userMessage", description = "The user's natural language request describing what they want to know or do with a Jira board.") String userMessage,
-            @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
-    ) {
-        log.info("Getting Jira agile board prompt.");
-
-        String availableToolsList = availableTools(JiraAgileTools.class, JiraIssueTools.class, WebSearchTools.class, DateTools.class);
-
-        Map<String, Object> templateVariables = Map.of(
-                AGENT_NAME, agentName,
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableToolsList
-        );
-
-        return buildPromptResult("jira-agile-board-prompt", this.jiraAgilePrompt, templateVariables);
-    }
-
-    @McpPrompt(
             name = "create-confluence-page-prompt",
             title = "Create Confluence Page",
             description = "A specialized prompt for drafting and creating Confluence pages.",
@@ -183,28 +111,5 @@ public class PromptProvider {
         );
 
         return buildPromptResult("create-confluence-page-prompt", this.createConfluencePagePrompt, templateVariables);
-    }
-
-    @McpPrompt(
-            name = "create-jira-issue-prompt",
-            title = "Create Jira Issue",
-            description = CREATE_JIRA_ISSUE_PROMPT_DESCRIPTION,
-            metaProvider = CreateJiraCommandProvider.class
-    )
-    public McpSchema.GetPromptResult createJiraIssuePrompt(
-            @McpArg(name = "userMessage", description = "The user's natural language request describing the issue to create in Jira.") String userMessage
-    ) {
-        log.info("Getting Jira issue creation prompt.");
-
-        String availableToolsList = CREATE_JIRA_ISSUE;
-
-        log.info("Available tools: {}", availableToolsList);
-
-        Map<String, Object> templateVariables = Map.of(
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableToolsList
-        );
-
-        return buildPromptResult("create-jira-issue-prompt", this.createJiraIssuePrompt, templateVariables);
     }
 }
