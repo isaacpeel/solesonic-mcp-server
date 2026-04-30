@@ -2,8 +2,10 @@ package com.solesonic.mcp.workflow.sports;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.ollama.management.ModelManagementOptions;
 import org.springframework.ai.ollama.management.PullModelStrategy;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,6 +28,24 @@ public class SportsChatClientConfig {
     public ChatClient sportsChatClient() {
         OllamaChatOptions ollamaChatOptions = OllamaChatOptions.builder()
                 .model(OLLAMA_MODEL)
+                .numThread(24)
+                .numGPU(999)
+                .mainGPU(0)
+                .numCtx(131072)
+                .numBatch(1024)
+                .build();
+
+        OllamaEmbeddingOptions ollamaEmbeddingOptions = OllamaEmbeddingOptions.builder()
+                .model("mxbai-embed-large")
+                .dimensions(1024)
+                .numThread(8)
+                .numGPU(999)
+                .mainGPU(1)
+                .build();
+
+        OllamaEmbeddingModel ollamaEmbeddingModel = OllamaEmbeddingModel.builder()
+                .defaultOptions(ollamaEmbeddingOptions)
+                .ollamaApi(ollamaApi)
                 .build();
 
         ModelManagementOptions modelManagementOptions = ModelManagementOptions.builder()
