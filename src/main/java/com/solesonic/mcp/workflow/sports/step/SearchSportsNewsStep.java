@@ -9,6 +9,7 @@ import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
+import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -89,16 +90,27 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
 
     private List<String> buildNewsQueries(SportsQueryIntent intent, String currentMonth) {
         List<String> queries = new ArrayList<>();
+        SportsQuestionType questionType = intent != null ? intent.resolvedQuestionType() : SportsQuestionType.GENERAL_NEWS;
 
         if (intent != null && intent.hasTeams()) {
             String teamNames = String.join(" ", intent.teams());
             queries.add("%s injuries lineup news %s".formatted(teamNames, currentMonth));
+
+            // Fetch current active roster for question types that analyze specific players
+            if (questionType == SportsQuestionType.GAME_PREVIEW || questionType == SportsQuestionType.PLAYER_ANALYSIS) {
+                for (String team : intent.teams()) {
+                    queries.add("%s current active roster %s".formatted(team, currentMonth));
+                }
+            }
         }
 
         if (intent != null && intent.hasPlayers()) {
-            String playerNames = String.join(" ", intent.players());
             String league = (intent.league() != null && !intent.league().isBlank()) ? intent.league() : "";
-            queries.add("%s %s news %s".formatted(playerNames, league, currentMonth).strip());
+            // One query per player (capped at 3) so individual status is not diluted in a combined search
+            List<String> playersToSearch = intent.players().size() > 3 ? intent.players().subList(0, 3) : intent.players();
+            for (String player : playersToSearch) {
+                queries.add("%s %s current team news %s".formatted(player, league, currentMonth).strip());
+            }
         }
 
         // Fallback if no specific entities were identified

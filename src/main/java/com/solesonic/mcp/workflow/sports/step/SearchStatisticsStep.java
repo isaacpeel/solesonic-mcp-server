@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,9 +64,10 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         executionContext.progressTracker().step(name()).update(0.1, "Searching for player and team statistics");
 
         String league = (intent.league() != null && !intent.league().isBlank()) ? intent.league() : "";
+        String seasonString = buildSeasonString(intent, context.getCurrentDateTime());
         StringBuilder summary = new StringBuilder();
 
-        List<String> statsQueries = buildStatsQueries(intent, league);
+        List<String> statsQueries = buildStatsQueries(intent, league, seasonString);
 
         for (int queryIndex = 0; queryIndex < statsQueries.size(); queryIndex++) {
             String query = statsQueries.get(queryIndex);
@@ -102,13 +104,13 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         return WorkflowDecision.continueWorkflow();
     }
 
-    private List<String> buildStatsQueries(SportsQueryIntent intent, String league) {
+    private List<String> buildStatsQueries(SportsQueryIntent intent, String league, String seasonString) {
         List<String> queries = new ArrayList<>();
 
         // Team season stats
         if (intent.hasTeams()) {
             String teamNames = String.join(" vs ", intent.teams());
-            queries.add("%s 2025-2026 season stats %s".formatted(teamNames, league).strip());
+            queries.add("%s %s season stats %s".formatted(teamNames, seasonString, league).strip());
 
             // Head-to-head if two teams are present (game preview)
             if (intent.teams().size() >= 2) {
@@ -120,11 +122,34 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         // Player stats
         if (intent.hasPlayers()) {
             for (String player : intent.players()) {
-                queries.add("%s stats 2025-2026 season %s".formatted(player, league).strip());
+                queries.add("%s stats %s season %s".formatted(player, seasonString, league).strip());
             }
         }
 
         return queries;
+    }
+
+    private String buildSeasonString(SportsQueryIntent intent, LocalDateTime currentDateTime) {
+        int year = currentDateTime.getYear();
+        int month = currentDateTime.getMonthValue();
+        String league = intent.league() != null ? intent.league().toUpperCase() : "";
+
+        return switch (league) {
+            // NFL season year is the year of the September kickoff
+            case "NFL" -> month >= 7 ? String.valueOf(year) : String.valueOf(year - 1);
+            // MLB and MLS run within a single calendar year
+            case "MLB", "MLS" -> String.valueOf(year);
+            default -> {
+                // NBA, NHL, and unknown: cross-calendar-year seasons (Oct – Jun)
+                // July–September is the off-season; point to the upcoming season
+                if (month >= 7) {
+                    yield year + "-" + (year + 1);
+                } else {
+                    // January–June: mid-season that started the prior year
+                    yield (year - 1) + "-" + year;
+                }
+            }
+        };
     }
 
     private String formatSearchResults(TavilySearchResponse response) {
