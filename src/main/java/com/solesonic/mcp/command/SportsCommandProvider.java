@@ -10,7 +10,7 @@ import static com.solesonic.mcp.tool.sports.SportsResearchTools.SPORTS_RESEARCH;
 
 public class SportsCommandProvider extends DefaultMetaProvider {
 
-    public static final String SPORTS = "sports";
+    public static final String SPORTS = "sportsball";
     public static final String TOOLS = "tools";
 
     @Override

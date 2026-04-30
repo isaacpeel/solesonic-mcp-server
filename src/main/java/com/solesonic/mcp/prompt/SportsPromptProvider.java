@@ -25,7 +25,7 @@ public class SportsPromptProvider {
     private static final String INPUT = "input";
     private static final String AVAILABLE_TOOLS = "available_tools";
 
-    private static final String DESCRIPTION = "Research sports schedules, game previews, player stats, and news using live web search.";
+    private static final String DESCRIPTION = "Research sportsball schedules, game previews, player stats, and news using live web search.";
 
     @Value("classpath:prompt/sports_prompt.st")
     private Resource sportsPrompt;
