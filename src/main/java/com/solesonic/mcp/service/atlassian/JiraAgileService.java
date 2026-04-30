@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.*;
+import static com.solesonic.mcp.workflow.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 
 @Service
 public class JiraAgileService {
@@ -83,7 +84,7 @@ public class JiraAgileService {
 
     public JiraAgileService(@Qualifier(ATLASSIAN_API_WEB_CLIENT) WebClient webClient,
                             JiraIssueService jiraIssueService,
-                            ChatClient chatClient) {
+                            @Qualifier(AGILE_CHAT_CLIENT) ChatClient chatClient) {
         this.webClient = webClient;
         this.jiraIssueService = jiraIssueService;
         this.chatClient = chatClient;

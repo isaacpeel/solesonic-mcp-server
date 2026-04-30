@@ -10,12 +10,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+
+import static com.solesonic.mcp.workflow.chain.UserStoryChainConfig.USER_STORY_CHAT_CLIENT;
 
 @Service
 public class AssigneeResolutionService {
@@ -29,7 +32,8 @@ public class AssigneeResolutionService {
     @Value("classpath:prompt/jira_assignee_lookup.st")
     private Resource jiraAssigneeLookupPrompt;
 
-    public AssigneeResolutionService(JiraUserService jiraUserService, ChatClient chatClient) {
+    public AssigneeResolutionService(JiraUserService jiraUserService,
+                                     @Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient) {
         this.jiraUserService = jiraUserService;
         this.chatClient = chatClient;
     }
