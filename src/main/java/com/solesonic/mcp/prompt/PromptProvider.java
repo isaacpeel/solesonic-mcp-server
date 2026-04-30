@@ -1,9 +1,7 @@
 package com.solesonic.mcp.prompt;
 
-import com.solesonic.mcp.command.ConfluenceCommandProvider;
 import com.solesonic.mcp.command.DefaultCommandProvider;
 import com.solesonic.mcp.service.WeatherService;
-import com.solesonic.mcp.tool.atlassian.CreateConfluenceTools;
 import com.solesonic.mcp.tool.general.DateTools;
 import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -27,56 +25,23 @@ public class PromptProvider {
 
     private static final String AGENT_NAME = "agentName";
     private static final String USER_MESSAGE = "userMessage";
-    private static final String INPUT = "input";
-    public static final String AVAILABLE_TOOLS = "available_tools";
+    private static final String AVAILABLE_TOOLS = "available_tools";
     public static final String COMMAND = "command";
+
+    private static final String DESCRIPTION = "General-purpose assistant for coding, writing, brainstorming, and everyday questions.";
 
     @Value("classpath:prompt/basic-prompt.st")
     private Resource basicPrompt;
 
-    @Value("classpath:prompt/create_confluence_page_prompt.st")
-    private Resource createConfluencePagePrompt;
-
-    private static final String BASIC_PROMPT_DESCRIPTION = """
-            A general-purpose assistant prompt for any topic that is not clearly about Jira or Confluence. Use this when the user is asking for explanations,
-            brainstorming, coding help, writing, troubleshooting, planning, or casual conversation that does not primarily involve Jira issues, Jira boards, or
-            Confluence pages.
-
-            Example suitable requests:
-            - "Explain how OAuth2 works."
-            - "Help me refactor this Java method."
-            - "Draft an email to my team."
-            - "Brainstorm product ideas for a habit-tracking app."
-
-            Do not use this prompt when the user is clearly asking to create or modify Jira issues, analyze Jira agile boards,
-            or create Confluence pages. In those cases, prefer the more specific Jira or Confluence prompts.
-            """;
-
-    private static final String CREATE_CONFLUENCE_PAGE_PROMPT_DESCRIPTION = """
-            A specialized prompt for drafting and creating Confluence pages based on user requests. Use this when the user
-            wants to create, structure, or generate content for a Confluence page, including technical documentation, runbooks,
-            design specs, meeting notes, or project documentation. The agent will analyze the user's request, structure the
-            content with headings and sections, and use the `create_confluence_page` tool to create the page.
-
-            Typical use cases:
-            - "Create a Confluence page documenting our new API endpoints."
-            - "Generate a runbook page for handling production incidents."
-            - "Create a design spec page for the new authentication flow."
-            - "Turn this meeting summary into a Confluence page in the backend team space."
-
-            This prompt is appropriate when the final output should be a Confluence page with a clear title, structure, and content.
-
-            Do not use this prompt when the user is just asking for a short explanation or text snippet that is not intended
-            to live as a Confluence page, or when they are clearly working with Jira tickets instead of documentation.
-            """;
-
     @McpPrompt(
             name = "basic-prompt",
             title = "General Assistant",
-            description = BASIC_PROMPT_DESCRIPTION,
+            description = DESCRIPTION,
             metaProvider = DefaultCommandProvider.class)
-    public McpSchema.GetPromptResult basicPrompt(@McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
-                                                 @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName) {
+    public McpSchema.GetPromptResult basicPrompt(
+            @McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
+            @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
+    ) {
         log.info("Getting basic prompt.");
 
         String availableToolsList = availableTools(WeatherService.class, WebSearchTools.class, DateTools.class);
@@ -88,28 +53,5 @@ public class PromptProvider {
         );
 
         return buildPromptResult("basic-prompt", this.basicPrompt, promptContext);
-    }
-
-    @McpPrompt(
-            name = "create-confluence-page-prompt",
-            title = "Create Confluence Page",
-            description = "A specialized prompt for drafting and creating Confluence pages.",
-            metaProvider = ConfluenceCommandProvider.class
-    )
-    public McpSchema.GetPromptResult createConfluencePagePrompt(
-            @McpArg(name = "userMessage", description = "The user's natural language request describing the page to create in Confluence.") String userMessage,
-            @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
-    ) {
-        log.info("Getting Confluence page creation prompt.");
-
-        String availableToolsList = availableTools(CreateConfluenceTools.class, WebSearchTools.class, DateTools.class);
-
-        Map<String, Object> templateVariables = Map.of(
-                AGENT_NAME, agentName,
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableToolsList
-        );
-
-        return buildPromptResult("create-confluence-page-prompt", this.createConfluencePagePrompt, templateVariables);
     }
 }

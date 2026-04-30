@@ -1,6 +1,5 @@
 package com.solesonic.mcp.tool.sports;
 
-import com.solesonic.mcp.tool.provider.SportsMetaProvider;
 import com.solesonic.mcp.workflow.SportsResearchWorkflow;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import org.slf4j.Logger;
@@ -31,9 +30,7 @@ public class SportsResearchTools {
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-WEB-SEARCH')")
-    @McpTool(name = SPORTS_RESEARCH,
-            description = SPORTS_RESEARCH_DESCRIPTION,
-            metaProvider = SportsMetaProvider.class)
+    @McpTool(name = SPORTS_RESEARCH, description = SPORTS_RESEARCH_DESCRIPTION)
     public String sportsResearch(
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = """

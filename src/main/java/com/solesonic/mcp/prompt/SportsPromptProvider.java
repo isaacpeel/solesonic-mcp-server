@@ -25,24 +25,7 @@ public class SportsPromptProvider {
     private static final String INPUT = "input";
     private static final String AVAILABLE_TOOLS = "available_tools";
 
-    private static final String DESCRIPTION = """
-            A specialized prompt for researching sports information using live web search. Use this when the user asks
-            any sports question, from basic schedule lookups to detailed game analysis and player statistics.
-
-            Typical use cases:
-            - "When are the Celtics playing next?"
-            - "Who might win tonight's Lakers game?"
-            - "How has Jayson Tatum been playing lately?"
-            - "Where do the Patriots stand in the AFC East?"
-            - "Any injury news for the Red Sox?"
-            - "Break down the matchup between the Chiefs and Eagles."
-
-            This prompt is appropriate for questions about NBA, NFL, MLB, NHL, MLS, and other major sports leagues.
-            It uses live web search internally to retrieve current schedules, injury reports, and statistics — making
-            it far more accurate than relying on the model's training data alone.
-
-            Do not use this prompt for non-sports questions or general news unrelated to sports.
-            """;
+    private static final String DESCRIPTION = "Research sports schedules, game previews, player stats, and news using live web search.";
 
     @Value("classpath:prompt/sports_prompt.st")
     private Resource sportsPrompt;
