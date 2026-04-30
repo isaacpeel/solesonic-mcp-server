@@ -22,7 +22,7 @@ public class SportsResearchWorkflowService {
             SportsResearchWorkflowContext workflowContext,
             WorkflowExecutionContext executionContext
     ) {
-        executionContext.progressTracker().startup("Starting sports research workflow");
+        executionContext.progressTracker().startup("Starting sportsball research workflow");
 
         WorkflowOutcome outcome = workflowRunner.run(
                 sportsResearchWorkflowDefinition.definition(), workflowContext, executionContext);

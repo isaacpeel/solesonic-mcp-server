@@ -25,22 +25,22 @@ public class SportsPromptProvider {
     private static final String INPUT = "input";
     private static final String AVAILABLE_TOOLS = "available_tools";
 
-    private static final String DESCRIPTION = "Research sportsball schedules, game previews, player stats, and news using live web search.";
+    private static final String DESCRIPTION = "Research sports schedules, game previews, player stats, and news using live web search.";
 
     @Value("classpath:prompt/sports_prompt.st")
     private Resource sportsPrompt;
 
     @McpPrompt(
             name = "sports-prompt",
-            title = "Sportsball Research",
+            title = "sportsball Research",
             description = DESCRIPTION,
             metaProvider = SportsCommandProvider.class
     )
     public McpSchema.GetPromptResult sportsPrompt(
-            @McpArg(name = "userMessage", description = "The user's sportsball question — schedule lookup, game preview, player analysis, standings, or news.") String userMessage,
+            @McpArg(name = "userMessage", description = "The user's sports question — schedule lookup, game preview, player analysis, standings, or news.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
-        log.info("Getting sportsball research prompt.");
+        log.info("Getting sports research prompt.");
 
         String availableToolsList = availableTools(SportsResearchTools.class);
 

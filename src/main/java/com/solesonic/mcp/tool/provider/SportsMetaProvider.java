@@ -12,7 +12,7 @@ public class SportsMetaProvider implements MetaProvider {
     @Override
     public Map<String, Object> getMeta() {
         return Map.of(
-                COMMAND, "sportsball",
+                COMMAND, "sports",
                 "task", SPORTS_WORKFLOW);
     }
 }

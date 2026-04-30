@@ -4,6 +4,8 @@ import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
+
+import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
@@ -22,7 +24,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
     // Plain String template — synthesizes all gathered search results into a final answer.
     // Current date is injected as the first argument to anchor the LLM's temporal reasoning.
     private static final String PROMPT_TEMPLATE = """
-            You are a knowledgeable sports analyst and journalist. Today's date is %s.
+            You are a knowledgeable NBA analyst and basketball journalist. Today's date is %s.
 
             CRITICAL INSTRUCTION: Use the search results below as your PRIMARY and authoritative source
             for all schedule information, game times, scores, rosters, and current news. Do NOT rely
@@ -56,6 +58,11 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
             =============================================
             STATISTICS AND PERFORMANCE DATA
+            =============================================
+            %s
+
+            =============================================
+            NBA TERMINOLOGY
             =============================================
             %s
 
@@ -136,7 +143,8 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
                 questionType,
                 scheduleResults,
                 newsResults,
-                statsResults
+                statsResults,
+                NBA_TERMINOLOGY
         );
 
         log.info("Synthesizing sports analysis for question type: {}", questionType);

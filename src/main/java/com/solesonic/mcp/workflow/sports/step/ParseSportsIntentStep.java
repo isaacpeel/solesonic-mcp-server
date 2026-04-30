@@ -22,15 +22,14 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
 
     // Plain String template — avoids ST4 delimiter conflicts with JSON braces
     private static final String PROMPT_TEMPLATE = """
-            You are a sports information assistant. Today's date is %s.
+            You are an NBA basketball information assistant. Today's date is %s.
 
-            Analyze the user's sports question and return a single JSON object with exactly these fields:
+            Analyze the user's NBA question and return a single JSON object with exactly these fields:
               questionType - one of exactly: "SCHEDULE_LOOKUP", "GAME_PREVIEW", "PLAYER_ANALYSIS", "STANDINGS", "GENERAL_NEWS"
-              teams        - JSON array of full team names mentioned (e.g. "Boston Celtics" not "Celtics"). Empty array if none.
-              players      - JSON array of player names mentioned. Empty array if none.
-              sport        - sport type as a lowercase string (e.g. "basketball", "football", "baseball", "hockey", "soccer").
-                             Use "unknown" if not determinable.
-              league       - league name (e.g. "NBA", "NFL", "MLB", "NHL", "MLS"). Use "unknown" if not determinable.
+              teams        - JSON array of full NBA team names mentioned (e.g. "Boston Celtics" not "Celtics"). Empty array if none.
+              players      - JSON array of NBA player names mentioned. Empty array if none.
+              sport        - always "basketball"
+              league       - always "NBA"
               timeContext  - one of: "today", "upcoming", "recent", "season", or "specific: YYYY-MM-DD"
 
             Question type guidance:
@@ -40,9 +39,11 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
               STANDINGS       - user wants current standings, rankings, win-loss records, or playoff picture
               GENERAL_NEWS    - user wants recent news, injuries, trades, or roster changes
 
-            When normalizing team names, expand common abbreviations and nicknames to full names:
+            When normalizing team names, expand common abbreviations and nicknames to full NBA names:
               "Celtics" -> "Boston Celtics", "Lakers" -> "Los Angeles Lakers",
-              "Chiefs" -> "Kansas City Chiefs", "Sox" -> determine from context (Red Sox or White Sox)
+              "Dubs" or "Warriors" -> "Golden State Warriors", "Bucks" -> "Milwaukee Bucks",
+              "Cavs" -> "Cleveland Cavaliers", "Knicks" -> "New York Knicks",
+              "Heat" -> "Miami Heat", "Nuggets" -> "Denver Nuggets"
 
             User question: %s
 

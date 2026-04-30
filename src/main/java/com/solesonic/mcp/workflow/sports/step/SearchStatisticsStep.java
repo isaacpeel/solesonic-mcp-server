@@ -27,8 +27,7 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
     private static final Logger log = LoggerFactory.getLogger(SearchStatisticsStep.class);
 
     private static final List<String> STATS_DOMAINS = List.of(
-            "basketball-reference.com", "baseball-reference.com", "pro-football-reference.com",
-            "hockey-reference.com", "statmuse.com", "espn.com"
+            "basketball-reference.com", "statmuse.com", "espn.com", "nba.com"
     );
 
     private final TavilySearchService tavilySearchService;
@@ -63,11 +62,10 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         context.setCurrentStage(SportsWorkflowStage.SEARCHING_STATISTICS);
         executionContext.progressTracker().step(name()).update(0.1, "Searching for player and team statistics");
 
-        String league = (intent.league() != null && !intent.league().isBlank()) ? intent.league() : "";
-        String seasonString = buildSeasonString(intent, context.getCurrentDateTime());
+        String seasonString = buildSeasonString(context.getCurrentDateTime());
         StringBuilder summary = new StringBuilder();
 
-        List<String> statsQueries = buildStatsQueries(intent, league, seasonString);
+        List<String> statsQueries = buildStatsQueries(intent, seasonString);
 
         for (int queryIndex = 0; queryIndex < statsQueries.size(); queryIndex++) {
             String query = statsQueries.get(queryIndex);
@@ -104,17 +102,17 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         return WorkflowDecision.continueWorkflow();
     }
 
-    private List<String> buildStatsQueries(SportsQueryIntent intent, String league, String seasonString) {
+    private List<String> buildStatsQueries(SportsQueryIntent intent, String seasonString) {
         List<String> queries = new ArrayList<>();
 
         // Team season stats
         if (intent.hasTeams()) {
             String teamNames = String.join(" vs ", intent.teams());
-            queries.add("%s %s season stats %s".formatted(teamNames, seasonString, league).strip());
+            queries.add("%s %s NBA season stats".formatted(teamNames, seasonString));
 
             // Head-to-head if two teams are present (game preview)
             if (intent.teams().size() >= 2) {
-                queries.add("%s vs %s head to head recent games".formatted(
+                queries.add("%s vs %s head to head recent NBA games".formatted(
                         intent.teams().get(0), intent.teams().get(1)));
             }
         }
@@ -122,34 +120,22 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
         // Player stats
         if (intent.hasPlayers()) {
             for (String player : intent.players()) {
-                queries.add("%s stats %s season %s".formatted(player, seasonString, league).strip());
+                queries.add("%s NBA stats %s season".formatted(player, seasonString));
             }
         }
 
         return queries;
     }
 
-    private String buildSeasonString(SportsQueryIntent intent, LocalDateTime currentDateTime) {
+    private String buildSeasonString(LocalDateTime currentDateTime) {
         int year = currentDateTime.getYear();
         int month = currentDateTime.getMonthValue();
-        String league = intent.league() != null ? intent.league().toUpperCase() : "";
-
-        return switch (league) {
-            // NFL season year is the year of the September kickoff
-            case "NFL" -> month >= 7 ? String.valueOf(year) : String.valueOf(year - 1);
-            // MLB and MLS run within a single calendar year
-            case "MLB", "MLS" -> String.valueOf(year);
-            default -> {
-                // NBA, NHL, and unknown: cross-calendar-year seasons (Oct – Jun)
-                // July–September is the off-season; point to the upcoming season
-                if (month >= 7) {
-                    yield year + "-" + (year + 1);
-                } else {
-                    // January–June: mid-season that started the prior year
-                    yield (year - 1) + "-" + year;
-                }
-            }
-        };
+        // NBA season runs October – June. July–September is the off-season.
+        if (month >= 7) {
+            return year + "-" + (year + 1);
+        } else {
+            return (year - 1) + "-" + year;
+        }
     }
 
     private String formatSearchResults(TavilySearchResponse response) {

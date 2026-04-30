@@ -17,10 +17,10 @@ public class SportsResearchTools {
 
     public static final String SPORTS_WORKFLOW = "sports-workflow";
 
-    public static final String SPORTS_RESEARCH = "sports-research";
+    public static final String SPORTS_RESEARCH = "nba-research";
 
     private static final String SPORTS_RESEARCH_DESCRIPTION = """
-            Research sports information for any information, from basic schedule lookups to detailed game analysis.
+            Research NBA basketball information, from basic schedule lookups to detailed game and player analysis.
             """;
 
     private final SportsResearchWorkflow sportsResearchWorkflow;
@@ -34,7 +34,7 @@ public class SportsResearchTools {
     public String sportsResearch(
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = """
-                    The sports question to research. Can range from simple schedule lookups
+                    The NBA question to research. Can range from simple schedule lookups
                     ("When do the Celtics play next?") to complex analysis
                     ("Compare Tatum and Durant's recent stats for tonight's game").
                     Include team names, player names, and any relevant context.
@@ -47,7 +47,7 @@ public class SportsResearchTools {
 
         String analysis = workflowContext.getFinalAnalysis();
         if (analysis == null || analysis.isBlank()) {
-            return "Unable to find information for your sports question. Please try rephrasing or check the official team website.";
+            return "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
         }
         return analysis;
     }

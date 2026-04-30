@@ -25,7 +25,7 @@ public class SearchCurrentScheduleStep implements WorkflowStep<SportsResearchWor
     private static final Logger log = LoggerFactory.getLogger(SearchCurrentScheduleStep.class);
 
     private static final List<String> SPORTS_SCHEDULE_DOMAINS = List.of(
-            "espn.com", "nba.com", "nfl.com", "mlb.com", "nhl.com", "cbssports.com", "sports.yahoo.com"
+            "nba.com", "espn.com", "cbssports.com", "sports.yahoo.com"
     );
 
     private final TavilySearchService tavilySearchService;

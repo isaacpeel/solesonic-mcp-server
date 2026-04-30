@@ -48,7 +48,7 @@ public class SportsResearchWorkflow {
         WorkflowOutcome outcome = sportsResearchWorkflowService.run(workflowContext, executionContext);
 
         if (outcome == WorkflowOutcome.FAILED) {
-            throw new IllegalStateException("Sports research workflow failed");
+            throw new IllegalStateException("sports research workflow failed");
         }
 
         return workflowContext;
