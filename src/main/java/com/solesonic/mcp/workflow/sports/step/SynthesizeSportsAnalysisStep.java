@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0;
+import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0_SYNTHESIZE;
 import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 
 @Component
@@ -143,7 +143,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     private final ChatClient chatClient;
 
-    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0) ChatClient chatClient) {
+    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0_SYNTHESIZE) ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 
@@ -160,7 +160,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         String currentDate = context.getCurrentDateTime()
                 .format(DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd"));
         SportsQueryIntent intent = context.getSportsQueryIntent();
-        String questionType = intent != null ? intent.questionType() : "GENERAL_NEWS";
+        String questionType = intent != null ? String.join(", ", intent.questionTypes()) : "GENERAL_NEWS";
 
         String deepPlayerSection = context.getDeepPlayerAnalysisSummary() != null
                 ? context.getDeepPlayerAnalysisSummary()

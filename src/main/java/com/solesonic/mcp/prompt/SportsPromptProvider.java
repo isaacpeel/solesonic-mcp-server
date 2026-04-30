@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
+import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
 
@@ -37,7 +38,7 @@ public class SportsPromptProvider {
             metaProvider = SportsCommandProvider.class
     )
     public McpSchema.GetPromptResult sportsPrompt(
-            @McpArg(name = "userMessage", description = "The user's sports question — schedule lookup, game preview, player analysis, standings, or news.") String userMessage,
+            @McpArg(name = USER_MESSAGE, description = "The user's sports question — schedule lookup, game preview, player analysis, standings, or news.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
         log.info("Getting sports research prompt.");

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
+import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.atlassian.JiraIssueTools.CREATE_JIRA_ISSUE;
 
@@ -35,7 +36,7 @@ public class JiraPromptProvider {
             metaProvider = CreateJiraCommandProvider.class
     )
     public McpSchema.GetPromptResult createJiraIssuePrompt(
-            @McpArg(name = "userMessage", description = "The user's natural language request describing the issue to create in Jira.") String userMessage
+            @McpArg(name = USER_MESSAGE, description = "The user's natural language request describing the issue to create in Jira.") String userMessage
     ) {
         log.info("Getting Jira issue creation prompt.");
 

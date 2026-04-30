@@ -51,9 +51,6 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        context.setCurrentStage(SportsWorkflowStage.SEARCHING_NEWS);
-        executionContext.progressTracker().step(name()).update(0.1, "Searching for injury reports and news");
-
         SportsQueryIntent intent = context.getSportsQueryIntent();
         SportsQuestionType questionType = intent != null
                 ? intent.resolvedQuestionType()
@@ -63,6 +60,9 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
             log.info("Skipping news search for SCHEDULE_LOOKUP — schedule data is sufficient");
             return WorkflowDecision.skip("News search not needed for schedule lookup");
         }
+
+        context.setCurrentStage(SportsWorkflowStage.SEARCHING_NEWS);
+        executionContext.progressTracker().step(name()).update(0.1, "Searching for injury reports and news");
 
         String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
 

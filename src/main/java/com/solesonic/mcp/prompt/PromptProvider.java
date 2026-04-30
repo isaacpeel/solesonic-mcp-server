@@ -39,7 +39,7 @@ public class PromptProvider {
             description = DESCRIPTION,
             metaProvider = DefaultCommandProvider.class)
     public McpSchema.GetPromptResult basicPrompt(
-            @McpArg(name = "userMessage", description = "A message from the user to embed into this prompt.") String userMessage,
+            @McpArg(name = USER_MESSAGE, description = "A message from the user to embed into this prompt.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
         log.info("Getting basic prompt.");

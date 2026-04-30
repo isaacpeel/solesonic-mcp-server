@@ -1,47 +1,45 @@
 package com.solesonic.mcp.workflow.sports.model;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.List;
 
 /**
- * Parsed result of the user's sports question — extracted by the LLM from natural language.
+ * Parsed result of the user's NBA question — extracted by the LLM from natural language.
  *
- * @param questionType the category of sports question
- * @param teams        full team names mentioned (e.g. "Boston Celtics", not "Celtics")
- * @param players      player names mentioned
- * @param focusPlayer  single player name when the question is specifically about one player; null otherwise
- * @param sport        sport type (e.g. "basketball", "football", "baseball")
- * @param league       league name (e.g. "NBA", "NFL", "MLB", "NHL")
- * @param timeContext  temporal context: "today", "upcoming", "recent", "season", or "specific: YYYY-MM-DD"
+ * @param questionTypes one or more categories describing the question (multiple are valid)
+ * @param teams         full team names mentioned (e.g. "Boston Celtics", not "Celtics")
+ * @param players       player names mentioned
+ * @param focusPlayer   single player name when the question is specifically about one player; null otherwise
  */
 public record SportsQueryIntent(
-        String questionType,
+        List<String> questionTypes,
         List<String> teams,
         List<String> players,
-        String focusPlayer,
-        String sport,
-        String league,
-        String timeContext
+        String focusPlayer
 ) {
     public SportsQuestionType resolvedQuestionType() {
-        if (questionType == null) {
+        if (CollectionUtils.isEmpty(questionTypes)) {
             return SportsQuestionType.GENERAL_NEWS;
         }
+
         try {
-            return SportsQuestionType.valueOf(questionType.toUpperCase());
+            return SportsQuestionType.valueOf(questionTypes.getFirst().toUpperCase());
         } catch (IllegalArgumentException ignored) {
             return SportsQuestionType.GENERAL_NEWS;
         }
     }
 
     public boolean hasTeams() {
-        return teams != null && !teams.isEmpty();
+        return CollectionUtils.isNotEmpty(teams);
     }
 
     public boolean hasPlayers() {
-        return players != null && !players.isEmpty();
+        return CollectionUtils.isNotEmpty(players);
     }
 
     public boolean hasFocusPlayer() {
-        return focusPlayer != null && !focusPlayer.isBlank();
+        return StringUtils.isNotEmpty(focusPlayer);
     }
 }

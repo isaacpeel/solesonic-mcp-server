@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
+import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
 
@@ -39,7 +40,7 @@ public class ConfluencePromptProvider {
             metaProvider = ConfluenceCommandProvider.class
     )
     public McpSchema.GetPromptResult createConfluencePagePrompt(
-            @McpArg(name = "userMessage", description = "The user's natural language request describing the page to create in Confluence.") String userMessage,
+            @McpArg(name = USER_MESSAGE, description = "The user's natural language request describing the page to create in Confluence.") String userMessage,
             @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
     ) {
         log.info("Getting Confluence page creation prompt.");

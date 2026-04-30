@@ -28,7 +28,7 @@ public class TaskPromptProvider {
             name = "task-prompt",
             title = "Task Prompt",
             description = "A task execution prompt")
-    public McpSchema.GetPromptResult basicPrompt(@McpArg(name = "userMessage", description = "A message used as input to a task.") String userMessage,
+    public McpSchema.GetPromptResult basicPrompt(@McpArg(name = USER_MESSAGE, description = "A message used as input to a task.") String userMessage,
                                                  @McpArg(name = "taskTool", description = "The name of the task to execute") String taskTool) {
         log.info("Getting task prompt.");
 
