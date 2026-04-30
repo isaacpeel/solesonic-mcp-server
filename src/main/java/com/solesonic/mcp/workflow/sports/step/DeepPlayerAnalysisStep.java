@@ -11,15 +11,15 @@ import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU1;
 
 @Component
 public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -73,12 +73,12 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
             %s
             """;
 
-    private final ChatClient chatClient;
+    private final SportsChatClientFactory chatClientFactory;
     private final TavilySearchService tavilySearchService;
 
-    public DeepPlayerAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU1) ChatClient chatClient,
+    public DeepPlayerAnalysisStep(SportsChatClientFactory chatClientFactory,
                                   TavilySearchService tavilySearchService) {
-        this.chatClient = chatClient;
+        this.chatClientFactory = chatClientFactory;
         this.tavilySearchService = tavilySearchService;
     }
 
@@ -121,6 +121,7 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
         executionContext.progressTracker().step(name()).update(0.8, "Synthesizing player analysis");
 
         try {
+            ChatClient chatClient = chatClientFactory.forProfile(SportsChatProfile.PLAYER_ANALYSIS);
             String analysis = chatClient.prompt().user(promptText).call().content();
             context.setDeepPlayerAnalysisSummary(analysis);
             executionContext.progressTracker().step(name()).done("Deep player analysis complete");

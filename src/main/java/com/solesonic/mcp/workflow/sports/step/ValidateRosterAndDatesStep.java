@@ -9,15 +9,14 @@ import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
-
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU1;
 
 @Component
 public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -70,10 +69,10 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
             SportsQuestionType.TRADE_NEWS
     );
 
-    private final ChatClient chatClient;
+    private final SportsChatClientFactory chatClientFactory;
 
-    public ValidateRosterAndDatesStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU1) ChatClient chatClient) {
-        this.chatClient = chatClient;
+    public ValidateRosterAndDatesStep(SportsChatClientFactory chatClientFactory) {
+        this.chatClientFactory = chatClientFactory;
     }
 
     @Override
@@ -121,6 +120,7 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
         executionContext.progressTracker().step(name()).update(0.5, "Cross-referencing ESPN roster and schedule data");
 
         try {
+            ChatClient chatClient = chatClientFactory.forProfile(SportsChatProfile.ROSTER_VALIDATION);
             String validationResult = chatClient.prompt().user(promptText).call().content();
             log.debug("Roster validation result length: {} chars",
                     validationResult != null ? validationResult.length() : 0);

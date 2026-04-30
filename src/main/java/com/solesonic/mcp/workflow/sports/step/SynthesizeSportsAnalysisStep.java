@@ -8,13 +8,13 @@ import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0_SYNTHESIZE;
 import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 
 @Component
@@ -141,10 +141,10 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
             End with a "Sources" section listing all ESPN URLs and news URLs referenced.
             """;
 
-    private final ChatClient chatClient;
+    private final SportsChatClientFactory chatClientFactory;
 
-    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0_SYNTHESIZE) ChatClient chatClient) {
-        this.chatClient = chatClient;
+    public SynthesizeSportsAnalysisStep(SportsChatClientFactory chatClientFactory) {
+        this.chatClientFactory = chatClientFactory;
     }
 
     @Override
@@ -184,6 +184,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         executionContext.progressTracker().step(name()).update(0.5, "Generating analysis");
 
         try {
+            ChatClient chatClient = chatClientFactory.forProfile(SportsChatProfile.SYNTHESIS);
             String analysis = chatClient.prompt().user(promptText).call().content();
             context.setFinalAnalysis(analysis);
             log.debug("Analysis generated: {} chars", analysis != null ? analysis.length() : 0);

@@ -8,10 +8,11 @@ import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
-import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT_GPU0_PARSE;
 
 @Component
 public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -31,10 +31,10 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
     @Value("classpath:prompt/sports/sports-intent-prompt.st")
     private Resource sportsIntentPrompt;
 
-    private final ChatClient chatClient;
+    private final SportsChatClientFactory chatClientFactory;
 
-    public ParseSportsIntentStep(@Qualifier(SPORTS_CHAT_CLIENT_GPU0_PARSE) ChatClient chatClient) {
-        this.chatClient = chatClient;
+    public ParseSportsIntentStep(SportsChatClientFactory chatClientFactory) {
+        this.chatClientFactory = chatClientFactory;
     }
 
     @Override
@@ -55,6 +55,7 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
         Prompt sportsIntentPrompt = sportsIntentTemplate.create(promptVars);
 
         try {
+            ChatClient chatClient = chatClientFactory.forProfile(SportsChatProfile.INTENT_PARSE);
             SportsQueryIntent sportsQueryIntent = chatClient.prompt(sportsIntentPrompt)
                     .call()
                     .entity(SportsQueryIntent.class);
