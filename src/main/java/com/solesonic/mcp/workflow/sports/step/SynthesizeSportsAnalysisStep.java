@@ -23,88 +23,122 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     private static final Logger log = LoggerFactory.getLogger(SynthesizeSportsAnalysisStep.class);
 
-    // Plain String template — synthesizes all gathered search results into a final answer.
-    // Current date is injected as the first argument to anchor the LLM's temporal reasoning.
     private static final String PROMPT_TEMPLATE = """
-            You are a knowledgeable NBA analyst and basketball journalist. Today's date is %s.
+            You are a professional NBA analyst and basketball journalist. Today is %s.
 
-            CRITICAL INSTRUCTION: Use the search results below as your PRIMARY and authoritative source
-            for all schedule information, game times, scores, rosters, and current news. Do NOT rely
-            on your training data for dates, upcoming game times, rosters, player-team associations,
-            or recent performance — this information changes frequently and your training data is
-            outdated.
+            CRITICAL — DATA AUTHORITY HIERARCHY:
+              1. ESPN ROSTER DATA is the ground truth for which players are on which teams.
+                 A player listed on ESPN's roster page IS on that team. A player not listed IS NOT.
+              2. ESPN SCHEDULE DATA is the ground truth for game dates and times.
+                 Use exact dates and times as shown — do not calculate or infer schedule.
+              3. ESPN STATISTICS DATA is the authoritative source for team and player performance metrics.
+              4. NEWS DATA supplements the above — use for context, injuries, and recent developments.
+              5. Do NOT use your training data for player-team associations, roster composition,
+                 game dates, or recent performance. Your training data is outdated.
 
-            PLAYER ACCURACY RULE: Do NOT mention specific player names unless those players appear
-            by name in the search results above. If a player appears in the search results as traded,
-            waived, released, or injured long-term, do not reference them as an active contributor
-            for the team in question. Never infer roster composition from your training data — only
-            name players who are confirmed as currently active in the search results.
+            PLAYER ACCURACY RULE:
+              Only name a player as an active contributor to a team if they appear by name in the
+              ESPN ROSTER DATA for that team. If the VALIDATED ROSTER STATUS section marks them as
+              NOT on the ESPN roster, do not treat them as active regardless of training data.
 
-            If the search results do not contain enough information to answer the question fully,
-            clearly state what is missing and recommend the user check the official team or league
-            website directly.
+            DATE FORMAT RULE:
+              Always express game times as: Day-of-week, YYYY-MM-DD, H:MM AM/PM TZ
+              Example: Wednesday, 2026-04-30, 7:30 PM ET
 
-            User question: %s
+            If the data is insufficient to fully answer the question, state clearly what is missing
+            and direct the user to ESPN.com for the latest information.
 
-            Question type: %s
+            ─────────────────────────────────────────────
+            USER QUESTION: %s
+            QUESTION TYPE: %s
+            ─────────────────────────────────────────────
 
-            =============================================
-            SCHEDULE SEARCH RESULTS
-            =============================================
+            ═══════════════════════════════════════════
+            VALIDATED ROSTER AND SCHEDULE STATUS
+            (highest authority — cross-references ESPN data against players mentioned)
+            ═══════════════════════════════════════════
             %s
 
-            =============================================
-            RECENT NEWS AND INJURY REPORTS
-            =============================================
+            ═══════════════════════════════════════════
+            ESPN SCHEDULE DATA  (official game schedule)
+            Source: espn.com/nba/team/schedule
+            ═══════════════════════════════════════════
             %s
 
-            =============================================
-            STATISTICS AND PERFORMANCE DATA
-            =============================================
+            ═══════════════════════════════════════════
+            ESPN ROSTER DATA  (current official roster)
+            Source: espn.com/nba/team/roster
+            ═══════════════════════════════════════════
             %s
 
-            =============================================
-            NBA TERMINOLOGY
-            =============================================
+            ═══════════════════════════════════════════
+            ESPN STATISTICS DATA  (official team stats)
+            Source: espn.com/nba/team/stats
+            ═══════════════════════════════════════════
             %s
 
-            =============================================
+            ═══════════════════════════════════════════
+            ESPN STANDINGS DATA
+            Source: espn.com/nba/standings
+            ═══════════════════════════════════════════
+            %s
 
-            Based ONLY on the search results above, provide a comprehensive response. Follow these
-            guidelines based on question type:
+            ═══════════════════════════════════════════
+            RECENT NEWS, INJURIES AND TRANSACTIONS
+            Source: news search + espn.com/nba/transactions
+            ═══════════════════════════════════════════
+            %s
+
+            ═══════════════════════════════════════════
+            DEEP PLAYER ANALYSIS
+            ═══════════════════════════════════════════
+            %s
+
+            ═══════════════════════════════════════════
+            NBA TERMINOLOGY REFERENCE
+            ═══════════════════════════════════════════
+            %s
+
+            ─────────────────────────────────────────────
+            Based ONLY on the data above, provide a comprehensive response per question type:
 
             SCHEDULE_LOOKUP:
-              - State the next upcoming game date, time (include timezone), opponent, and venue
-              - Include TV/streaming info if found
-              - Be direct and specific — this is the most important detail the user wants
-              - If conflicting times appear across sources, note the discrepancy and recommend verification
+              - State the next game: Day, YYYY-MM-DD, tipoff time with timezone, opponent, venue
+              - TV/streaming info if present in the schedule data
+              - Flag any conflicting times and recommend espn.com verification
 
             GAME_PREVIEW:
-              - Summarize both teams' recent form and momentum
-              - Highlight key players to watch and their recent performance trends
-              - Note any significant injury or lineup news
-              - Provide a prediction with clear rationale based on the data
-              - Identify potential X-factors or matchup advantages
+              - Both teams' recent form from the schedule data (last 5+ games)
+              - Key active players confirmed in ESPN roster data; only name those listed
+              - All injury and lineup news from the news section
+              - Head-to-head context if present in the data
+              - Analytical prediction grounded in the statistics and form data
+              - Matchup advantages and X-factors
 
             PLAYER_ANALYSIS:
-              - Present the player's current season statistics
-              - Describe their recent game-by-game trend (hot or cold streak?)
-              - Contextualize performance relative to their season average
-              - Note any injury concerns or role changes
-              - Highlight what to watch for in their next game
+              - Use the deep player analysis section as the primary source
+              - Season averages, recent form trend, role, impact metrics
+              - Confirmed injury status from the validated section
+              - What to watch in the next game
 
             STANDINGS:
-              - State the current record and division/conference standing
-              - Describe the playoff picture and current positioning
-              - Note recent winning or losing streaks relevant to the standing
+              - Current record and conference standing from the ESPN standings data
+              - Playoff seeding, games ahead/behind key positions
+              - Clinching or elimination scenarios if relevant
+              - Recent form trend and trajectory
+
+            TRADE_NEWS:
+              - Players and teams involved — confirmed from ESPN transactions and roster data
+              - Assets exchanged (players, picks, cash) — attribute to source
+              - Mark as official vs. reported/rumored
+              - Roster impact on both teams
 
             GENERAL_NEWS:
-              - Summarize the most significant recent developments
-              - Prioritize injury news, trades, and performance milestones
-              - Attribute each key fact to its source
+              - Most significant recent developments prioritized by impact
+              - Injury updates, roster moves, performance milestones
+              - Each fact attributed to its source
 
-            Always cite the sources you drew from by including the URL where available.
-            End with a brief "Sources" section listing all URLs referenced.
+            End with a "Sources" section listing all ESPN URLs and news URLs referenced.
             """;
 
     private final ChatClient chatClient;
@@ -123,44 +157,41 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         context.setCurrentStage(SportsWorkflowStage.SYNTHESIZING_ANALYSIS);
         executionContext.progressTracker().step(name()).update(0.1, "Synthesizing research into final analysis");
 
-        String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' h:mm a"));
+        String currentDate = context.getCurrentDateTime()
+                .format(DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd"));
         SportsQueryIntent intent = context.getSportsQueryIntent();
         String questionType = intent != null ? intent.questionType() : "GENERAL_NEWS";
 
-        String scheduleResults = context.getScheduleSearchSummary() != null
-                ? context.getScheduleSearchSummary()
-                : "No schedule data gathered.";
-
-        String newsResults = context.getNewsSearchSummary() != null
-                ? context.getNewsSearchSummary()
-                : "No news data gathered.";
-
-        String statsResults = context.getStatisticsSearchSummary() != null
-                ? context.getStatisticsSearchSummary()
-                : "Statistics not applicable for this query type.";
+        String deepPlayerSection = context.getDeepPlayerAnalysisSummary() != null
+                ? context.getDeepPlayerAnalysisSummary()
+                : "No focused player analysis for this query type.";
 
         String promptText = PROMPT_TEMPLATE.formatted(
                 currentDate,
                 context.getOriginalUserMessage(),
                 questionType,
-                scheduleResults,
-                newsResults,
-                statsResults,
+                context.getRosterValidationSummary(),
+                context.getEspnScheduleData(),
+                context.getEspnRosterData(),
+                context.getEspnStatsData(),
+                context.getEspnStandingsData(),
+                context.getNewsSearchSummary() != null ? context.getNewsSearchSummary() : "No news data.",
+                deepPlayerSection,
                 NBA_TERMINOLOGY
         );
 
-        log.info("Synthesizing sports analysis for question type: {}", questionType);
+        log.info("Synthesizing NBA analysis for question type: {}", questionType);
         executionContext.progressTracker().step(name()).update(0.5, "Generating analysis");
 
         try {
             String analysis = chatClient.prompt().user(promptText).call().content();
             context.setFinalAnalysis(analysis);
-            log.debug("Sports analysis generated, length: {} chars", analysis != null ? analysis.length() : 0);
+            log.debug("Analysis generated: {} chars", analysis != null ? analysis.length() : 0);
             executionContext.progressTracker().step(name()).done("Analysis complete");
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
-            log.error("Failed to synthesize sports analysis", exception);
-            return WorkflowDecision.failed("Could not generate sports analysis: " + exception.getMessage());
+            log.error("Failed to synthesize NBA analysis", exception);
+            return WorkflowDecision.failed("Could not generate NBA analysis: " + exception.getMessage());
         }
     }
 }

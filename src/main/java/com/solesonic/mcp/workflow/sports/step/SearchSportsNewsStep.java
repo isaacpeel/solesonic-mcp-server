@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.sports.step;
 
+import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
 import com.solesonic.mcp.model.tavily.TavilySearchRequest;
 import com.solesonic.mcp.model.tavily.TavilySearchResponse;
 import com.solesonic.mcp.service.tavily.TavilySearchService;
@@ -26,6 +27,12 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
 
     private static final Logger log = LoggerFactory.getLogger(SearchSportsNewsStep.class);
 
+    private static final String ESPN_TRANSACTIONS_URL = "https://www.espn.com/nba/transactions";
+
+    private static final List<String> TRADE_DOMAINS = List.of(
+            "spotrac.com", "hoopshype.com", "espn.com", "nba.com"
+    );
+
     private final TavilySearchService tavilySearchService;
 
     public SearchSportsNewsStep(TavilySearchService tavilySearchService) {
@@ -45,78 +52,99 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(SportsWorkflowStage.SEARCHING_NEWS);
-        executionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
+        executionContext.progressTracker().step(name()).update(0.1, "Searching for injury reports and news");
 
         SportsQueryIntent intent = context.getSportsQueryIntent();
-        String currentMonth = context.getCurrentDateTime().format(DateTimeFormatter.ofPattern("MMMM yyyy"));
+        SportsQuestionType questionType = intent != null
+                ? intent.resolvedQuestionType()
+                : SportsQuestionType.GENERAL_NEWS;
+        String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
+
         StringBuilder summary = new StringBuilder();
 
-        List<String> newsQueries = buildNewsQueries(intent, currentMonth);
+        if (questionType == SportsQuestionType.TRADE_NEWS) {
+            fetchEspnTransactions(summary, executionContext);
+        }
 
+        List<String> newsQueries = buildNewsQueries(intent, questionType, currentDate);
         for (int queryIndex = 0; queryIndex < newsQueries.size(); queryIndex++) {
             String query = newsQueries.get(queryIndex);
-            double progressFraction = 0.2 + (0.7 * (queryIndex + 1.0) / newsQueries.size());
+            double progressFraction = 0.3 + (0.6 * (queryIndex + 1.0) / newsQueries.size());
 
             try {
-                log.info("Executing sports news search: {}", query);
+                log.info("Executing news search: {}", query);
 
-                TavilySearchRequest newsRequest = TavilySearchRequest.builder()
+                TavilySearchRequest.Builder requestBuilder = TavilySearchRequest.builder()
                         .query(query)
                         .searchDepth(DEPTH_BASIC)
                         .topic(TOPIC_NEWS)
                         .maxResults(5)
                         .includeAnswer(true)
-                        .timeRange(TIME_WEEK)
-                        .build();
+                        .timeRange(TIME_WEEK);
+
+                if (questionType == SportsQuestionType.TRADE_NEWS) {
+                    requestBuilder.includeDomains(TRADE_DOMAINS);
+                }
 
                 executionContext.progressTracker().step(name()).update(progressFraction,
                         "Fetching news (%d of %d)".formatted(queryIndex + 1, newsQueries.size()));
 
-                TavilySearchResponse response = tavilySearchService.search(newsRequest);
-
-                summary.append("=== News: ").append(query).append(" ===\n");
+                TavilySearchResponse response = tavilySearchService.search(requestBuilder.build());
+                summary.append("=== ").append(query).append(" ===\n");
                 summary.append(formatSearchResults(response));
                 summary.append("\n");
+
             } catch (Exception exception) {
                 log.warn("News search failed for query '{}': {}", query, exception.getMessage());
-                summary.append("=== News: ").append(query).append(" ===\nSearch unavailable.\n\n");
+                summary.append("=== ").append(query).append(" ===\nSearch unavailable.\n\n");
             }
         }
 
         context.setNewsSearchSummary(summary.toString());
-        executionContext.progressTracker().step(name()).done("News and injury search complete");
+        executionContext.progressTracker().step(name()).done("News search complete");
         return WorkflowDecision.continueWorkflow();
     }
 
-    private List<String> buildNewsQueries(SportsQueryIntent intent, String currentMonth) {
+    private void fetchEspnTransactions(StringBuilder summary, WorkflowExecutionContext executionContext) {
+        try {
+            log.info("Fetching ESPN transactions page for TRADE_NEWS query");
+            executionContext.progressTracker().step(name()).update(0.2, "Fetching ESPN transactions");
+            TavilyExtractResponse transactionsResponse = tavilySearchService.extract(List.of(ESPN_TRANSACTIONS_URL));
+            summary.append("=== ESPN Transactions (Official) ===\n");
+            if (transactionsResponse != null && transactionsResponse.results() != null) {
+                for (var result : transactionsResponse.results()) {
+                    summary.append(result.rawContent()).append("\n");
+                }
+            }
+            summary.append("\n");
+        } catch (Exception exception) {
+            log.warn("ESPN transactions fetch failed: {}", exception.getMessage());
+            summary.append("=== ESPN Transactions ===\nUnavailable.\n\n");
+        }
+    }
+
+    private List<String> buildNewsQueries(SportsQueryIntent intent, SportsQuestionType questionType, String currentDate) {
         List<String> queries = new ArrayList<>();
-        SportsQuestionType questionType = intent != null ? intent.resolvedQuestionType() : SportsQuestionType.GENERAL_NEWS;
 
         if (intent != null && intent.hasTeams()) {
-            String teamNames = String.join(" ", intent.teams());
-            queries.add("%s injuries lineup news %s".formatted(teamNames, currentMonth));
+            String teamsString = String.join(" ", intent.teams());
+            queries.add("%s injuries lineup availability %s".formatted(teamsString, currentDate));
 
-            // Fetch current active roster for question types that analyze specific players
-            if (questionType == SportsQuestionType.GAME_PREVIEW || questionType == SportsQuestionType.PLAYER_ANALYSIS) {
-                for (String team : intent.teams()) {
-                    queries.add("%s current active roster %s".formatted(team, currentMonth));
-                }
+            if (questionType == SportsQuestionType.TRADE_NEWS) {
+                queries.add("%s trade transaction news %s".formatted(teamsString, currentDate));
             }
         }
 
         if (intent != null && intent.hasPlayers()) {
-            String league = (intent.league() != null && !intent.league().isBlank()) ? intent.league() : "";
-            // One query per player (capped at 3) so individual status is not diluted in a combined search
-            List<String> playersToSearch = intent.players().size() > 3 ? intent.players().subList(0, 3) : intent.players();
-            for (String player : playersToSearch) {
-                queries.add("%s %s current team news %s".formatted(player, league, currentMonth).strip());
+            List<String> players = intent.players();
+            int playerLimit = Math.min(players.size(), 5);
+            for (String player : players.subList(0, playerLimit)) {
+                queries.add("%s NBA news %s".formatted(player, currentDate));
             }
         }
 
-        // Fallback if no specific entities were identified
-        if (queries.isEmpty() && intent != null) {
-            String sport = (intent.sport() != null && !intent.sport().isBlank()) ? intent.sport() : "sports";
-            queries.add("%s news %s".formatted(sport, currentMonth));
+        if (queries.isEmpty()) {
+            queries.add("NBA basketball news %s".formatted(currentDate));
         }
 
         return queries;
@@ -126,13 +154,10 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
         if (response == null) {
             return "No results found.\n";
         }
-
         StringBuilder builder = new StringBuilder();
-
         if (response.answer() != null && !response.answer().isBlank()) {
             builder.append("Summary: ").append(response.answer()).append("\n\n");
         }
-
         if (response.results() != null) {
             for (var result : response.results()) {
                 builder.append("Title: ").append(result.title()).append("\n");
@@ -140,7 +165,6 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
                 builder.append("Content: ").append(result.content()).append("\n\n");
             }
         }
-
         return builder.isEmpty() ? "No results found.\n" : builder.toString();
     }
 }

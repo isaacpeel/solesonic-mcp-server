@@ -31,8 +31,12 @@ public class SportsResearchWorkflow {
         this.executionContextFactory = executionContextFactory;
     }
 
-    public SportsResearchWorkflowContext startWorkflow(McpSyncRequestContext mcpSyncRequestContext, String userMessage) {
-        log.info("Starting sports research workflow");
+    public SportsResearchWorkflowContext startWorkflow(
+            McpSyncRequestContext mcpSyncRequestContext,
+            String userMessage,
+            String focusPlayerName
+    ) {
+        log.info("Starting sports research workflow, focusPlayer={}", focusPlayerName);
 
         WorkflowExecutionContext executionContext = executionContextFactory.create(
                 mcpSyncRequestContext,
@@ -41,7 +45,7 @@ public class SportsResearchWorkflow {
         );
 
         SportsResearchWorkflowContext workflowContext = new SportsResearchWorkflowContext(
-                userMessage, LocalDateTime.now()
+                userMessage, LocalDateTime.now(), focusPlayerName
         );
         workflowContext.setExecutionContext(executionContext);
 

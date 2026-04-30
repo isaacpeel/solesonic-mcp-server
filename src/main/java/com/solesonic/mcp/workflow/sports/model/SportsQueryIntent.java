@@ -8,6 +8,7 @@ import java.util.List;
  * @param questionType the category of sports question
  * @param teams        full team names mentioned (e.g. "Boston Celtics", not "Celtics")
  * @param players      player names mentioned
+ * @param focusPlayer  single player name when the question is specifically about one player; null otherwise
  * @param sport        sport type (e.g. "basketball", "football", "baseball")
  * @param league       league name (e.g. "NBA", "NFL", "MLB", "NHL")
  * @param timeContext  temporal context: "today", "upcoming", "recent", "season", or "specific: YYYY-MM-DD"
@@ -16,6 +17,7 @@ public record SportsQueryIntent(
         String questionType,
         List<String> teams,
         List<String> players,
+        String focusPlayer,
         String sport,
         String league,
         String timeContext
@@ -37,5 +39,9 @@ public record SportsQueryIntent(
 
     public boolean hasPlayers() {
         return players != null && !players.isEmpty();
+    }
+
+    public boolean hasFocusPlayer() {
+        return focusPlayer != null && !focusPlayer.isBlank();
     }
 }
