@@ -4,16 +4,18 @@ import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
-
-import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
+
+import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
+import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.NBA_TERMINOLOGY;
 
 @Component
 public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -107,7 +109,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     private final ChatClient chatClient;
 
-    public SynthesizeSportsAnalysisStep(ChatClient chatClient) {
+    public SynthesizeSportsAnalysisStep(@Qualifier(SPORTS_CHAT_CLIENT) ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 

@@ -9,10 +9,13 @@ import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.format.DateTimeFormatter;
+
+import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
 
 @Component
 public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -53,7 +56,8 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
     private final ChatClient chatClient;
     private final JsonMapper jsonMapper;
 
-    public ParseSportsIntentStep(ChatClient chatClient, JsonMapper jsonMapper) {
+    public ParseSportsIntentStep(@Qualifier(SPORTS_CHAT_CLIENT) ChatClient chatClient,
+                                 JsonMapper jsonMapper) {
         this.chatClient = chatClient;
         this.jsonMapper = jsonMapper;
     }
