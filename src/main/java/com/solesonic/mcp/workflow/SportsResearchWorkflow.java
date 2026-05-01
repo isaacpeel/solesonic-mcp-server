@@ -33,10 +33,9 @@ public class SportsResearchWorkflow {
 
     public SportsResearchWorkflowContext startWorkflow(
             McpSyncRequestContext mcpSyncRequestContext,
-            String userMessage,
-            String focusPlayerName
+            String userMessage
     ) {
-        log.info("Starting sports research workflow, focusPlayer={}", focusPlayerName);
+        log.info("Starting NBA research workflow");
 
         WorkflowExecutionContext executionContext = executionContextFactory.create(
                 mcpSyncRequestContext,
@@ -45,14 +44,14 @@ public class SportsResearchWorkflow {
         );
 
         SportsResearchWorkflowContext workflowContext = new SportsResearchWorkflowContext(
-                userMessage, LocalDateTime.now(), focusPlayerName
+                userMessage, LocalDateTime.now()
         );
         workflowContext.setExecutionContext(executionContext);
 
         WorkflowOutcome outcome = sportsResearchWorkflowService.run(workflowContext, executionContext);
 
         if (outcome == WorkflowOutcome.FAILED) {
-            throw new IllegalStateException("sports research workflow failed");
+            throw new IllegalStateException("NBA research workflow failed");
         }
 
         return workflowContext;

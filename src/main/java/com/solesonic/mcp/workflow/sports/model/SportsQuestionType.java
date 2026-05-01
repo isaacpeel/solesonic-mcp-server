@@ -5,6 +5,5 @@ public enum SportsQuestionType {
     GAME_PREVIEW,
     PLAYER_ANALYSIS,
     STANDINGS,
-    TRADE_NEWS,
     GENERAL_NEWS
 }

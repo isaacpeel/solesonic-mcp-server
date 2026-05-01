@@ -20,19 +20,25 @@ public class SportsResearchTools {
     public static final String SPORTS_RESEARCH = "nba-research";
 
     private static final String SPORTS_RESEARCH_DESCRIPTION = """
-            Research NBA basketball information, from basic schedule lookups to professional-grade
-            game previews, player analysis, standings, trade news, and injury reports.
+            Research current NBA basketball information: schedules, game previews, player analysis,
+            standings, trades, and injury reports.
 
-            Supports all query types:
-              - Schedule lookups: "When do the Celtics play next?"
-              - Game previews: "Break down tonight's Lakers vs Nuggets matchup"
-              - Player analysis: "How has Jayson Tatum been playing this month?" (use playerName for deep-dive)
-              - Standings: "Where do the Knicks stand in the playoffs right now?"
-              - Trade news: "What players were involved in the recent Nets trade?"
-              - General news: "What are the latest NBA injury updates?"
+            Call this tool for ANY NBA question — including follow-up questions and predictions about
+            games or players that came up earlier in the conversation. Do NOT answer NBA schedule,
+            roster, or recent-performance questions from training data; always invoke this tool so
+            the response is grounded in current sources.
 
-            For single-player deep-dive analysis, provide the player's name in the playerName parameter
-            to enable advanced game log, usage, splits, and impact metric research.
+            This tool has no memory of prior conversation turns. Include ALL relevant context in
+            userMessage (team names, player names, game date, series situation) every time, even for
+            follow-ups.
+
+            Examples:
+              - "When do the Celtics play next?"
+              - "Break down tonight's Lakers vs Nuggets matchup"
+              - "How has Jayson Tatum been playing this month?"
+              - "Where do the Knicks stand in the playoffs right now?"
+              - "Predict the winner of game 6 of the Celtics-Heat series"
+              - "Latest NBA injury news"
             """;
 
     private final SportsResearchWorkflow sportsResearchWorkflow;
@@ -46,25 +52,17 @@ public class SportsResearchTools {
     public String sportsResearch(
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = """
-                    The NBA question to research. Include team names, player names, and any relevant
-                    context. Examples: "When do the Warriors play next?", "Break down tonight's Celtics
-                    vs Heat game", "How is LeBron James playing this week?", "NBA Eastern Conference
-                    standings", "Latest injury news around the league".
+                    The NBA question to research, with all context the tool needs to answer it
+                    standalone (team names, player names, game date, series state, etc.). Examples:
+                    "When do the Warriors play next?", "Break down tonight's Celtics vs Heat game",
+                    "How is LeBron James playing this week?", "NBA Eastern Conference standings".
                     """)
-            String userMessage,
-            @McpToolParam(required = false, description = """
-                    Optional: the full name of a single NBA player for focused deep-dive analysis.
-                    When provided, the workflow runs additional game log, advanced stats, and impact
-                    metric searches specifically for this player. Only set this when the user's question
-                    is about one specific player (e.g., "Jayson Tatum", "LeBron James").
-                    Leave null for team, schedule, standings, trade, or multi-player questions.
-                    """)
-            String playerName
+            String userMessage
     ) {
-        log.info("Sports research tool invoked: userMessage={}, playerName={}", userMessage, playerName);
+        log.info("NBA research tool invoked: userMessage={}", userMessage);
 
         SportsResearchWorkflowContext workflowContext =
-                sportsResearchWorkflow.startWorkflow(mcpSyncRequestContext, userMessage, playerName);
+                sportsResearchWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
 
         String analysis = workflowContext.getFinalAnalysis();
         if (analysis == null || analysis.isBlank()) {
