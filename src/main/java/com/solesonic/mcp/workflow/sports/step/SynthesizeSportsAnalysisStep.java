@@ -44,7 +44,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
         context.setCurrentStage(SportsWorkflowStage.SYNTHESIZING_ANALYSIS);
-        executionContext.progressTracker().step(name()).update(0.1, "Synthesizing research into final analysis");
+        executionContext.progressTracker().step(name()).update(0.1, "Sportsball sprockets synthesizing");
 
         SportsQueryIntent intent = context.getSportsQueryIntent();
         String questionType = intent.questionTypes().stream()
@@ -80,7 +80,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         Prompt synthesizeSportAnalysisPrompt = synthesizeSportAnalysisTemplate.create(promptVars);
 
         log.info("Synthesizing sports analysis for question type: {}", questionType);
-        executionContext.progressTracker().step(name()).update(0.5, "Generating sportsball analysis");
+        executionContext.progressTracker().step(name()).update(0.5, "Sportsball droid still shooting");
 
         String analysis = chatClient.prompt(synthesizeSportAnalysisPrompt)
                 .call()
@@ -90,7 +90,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
         log.info("Sports analysis generated");
 
-        executionContext.progressTracker().step(name()).done("Sportsball agent finished.");
+        executionContext.progressTracker().step(name()).done("Sportsball robot finished.... ahhhh");
 
         return WorkflowDecision.continueWorkflow();
     }
