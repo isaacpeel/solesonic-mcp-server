@@ -99,11 +99,11 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
             return WorkflowDecision.skip("Deep player analysis requires a specific player focus");
         }
 
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+        List<SportsQuestionType> questionTypes = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().questionTypes()
+                : List.of(SportsQuestionType.GENERAL_NEWS);
 
-        if (questionType != SportsQuestionType.PLAYER_ANALYSIS) {
+        if (!questionTypes.contains(SportsQuestionType.PLAYER_ANALYSIS)) {
             return WorkflowDecision.skip("Deep player analysis only runs for PLAYER_ANALYSIS queries");
         }
 

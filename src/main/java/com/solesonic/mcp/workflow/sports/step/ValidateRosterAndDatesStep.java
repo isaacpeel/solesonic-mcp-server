@@ -87,13 +87,16 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+        List<SportsQuestionType> questionTypes = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().questionTypes()
+                : List.of(SportsQuestionType.GENERAL_NEWS);
 
-        if (!VALIDATION_RELEVANT_TYPES.contains(questionType)) {
-            log.info("Skipping roster validation for question type: {}", questionType);
-            return WorkflowDecision.skip("Roster validation not needed for question type: " + questionType);
+        boolean isValidationNeeded = questionTypes.stream()
+                .anyMatch(VALIDATION_RELEVANT_TYPES::contains);
+
+        if (!isValidationNeeded) {
+            log.info("Skipping roster validation for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Roster validation not needed for question type: " + questionTypes);
         }
 
         context.setCurrentStage(SportsWorkflowStage.VALIDATING_ROSTER);

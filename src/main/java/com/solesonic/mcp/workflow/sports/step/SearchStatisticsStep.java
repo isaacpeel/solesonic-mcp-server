@@ -17,8 +17,11 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
-import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
+import static com.solesonic.mcp.config.tavily.TavilyConstants.DEPTH_ADVANCED;
+import static com.solesonic.mcp.config.tavily.TavilyConstants.TOPIC_GENERAL;
+import static com.solesonic.mcp.workflow.sports.model.SportsQuestionType.*;
 
 @Component
 public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -29,6 +32,8 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
     private static final List<String> STATS_DOMAINS = List.of(
             "basketball-reference.com", "statmuse.com", "espn.com", "nba.com"
     );
+
+    private static final Set<SportsQuestionType> NON_STATS_RELEVANT_TYPES = Set.of(SCHEDULE_LOOKUP, GENERAL_NEWS, STANDINGS);
 
     private final TavilySearchService tavilySearchService;
 
@@ -49,14 +54,16 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
         SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
-        SportsQuestionType questionType = sportsQueryIntent.questionType();
+        List<SportsQuestionType> questionTypes = sportsQueryIntent.questionTypes();
 
         // Statistics are only meaningful for deep analysis questions
-        if (questionType == SportsQuestionType.SCHEDULE_LOOKUP
-                || questionType == SportsQuestionType.STANDINGS
-                || questionType == SportsQuestionType.GENERAL_NEWS) {
-            log.info("Skipping statistics search for question type: {}", questionType);
-            return WorkflowDecision.skip("Statistics not required for question type: " + questionType);
+
+        boolean isNotStatsQuestion = questionTypes.stream()
+                .anyMatch(NON_STATS_RELEVANT_TYPES::contains);
+
+        if (isNotStatsQuestion) {
+            log.info("Skipping statistics search for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Statistics not required for question type: " + questionTypes);
         }
 
         sportsResearchWorkflowContext.setCurrentStage(SportsWorkflowStage.SEARCHING_STATISTICS);

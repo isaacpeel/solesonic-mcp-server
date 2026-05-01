@@ -46,13 +46,16 @@ public class FetchEspnScheduleStep implements WorkflowStep<SportsResearchWorkflo
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+        List<SportsQuestionType> questionTypes = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().questionTypes()
+                : List.of(SportsQuestionType.GENERAL_NEWS);
 
-        if (!SCHEDULE_RELEVANT_TYPES.contains(questionType)) {
-            log.info("Skipping schedule fetch for question type: {}", questionType);
-            return WorkflowDecision.skip("Schedule not needed for question type: " + questionType);
+        boolean isScheduleQuestion = questionTypes.stream()
+                .anyMatch(SCHEDULE_RELEVANT_TYPES::contains);
+
+        if (!isScheduleQuestion) {
+            log.info("Skipping schedule fetch for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Schedule not needed for question type: " + questionTypes);
         }
 
         List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();

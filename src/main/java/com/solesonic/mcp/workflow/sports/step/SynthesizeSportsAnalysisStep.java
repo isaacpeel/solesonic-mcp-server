@@ -47,7 +47,9 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         executionContext.progressTracker().step(name()).update(0.1, "Synthesizing research into final analysis");
 
         SportsQueryIntent intent = context.getSportsQueryIntent();
-        String questionType = intent.questionType().name();
+        String questionType = intent.questionTypes().stream()
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.joining(", "));
 
         String scheduleResults = context.getScheduleSearchSummary() != null
                 ? context.getScheduleSearchSummary()

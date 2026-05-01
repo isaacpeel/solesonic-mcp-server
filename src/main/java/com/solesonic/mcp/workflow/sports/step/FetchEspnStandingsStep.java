@@ -6,7 +6,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
-import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
+
+import static com.solesonic.mcp.workflow.sports.SportsWorkflowStage.FETCHING_ESPN_STANDINGS;
 
 @Component
 public class FetchEspnStandingsStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -45,30 +46,31 @@ public class FetchEspnStandingsStep implements WorkflowStep<SportsResearchWorkfl
     }
 
     @Override
-    public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+    public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
+        List<SportsQuestionType> questionTypes = sportsResearchWorkflowContext.getSportsQueryIntent().questionTypes();
 
-        if (!STANDINGS_RELEVANT_TYPES.contains(questionType)) {
-            log.info("Skipping standings fetch for question type: {}", questionType);
-            return WorkflowDecision.skip("Standings not needed for question type: " + questionType);
+        boolean isStandingsQuestion = questionTypes.stream()
+                .anyMatch(STANDINGS_RELEVANT_TYPES::contains);
+
+        if (!isStandingsQuestion) {
+            log.info("Skipping standings fetch for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Standings not needed for question type: " + questionTypes);
         }
 
-        context.setCurrentStage(SportsWorkflowStage.FETCHING_ESPN_STANDINGS);
-        executionContext.progressTracker().step(name()).update(0.2, "Fetching NBA standings from ESPN");
+        sportsResearchWorkflowContext.setCurrentStage(FETCHING_ESPN_STANDINGS);
+        workflowExecutionContext.progressTracker().step(name()).update(0.2, "Fetching NBA standings from ESPN");
 
         log.info("Fetching ESPN standings: {}", ESPN_STANDINGS_URL);
 
         try {
             TavilyExtractResponse response = tavilySearchService.extract(List.of(ESPN_STANDINGS_URL));
             String standingsData = formatExtractResults(response);
-            context.setEspnStandingsData(standingsData);
-            executionContext.progressTracker().step(name()).done("ESPN standings data fetched");
+            sportsResearchWorkflowContext.setEspnStandingsData(standingsData);
+            workflowExecutionContext.progressTracker().step(name()).done("ESPN standings data fetched");
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
             log.error("Failed to fetch ESPN standings page", exception);
-            context.setEspnStandingsData("ESPN standings data unavailable.");
+            sportsResearchWorkflowContext.setEspnStandingsData("ESPN standings data unavailable.");
             return WorkflowDecision.continueWorkflow();
         }
     }

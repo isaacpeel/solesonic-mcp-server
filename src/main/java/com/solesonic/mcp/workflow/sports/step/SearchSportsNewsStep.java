@@ -7,18 +7,18 @@ import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
-import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
+import static com.solesonic.mcp.prompt.PromptConstants.todayDate;
+import static com.solesonic.mcp.workflow.sports.SportsWorkflowStage.SEARCHING_NEWS;
 
 @Component
 public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -43,15 +43,17 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
     }
 
     @Override
-    public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        context.setCurrentStage(SportsWorkflowStage.SEARCHING_NEWS);
-        executionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
+    public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
+        sportsResearchWorkflowContext.setCurrentStage(SEARCHING_NEWS);
 
-        SportsQueryIntent intent = context.getSportsQueryIntent();
-        String currentMonth = context.getCurrentDateTime().format(DateTimeFormatter.ofPattern("MMMM yyyy"));
+        workflowExecutionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
+
+        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
+
+        String todayDate = todayDate();
         StringBuilder summary = new StringBuilder();
 
-        List<String> newsQueries = buildNewsQueries(intent, currentMonth);
+        List<String> newsQueries = buildNewsQueries(sportsQueryIntent, todayDate);
 
         for (int queryIndex = 0; queryIndex < newsQueries.size(); queryIndex++) {
             String query = newsQueries.get(queryIndex);
@@ -69,7 +71,7 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
                         .timeRange(TIME_WEEK)
                         .build();
 
-                executionContext.progressTracker().step(name()).update(progressFraction,
+                workflowExecutionContext.progressTracker().step(name()).update(progressFraction,
                         "Fetching news (%d of %d)".formatted(queryIndex + 1, newsQueries.size()));
 
                 TavilySearchResponse response = tavilySearchService.search(newsRequest);
@@ -83,21 +85,24 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
             }
         }
 
-        context.setNewsSearchSummary(summary.toString());
-        executionContext.progressTracker().step(name()).done("News and injury search complete");
+        sportsResearchWorkflowContext.setNewsSearchSummary(summary.toString());
+        workflowExecutionContext.progressTracker().step(name()).done("News and injury search complete");
+
         return WorkflowDecision.continueWorkflow();
     }
 
     private List<String> buildNewsQueries(SportsQueryIntent sportsQueryIntent, String currentMonth) {
         List<String> queries = new ArrayList<>();
-        SportsQuestionType questionType = sportsQueryIntent.questionType();
+        List<SportsQuestionType> questionTypes = sportsQueryIntent.questionTypes();
 
         if (sportsQueryIntent.hasTeams()) {
             String teamNames = String.join(" ", sportsQueryIntent.teams());
             queries.add("%s injuries lineup news %s".formatted(teamNames, currentMonth));
 
             // Fetch current active roster for question types that analyze specific players
-            if (questionType == SportsQuestionType.GAME_PREVIEW || questionType == SportsQuestionType.PLAYER_ANALYSIS) {
+            boolean isRosterRelevant = questionTypes.contains(SportsQuestionType.GAME_PREVIEW)
+                    || questionTypes.contains(SportsQuestionType.PLAYER_ANALYSIS);
+            if (isRosterRelevant) {
                 for (String team : sportsQueryIntent.teams()) {
                     queries.add("%s current active roster %s".formatted(team, currentMonth));
                 }

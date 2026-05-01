@@ -62,17 +62,17 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
                 .entity(SportsQueryIntent.class);
 
         assert sportsQueryIntent != null;
-        log.info("Sports intent parse LLM response: {}", sportsQueryIntent.questionType());
+        log.info("Sports intent parse LLM response: {}", sportsQueryIntent.questionTypes());
 
-        log.info("Parsed NBA intent: questionType={}, teams={}, players={}",
-                sportsQueryIntent.questionType(), sportsQueryIntent.teams(),
+        log.info("Parsed NBA intent: questionTypes={}, teams={}, players={}",
+                sportsQueryIntent.questionTypes(), sportsQueryIntent.teams(),
                 sportsQueryIntent.players());
 
         context.setSportsQueryIntent(sportsQueryIntent);
 
         executionContext.progressTracker().step(name()).done(
-                "Question type: %s, Teams: %s".formatted(
-                        sportsQueryIntent.questionType(),
+                "Question types: %s, Teams: %s".formatted(
+                        sportsQueryIntent.questionTypes(),
                         sportsQueryIntent.hasTeams() ? String.join(", ", sportsQueryIntent.teams()) : "none"
                 )
         );

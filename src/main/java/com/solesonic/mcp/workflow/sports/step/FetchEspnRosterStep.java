@@ -52,13 +52,16 @@ public class FetchEspnRosterStep implements WorkflowStep<SportsResearchWorkflowC
             return WorkflowDecision.skip("No teams resolved for roster fetch");
         }
 
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+        List<SportsQuestionType> questionTypes = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().questionTypes()
+                : List.of(SportsQuestionType.GENERAL_NEWS);
 
-        if (!ROSTER_RELEVANT_TYPES.contains(questionType)) {
-            log.info("Skipping roster fetch for question type: {}", questionType);
-            return WorkflowDecision.skip("Roster not needed for question type: " + questionType);
+        boolean isRosterQuestion = questionTypes.stream()
+                .anyMatch(ROSTER_RELEVANT_TYPES::contains);
+
+        if (!isRosterQuestion) {
+            log.info("Skipping roster fetch for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Roster not needed for question type: " + questionTypes);
         }
 
         context.setCurrentStage(SportsWorkflowStage.FETCHING_ESPN_ROSTER);

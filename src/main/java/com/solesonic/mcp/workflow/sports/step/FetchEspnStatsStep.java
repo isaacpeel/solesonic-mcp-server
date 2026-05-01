@@ -46,18 +46,22 @@ public class FetchEspnStatsStep implements WorkflowStep<SportsResearchWorkflowCo
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
         List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();
+
         if (resolvedTeams == null || resolvedTeams.isEmpty()) {
             log.info("No resolved teams — skipping ESPN stats fetch");
             return WorkflowDecision.skip("No teams resolved for stats fetch");
         }
 
-        SportsQuestionType questionType = context.getSportsQueryIntent() != null
-                ? context.getSportsQueryIntent().resolvedQuestionType()
-                : SportsQuestionType.GENERAL_NEWS;
+        List<SportsQuestionType> questionTypes = context.getSportsQueryIntent() != null
+                ? context.getSportsQueryIntent().questionTypes()
+                : List.of(SportsQuestionType.GENERAL_NEWS);
 
-        if (!STATS_RELEVANT_TYPES.contains(questionType)) {
-            log.info("Skipping stats fetch for question type: {}", questionType);
-            return WorkflowDecision.skip("Statistics not needed for question type: " + questionType);
+        boolean isStatsQuestion = questionTypes.stream()
+                .anyMatch(STATS_RELEVANT_TYPES::contains);
+
+        if (!isStatsQuestion) {
+            log.info("Skipping stats fetch for question type: {}", questionTypes);
+            return WorkflowDecision.skip("Statistics not needed for question type: " + questionTypes);
         }
 
         context.setCurrentStage(SportsWorkflowStage.FETCHING_ESPN_STATS);

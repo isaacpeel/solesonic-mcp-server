@@ -3,9 +3,11 @@ package com.solesonic.mcp.workflow.sports;
 import com.solesonic.mcp.workflow.framework.WorkflowContext;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
+import com.solesonic.mcp.workflow.sports.model.EspnTeamProfile;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
@@ -18,9 +20,17 @@ public class SportsResearchWorkflowContext implements WorkflowContext {
 
     // volatile: written by parallel steps from different threads
     private volatile SportsQueryIntent sportsQueryIntent;
+    private volatile List<EspnTeamProfile> resolvedTeams;
+    private volatile String focusPlayerName;
     private volatile String scheduleSearchSummary;
     private volatile String newsSearchSummary;
     private volatile String statisticsSearchSummary;
+    private volatile String espnStandingsData;
+    private volatile String espnStatsData;
+    private volatile String espnRosterData;
+    private volatile String espnScheduleData;
+    private volatile String rosterValidationSummary;
+    private volatile String deepPlayerAnalysisSummary;
     private volatile String finalAnalysis;
 
     private volatile SportsWorkflowStage currentStage;
@@ -51,6 +61,22 @@ public class SportsResearchWorkflowContext implements WorkflowContext {
         this.sportsQueryIntent = sportsQueryIntent;
     }
 
+    public List<EspnTeamProfile> getResolvedTeams() {
+        return resolvedTeams;
+    }
+
+    public void setResolvedTeams(List<EspnTeamProfile> resolvedTeams) {
+        this.resolvedTeams = resolvedTeams;
+    }
+
+    public String getFocusPlayerName() {
+        return focusPlayerName;
+    }
+
+    public void setFocusPlayerName(String focusPlayerName) {
+        this.focusPlayerName = focusPlayerName;
+    }
+
     public String getScheduleSearchSummary() {
         return scheduleSearchSummary;
     }
@@ -73,6 +99,54 @@ public class SportsResearchWorkflowContext implements WorkflowContext {
 
     public void setStatisticsSearchSummary(String statisticsSearchSummary) {
         this.statisticsSearchSummary = statisticsSearchSummary;
+    }
+
+    public String getEspnStandingsData() {
+        return espnStandingsData;
+    }
+
+    public void setEspnStandingsData(String espnStandingsData) {
+        this.espnStandingsData = espnStandingsData;
+    }
+
+    public String getEspnStatsData() {
+        return espnStatsData;
+    }
+
+    public void setEspnStatsData(String espnStatsData) {
+        this.espnStatsData = espnStatsData;
+    }
+
+    public String getEspnRosterData() {
+        return espnRosterData;
+    }
+
+    public void setEspnRosterData(String espnRosterData) {
+        this.espnRosterData = espnRosterData;
+    }
+
+    public String getEspnScheduleData() {
+        return espnScheduleData;
+    }
+
+    public void setEspnScheduleData(String espnScheduleData) {
+        this.espnScheduleData = espnScheduleData;
+    }
+
+    public String getRosterValidationSummary() {
+        return rosterValidationSummary;
+    }
+
+    public void setRosterValidationSummary(String rosterValidationSummary) {
+        this.rosterValidationSummary = rosterValidationSummary;
+    }
+
+    public String getDeepPlayerAnalysisSummary() {
+        return deepPlayerAnalysisSummary;
+    }
+
+    public void setDeepPlayerAnalysisSummary(String deepPlayerAnalysisSummary) {
+        this.deepPlayerAnalysisSummary = deepPlayerAnalysisSummary;
     }
 
     public String getFinalAnalysis() {
