@@ -2,8 +2,6 @@ package com.solesonic.mcp.workflow.sports.step;
 
 import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
 import com.solesonic.mcp.service.tavily.TavilySearchService;
-import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
-import com.solesonic.mcp.workflow.sports.model.EspnTeamProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -11,31 +9,25 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class FetchEspnScheduleStep {
+public class FetchNbaComScheduleStep {
 
-    private static final Logger log = LoggerFactory.getLogger(FetchEspnScheduleStep.class);
+    private static final Logger log = LoggerFactory.getLogger(FetchNbaComScheduleStep.class);
 
-    private static final String ESPN_NBA_SCHEDULE_URL = "https://www.espn.com/nba/schedule";
+    private static final String NBA_COM_SCHEDULE_URL = "https://www.nba.com/schedule";
 
     private final TavilySearchService tavilySearchService;
 
-    public FetchEspnScheduleStep(TavilySearchService tavilySearchService) {
+    public FetchNbaComScheduleStep(TavilySearchService tavilySearchService) {
         this.tavilySearchService = tavilySearchService;
     }
 
-    public String fetch(SportsResearchWorkflowContext context) {
-        List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();
-
-        List<String> urls = (resolvedTeams != null && !resolvedTeams.isEmpty())
-                ? resolvedTeams.stream().map(EspnTeamProfile::scheduleUrl).toList()
-                : List.of(ESPN_NBA_SCHEDULE_URL);
-
-        log.info("Fetching ESPN schedule pages: {}", urls);
+    public String fetch() {
+        log.info("Fetching NBA.com schedule: {}", NBA_COM_SCHEDULE_URL);
         try {
-            TavilyExtractResponse response = tavilySearchService.extract(urls);
+            TavilyExtractResponse response = tavilySearchService.extract(List.of(NBA_COM_SCHEDULE_URL));
             return formatExtractResults(response);
         } catch (Exception exception) {
-            log.warn("ESPN schedule extraction failed: {}", exception.getMessage());
+            log.warn("NBA.com schedule extraction failed: {}", exception.getMessage());
             return null;
         }
     }
@@ -48,7 +40,7 @@ public class FetchEspnScheduleStep {
         StringBuilder builder = new StringBuilder();
         for (var result : response.results()) {
             if (result.rawContent() != null && !result.rawContent().isBlank()) {
-                builder.append("=== ESPN Schedule: ").append(result.url()).append(" ===\n");
+                builder.append("=== NBA.com Schedule: ").append(result.url()).append(" ===\n");
                 builder.append(result.rawContent()).append("\n\n");
             }
         }
