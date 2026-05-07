@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
 import static com.solesonic.mcp.prompt.PromptConstants.todayDate;
@@ -25,6 +27,12 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
     public static final String STEP_NAME = "search-sports-news";
 
     private static final Logger log = LoggerFactory.getLogger(SearchSportsNewsStep.class);
+
+    static final Set<SportsQuestionType> APPLICABLE_INTENTS = Set.of(
+            SportsQuestionType.GAME_PREVIEW,
+            SportsQuestionType.PLAYER_ANALYSIS,
+            SportsQuestionType.GENERAL_NEWS,
+            SportsQuestionType.TRADE_NEWS);
 
     private final TavilySearchService tavilySearchService;
 
@@ -49,6 +57,10 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
         workflowExecutionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
 
         SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
+
+        if (Collections.disjoint(sportsQueryIntent.questionTypes(), APPLICABLE_INTENTS)) {
+            return WorkflowDecision.continueWorkflow();
+        }
 
         String todayDate = todayDate();
         StringBuilder summary = new StringBuilder();

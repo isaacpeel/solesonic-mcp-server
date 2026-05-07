@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -32,7 +33,11 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
             "basketball-reference.com", "statmuse.com", "espn.com", "nba.com"
     );
 
-    private static final Set<SportsQuestionType> NON_STATS_RELEVANT_TYPES = Set.of(SCHEDULE_LOOKUP, GENERAL_NEWS, STANDINGS);
+    static final Set<SportsQuestionType> APPLICABLE_INTENTS = Set.of(
+            GAME_PREVIEW,
+            PLAYER_ANALYSIS,
+            STATISTICS,
+            TRADE_NEWS);
 
     private final TavilySearchService tavilySearchService;
 
@@ -56,14 +61,8 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
 
         List<SportsQuestionType> questionTypes = sportsQueryIntent.questionTypes();
 
-        // Statistics are only meaningful for deep analysis questions
-
-        boolean isNotStatsQuestion = questionTypes.stream()
-                .anyMatch(NON_STATS_RELEVANT_TYPES::contains);
-
-        if (isNotStatsQuestion) {
-            log.info("Skipping statistics search for question type: {}", questionTypes);
-            return WorkflowDecision.skip("Statistics not required for question type: " + questionTypes);
+        if (Collections.disjoint(sportsQueryIntent.questionTypes(), APPLICABLE_INTENTS)) {
+            return WorkflowDecision.skip("Schedule lookup not needed for question type: " + questionTypes);
         }
 
         sportsResearchWorkflowContext.setCurrentStage(SportsWorkflowStage.SEARCHING_STATISTICS);
