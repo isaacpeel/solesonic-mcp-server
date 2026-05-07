@@ -4,7 +4,6 @@ import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
-import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +15,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Map;
 
 import static com.solesonic.mcp.prompt.PromptConstants.*;
 import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
+import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.*;
+import static com.solesonic.mcp.workflow.sports.SportsWorkflowStage.SYNTHESIZING_ANALYSIS;
 
 @Component
 public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -29,6 +32,9 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     @Value("classpath:prompt/sports/synthesize-sports-analysis.st")
     private Resource synthesizeSportAnalysisResource;
+
+    @Value("classpath:prompt/sports/nba-terminology.md")
+    private Resource nbaTerminologyResource;
 
     private final ChatClient chatClient;
 
@@ -42,55 +48,58 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
     }
 
     @Override
-    public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        context.setCurrentStage(SportsWorkflowStage.SYNTHESIZING_ANALYSIS);
-        executionContext.progressTracker().step(name()).update(0.1, "Sportsball sprockets synthesizing");
+    public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
+        sportsResearchWorkflowContext.set(CURRENT_STAGE, SYNTHESIZING_ANALYSIS);
 
-        SportsQueryIntent intent = context.getSportsQueryIntent();
-        String questionType = intent.questionTypes().stream()
+        workflowExecutionContext.progressTracker().step(name()).update(0.1, "Sportsball sprockets synthesizing");
+
+        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.get(SPORTS_QUERY_INTENT, SportsQueryIntent.class);
+
+        assert sportsQueryIntent != null;
+        String questionType = sportsQueryIntent.questionTypes().stream()
                 .map(Enum::name)
                 .collect(java.util.stream.Collectors.joining(", "));
 
-        String scheduleResults = context.getScheduleSearchSummary() != null
-                ? context.getScheduleSearchSummary()
-                : "No schedule data gathered.";
 
-        String newsResults = context.getNewsSearchSummary() != null
-                ? context.getNewsSearchSummary()
-                : "No news data gathered.";
-
-        String statsResults = context.getStatisticsSearchSummary() != null
-                ? context.getStatisticsSearchSummary()
-                : "Statistics not applicable for this query type.";
+        String scheduleResults = sportsResearchWorkflowContext.get(SCHEDULE_SEARCH_SUMMARY);
+        String newsResults = sportsResearchWorkflowContext.get(NEWS_SEARCH_SUMMARY);
+        String statsResults =  sportsResearchWorkflowContext.get(STATISTICS_SEARCH_SUMMARY);
 
         String todayDate = todayDate();
-
         PromptTemplate synthesizeSportAnalysisTemplate = new PromptTemplate(synthesizeSportAnalysisResource);
 
+        String nbaTerminology;
+
+        try {
+            nbaTerminology = nbaTerminologyResource.getContentAsString(Charset.defaultCharset());
+        } catch (IOException ioException) {
+            throw new RuntimeException(ioException);
+        }
+
         Map<String, Object> promptVars = Map.of(
-                USER_MESSAGE, context.getOriginalUserMessage(),
+                USER_MESSAGE, sportsResearchWorkflowContext.get(USER_MESSAGE),
                 TODAY_DATE, todayDate,
                 QUESTION_TYPE, questionType,
                 SCHEDULE_RESULTS, scheduleResults,
                 NEWS_RESULTS, newsResults,
                 STATS_RESULTS, statsResults,
-                NBA_TERMINOLOGY, NBA_TERMINOLOGY_CONTENT
+                NBA_TERMINOLOGY, nbaTerminology
         );
 
         Prompt synthesizeSportAnalysisPrompt = synthesizeSportAnalysisTemplate.create(promptVars);
 
         log.info("Synthesizing sports analysis for question type: {}", questionType);
-        executionContext.progressTracker().step(name()).update(0.5, "Sportsball droid still shooting");
+        workflowExecutionContext.progressTracker().step(name()).update(0.5, "Sportsball droid still shooting");
 
         String analysis = chatClient.prompt(synthesizeSportAnalysisPrompt)
                 .call()
                 .content();
 
-        context.setFinalAnalysis(analysis);
+        sportsResearchWorkflowContext.set(FINAL_ANALYSIS, analysis);
 
         log.info("Sports analysis generated");
 
-        executionContext.progressTracker().step(name()).done("Sportsball robot finished.... ahhhh");
+        workflowExecutionContext.progressTracker().step(name()).done("Sportsball robot finished.... ahhhh");
 
         return WorkflowDecision.continueWorkflow();
     }

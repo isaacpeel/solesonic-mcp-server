@@ -24,19 +24,17 @@ public class SportsResearchWorkflowService {
     ) {
         executionContext.progressTracker().startup("Sportsball robot powering up!");
 
-        WorkflowOutcome outcome = workflowRunner.run(
+        WorkflowOutcome workflowOutcome = workflowRunner.run(
                 sportsResearchWorkflowDefinition.definition(), workflowContext, executionContext);
 
-        workflowContext.setWorkflowStatus(outcome);
-
-        if (outcome == WorkflowOutcome.FAILED) {
+        if (workflowOutcome == WorkflowOutcome.FAILED) {
             workflowContext.setCurrentStage(SportsWorkflowStage.FAILED);
         }
 
-        if (outcome == WorkflowOutcome.COMPLETED) {
+        if (workflowOutcome == WorkflowOutcome.COMPLETED) {
             workflowContext.setCurrentStage(SportsWorkflowStage.COMPLETED);
         }
 
-        return outcome;
+        return workflowOutcome;
     }
 }

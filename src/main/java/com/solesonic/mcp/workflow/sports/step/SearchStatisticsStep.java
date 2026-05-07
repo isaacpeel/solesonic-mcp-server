@@ -21,6 +21,7 @@ import java.util.Set;
 
 import static com.solesonic.mcp.config.tavily.TavilyConstants.DEPTH_ADVANCED;
 import static com.solesonic.mcp.config.tavily.TavilyConstants.TOPIC_GENERAL;
+import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.*;
 import static com.solesonic.mcp.workflow.sports.model.SportsQuestionType.*;
 
 @Component
@@ -53,7 +54,8 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
-        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
+        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.get(SPORTS_QUERY_INTENT, SportsQueryIntent.class);
+
         List<SportsQuestionType> questionTypes = sportsQueryIntent.questionTypes();
 
         // Statistics are only meaningful for deep analysis questions
@@ -66,10 +68,14 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
             return WorkflowDecision.skip("Statistics not required for question type: " + questionTypes);
         }
 
-        sportsResearchWorkflowContext.setCurrentStage(SportsWorkflowStage.SEARCHING_STATISTICS);
+        sportsResearchWorkflowContext.set(CURRENT_STAGE, SportsWorkflowStage.SEARCHING_STATISTICS);
+
         workflowExecutionContext.progressTracker().step(name()).update(0.1, "Searching for player and team statistics");
 
-        String seasonString = buildSeasonString(sportsResearchWorkflowContext.getCurrentDateTime());
+        LocalDateTime workflowTime = sportsResearchWorkflowContext.get(CURRENT_DATE_TIME, LocalDateTime.class);
+        assert workflowTime != null;
+
+        String seasonString = buildSeasonString(workflowTime);
         StringBuilder summary = new StringBuilder();
 
         List<String> statsQueries = buildStatsQueries(sportsQueryIntent, seasonString);
@@ -104,7 +110,8 @@ public class SearchStatisticsStep implements WorkflowStep<SportsResearchWorkflow
             }
         }
 
-        sportsResearchWorkflowContext.setStatisticsSearchSummary(summary.toString());
+        sportsResearchWorkflowContext.set(STATISTICS_SEARCH_SUMMARY, summary.toString());
+
         workflowExecutionContext.progressTracker().step(name()).done("Statistics search complete");
         return WorkflowDecision.continueWorkflow();
     }

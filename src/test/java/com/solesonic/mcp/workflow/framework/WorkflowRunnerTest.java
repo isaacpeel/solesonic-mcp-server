@@ -105,7 +105,24 @@ class WorkflowRunnerTest {
         );
     }
 
-    private static final class TestWorkflowContext implements WorkflowContext {
+    private enum TestStage { RUNNING }
+
+    private static final class TestWorkflowContext extends WorkflowContext<TestStage> {
+        private TestStage currentStage = TestStage.RUNNING;
+
+        TestWorkflowContext() {
+            super("test message");
+        }
+
+        @Override
+        public TestStage currentStage() {
+            return currentStage;
+        }
+
+        @Override
+        public void setCurrentStage(TestStage stage) {
+            this.currentStage = stage;
+        }
     }
 
     private record StaticWorkflowStep(String name, DecisionSupplier decisionSupplier) implements WorkflowStep<TestWorkflowContext> {

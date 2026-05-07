@@ -92,11 +92,11 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
     }
 
     @Override
-    public WorkflowDecision execute(AgileQueryWorkflowContext context, WorkflowExecutionContext executionContext) {
-        context.setCurrentStage(AgileWorkflowStage.PARSING_INTENT);
+    public WorkflowDecision execute(AgileQueryWorkflowContext agileQueryWorkflowContext, WorkflowExecutionContext executionContext) {
+        agileQueryWorkflowContext.setCurrentStage(AgileWorkflowStage.PARSING_INTENT);
         executionContext.progressTracker().step(name()).update(0.1, "Parsing your request");
 
-        String promptText = PROMPT_TEMPLATE.formatted(context.getOriginalUserMessage());
+        String promptText = PROMPT_TEMPLATE.formatted(agileQueryWorkflowContext.userMessage());
         String responseContent = chatClient.prompt().user(promptText).call().content();
 
         log.debug("Intent parse LLM response: {}", responseContent);
@@ -107,7 +107,7 @@ public class ParseAgileIntentStep implements WorkflowStep<AgileQueryWorkflowCont
             AgileQueryResult agileQueryResult = jsonMapper.readValue(jsonContent, AgileQueryResult.class);
             log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}",
                     agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
-            context.setAgileQueryResult(agileQueryResult);
+            agileQueryWorkflowContext.setAgileQueryResult(agileQueryResult);
             String filterDescription = agileQueryResult.jqlFilter() != null && !agileQueryResult.jqlFilter().isBlank()
                     ? ", filter: " + agileQueryResult.jqlFilter()
                     : "";

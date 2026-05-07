@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public class AgileQueryWorkflowContext implements WorkflowContext {
-    private final String originalUserMessage;
-
+public class AgileQueryWorkflowContext extends WorkflowContext<AgileWorkflowStage> {
     // volatile: written by parallel steps from different threads
     private volatile AgileQueryResult agileQueryResult;
     private volatile List<Board> boards;
@@ -25,15 +23,11 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
     private volatile WorkflowOutcome workflowStatus;
     private volatile WorkflowExecutionContext executionContext;
 
-    public AgileQueryWorkflowContext(String originalUserMessage) {
-        this.originalUserMessage = Objects.requireNonNull(originalUserMessage, "originalUserMessage must not be null");
+    public AgileQueryWorkflowContext(String userMessage) {
+        super(userMessage);
         this.boards = new ArrayList<>();
         this.currentStage = AgileWorkflowStage.INITIALIZING;
         this.workflowStatus = WorkflowOutcome.COMPLETED;
-    }
-
-    public String getOriginalUserMessage() {
-        return originalUserMessage;
     }
 
     public AgileQueryResult getAgileQueryResult() {
@@ -98,5 +92,10 @@ public class AgileQueryWorkflowContext implements WorkflowContext {
 
     public void setExecutionContext(WorkflowExecutionContext executionContext) {
         this.executionContext = executionContext;
+    }
+
+    @Override
+    public AgileWorkflowStage currentStage() {
+        return currentStage;
     }
 }

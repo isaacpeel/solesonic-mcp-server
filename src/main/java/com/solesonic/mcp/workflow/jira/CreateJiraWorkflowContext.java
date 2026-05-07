@@ -14,8 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public class CreateJiraWorkflowContext implements WorkflowContext {
-    private final String originalUserMessage;
+public class CreateJiraWorkflowContext extends WorkflowContext<WorkflowStage> {
 
     // volatile: written by parallel steps from different threads
     private volatile String storySummary;
@@ -33,8 +32,8 @@ public class CreateJiraWorkflowContext implements WorkflowContext {
     private Map<String, Object> pendingAnswers;
     private WorkflowPendingInput pendingInput;
 
-    public CreateJiraWorkflowContext(String originalUserMessage) {
-        this.originalUserMessage = Objects.requireNonNull(originalUserMessage, "originalUserMessage must not be null");
+    public CreateJiraWorkflowContext(String userMessage) {
+        super(userMessage);
         this.acceptanceCriteria = new ArrayList<>();
         this.workflowStatus = WorkflowOutcome.COMPLETED;
         this.clarificationQuestions = new ArrayList<>();
@@ -43,8 +42,9 @@ public class CreateJiraWorkflowContext implements WorkflowContext {
         this.currentStage = WorkflowStage.INITIALIZING;
     }
 
-    public String getOriginalUserMessage() {
-        return originalUserMessage;
+    @Override
+    public WorkflowStage currentStage() {
+        return null;
     }
 
     public String getStorySummary() {

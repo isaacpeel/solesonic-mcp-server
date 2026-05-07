@@ -6,18 +6,11 @@ import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
 import com.solesonic.mcp.workflow.sports.model.EspnTeamProfile;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
 @SuppressWarnings("unused")
-public class SportsResearchWorkflowContext implements WorkflowContext {
-
-
-
-    private final String originalUserMessage;
-    private final LocalDateTime currentDateTime;
-
+public class SportsResearchWorkflowContext extends WorkflowContext<SportsWorkflowStage> {
     // volatile: written by parallel steps from different threads
     private volatile SportsQueryIntent sportsQueryIntent;
     private volatile List<EspnTeamProfile> resolvedTeams;
@@ -37,20 +30,16 @@ public class SportsResearchWorkflowContext implements WorkflowContext {
     private volatile WorkflowOutcome workflowStatus;
     private volatile WorkflowExecutionContext executionContext;
 
-    public SportsResearchWorkflowContext(String originalUserMessage, LocalDateTime currentDateTime) {
-        this.originalUserMessage = Objects.requireNonNull(originalUserMessage, "originalUserMessage must not be null");
-        this.currentDateTime = Objects.requireNonNull(currentDateTime, "currentDateTime must not be null");
+    public SportsResearchWorkflowContext(String userMessage) {
+        super(userMessage);
         this.currentStage = SportsWorkflowStage.INITIALIZING;
         this.workflowStatus = WorkflowOutcome.COMPLETED;
         this.statisticsSearchSummary = "Statistics not applicable for this query type.";
     }
 
-    public String getOriginalUserMessage() {
-        return originalUserMessage;
-    }
-
-    public LocalDateTime getCurrentDateTime() {
-        return currentDateTime;
+    @Override
+    public SportsWorkflowStage currentStage() {
+        return currentStage;
     }
 
     public SportsQueryIntent getSportsQueryIntent() {
