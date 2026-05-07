@@ -3,18 +3,17 @@ package com.solesonic.mcp.workflow.sports.step;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQueryIntent;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
-import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
@@ -103,7 +102,7 @@ public class ValidateRosterAndDatesStep implements WorkflowStep<SportsResearchWo
         executionContext.progressTracker().step(name()).update(0.1, "Validating roster status and schedule dates");
 
         SportsQueryIntent intent = context.getSportsQueryIntent();
-        String todayIso = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String todayIso = context.currentDateTime();;
         String playersToCheck = buildPlayersString(intent, context.getFocusPlayerName());
 
         String rosterData = context.getEspnRosterData();

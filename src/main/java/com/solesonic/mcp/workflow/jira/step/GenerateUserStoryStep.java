@@ -33,7 +33,7 @@ public class GenerateUserStoryStep implements WorkflowStep<CreateJiraWorkflowCon
         context.setCurrentStage(WorkflowStage.GENERATING_USER_STORY);
 
         var userStoryResult = userStoryGenerationSkill.generate(
-                context.getOriginalUserMessage(),
+                context.userMessage(),
                 executionContext.progressTracker().step(name())
         );
 

@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
@@ -45,12 +44,12 @@ public class SearchCurrentScheduleStep implements WorkflowStep<SportsResearchWor
     }
 
     @Override
-    public WorkflowDecision execute(SportsResearchWorkflowContext context, WorkflowExecutionContext executionContext) {
-        context.setCurrentStage(SportsWorkflowStage.SEARCHING_SCHEDULE);
+    public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext executionContext) {
+        sportsResearchWorkflowContext.setCurrentStage(SportsWorkflowStage.SEARCHING_SCHEDULE);
         executionContext.progressTracker().step(name()).update(0.1, "Searching for current game schedules");
 
-        SportsQueryIntent intent = context.getSportsQueryIntent();
-        String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+        SportsQueryIntent intent = sportsResearchWorkflowContext.getSportsQueryIntent();
+        String currentDate = sportsResearchWorkflowContext.currentDateTime();
         String teamQuery = buildTeamQueryString(intent);
 
         StringBuilder summary = new StringBuilder();
@@ -102,7 +101,7 @@ public class SearchCurrentScheduleStep implements WorkflowStep<SportsResearchWor
             summary.append("=== Official Sites Search Results ===\nSearch unavailable.\n");
         }
 
-        context.setScheduleSearchSummary(summary.toString());
+        sportsResearchWorkflowContext.setScheduleSearchSummary(summary.toString());
         executionContext.progressTracker().step(name()).done("Schedule search complete");
         return WorkflowDecision.continueWorkflow();
     }

@@ -21,7 +21,6 @@ import java.util.Map;
 
 import static com.solesonic.mcp.prompt.PromptConstants.*;
 import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
-import static com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext.*;
 import static com.solesonic.mcp.workflow.sports.SportsWorkflowStage.SYNTHESIZING_ANALYSIS;
 
 @Component
@@ -49,11 +48,12 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
 
     @Override
     public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
-        sportsResearchWorkflowContext.set(CURRENT_STAGE, SYNTHESIZING_ANALYSIS);
+        sportsResearchWorkflowContext.setCurrentStage(SYNTHESIZING_ANALYSIS);
 
         workflowExecutionContext.progressTracker().step(name()).update(0.1, "Sportsball sprockets synthesizing");
 
-        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.get(SPORTS_QUERY_INTENT, SportsQueryIntent.class);
+        SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
+
 
         assert sportsQueryIntent != null;
         String questionType = sportsQueryIntent.questionTypes().stream()
@@ -61,9 +61,9 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
                 .collect(java.util.stream.Collectors.joining(", "));
 
 
-        String scheduleResults = sportsResearchWorkflowContext.get(SCHEDULE_SEARCH_SUMMARY);
-        String newsResults = sportsResearchWorkflowContext.get(NEWS_SEARCH_SUMMARY);
-        String statsResults =  sportsResearchWorkflowContext.get(STATISTICS_SEARCH_SUMMARY);
+        String scheduleResults = sportsResearchWorkflowContext.getScheduleSearchSummary();
+        String newsResults = sportsResearchWorkflowContext.getNewsSearchSummary();
+        String statsResults =  sportsResearchWorkflowContext.getStatisticsSearchSummary();
 
         String todayDate = todayDate();
         PromptTemplate synthesizeSportAnalysisTemplate = new PromptTemplate(synthesizeSportAnalysisResource);
@@ -77,7 +77,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
         }
 
         Map<String, Object> promptVars = Map.of(
-                USER_MESSAGE, sportsResearchWorkflowContext.get(USER_MESSAGE),
+                USER_MESSAGE, sportsResearchWorkflowContext.userMessage(),
                 TODAY_DATE, todayDate,
                 QUESTION_TYPE, questionType,
                 SCHEDULE_RESULTS, scheduleResults,
@@ -95,7 +95,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
                 .call()
                 .content();
 
-        sportsResearchWorkflowContext.set(FINAL_ANALYSIS, analysis);
+        sportsResearchWorkflowContext.setFinalAnalysis(analysis);
 
         log.info("Sports analysis generated");
 

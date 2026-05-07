@@ -33,7 +33,7 @@ public class ResolveAssigneeStep implements WorkflowStep<CreateJiraWorkflowConte
         context.setCurrentStage(WorkflowStage.RESOLVING_ASSIGNEE);
 
         var assigneeLookupResult = assigneeResolutionSkill.resolve(
-                context.getOriginalUserMessage(),
+                context.userMessage(),
                 executionContext.progressTracker().step(name())
         );
 

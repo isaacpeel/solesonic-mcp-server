@@ -51,7 +51,7 @@ public class ParseSportsIntentStep implements WorkflowStep<SportsResearchWorkflo
         PromptTemplate sportsIntentTemplate = new PromptTemplate(sportsIntentPromptResource);
 
         Map<String, Object> promptVars = Map.of(
-                USER_MESSAGE, context.getOriginalUserMessage(),
+                USER_MESSAGE, context.userMessage(),
                 TODAY_DATE, todayDate
         );
 

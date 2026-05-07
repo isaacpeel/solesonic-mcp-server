@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 public class SportsResearchWorkflow {
     private static final Logger log = LoggerFactory.getLogger(SportsResearchWorkflow.class);
@@ -43,9 +41,7 @@ public class SportsResearchWorkflow {
                 sportsResearchWorkflowDefinition.stepWeights()
         );
 
-        SportsResearchWorkflowContext workflowContext = new SportsResearchWorkflowContext(
-                userMessage, LocalDateTime.now()
-        );
+        SportsResearchWorkflowContext workflowContext = new SportsResearchWorkflowContext(userMessage);
         workflowContext.setExecutionContext(executionContext);
 
         WorkflowOutcome outcome = sportsResearchWorkflowService.run(workflowContext, executionContext);

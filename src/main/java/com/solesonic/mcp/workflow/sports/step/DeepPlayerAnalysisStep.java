@@ -6,20 +6,20 @@ import com.solesonic.mcp.service.tavily.TavilySearchService;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
+import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
+import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.SportsWorkflowStage;
 import com.solesonic.mcp.workflow.sports.model.SportsQuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.solesonic.mcp.workflow.sports.SportsChatClientFactory;
-import com.solesonic.mcp.workflow.sports.SportsChatProfile;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
+import static com.solesonic.mcp.config.tavily.TavilyConstants.DEPTH_ADVANCED;
+import static com.solesonic.mcp.config.tavily.TavilyConstants.TOPIC_GENERAL;
 
 @Component
 public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkflowContext> {
@@ -112,10 +112,10 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
 
         String playerSearchResults = runPlayerSearches(context, executionContext, playerName);
 
-        String todayIso = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String dateTime = context.currentDateTime();
         String espnStats = context.getEspnStatsData() != null ? context.getEspnStatsData() : "No team stats available.";
 
-        String promptText = PROMPT_TEMPLATE.formatted(todayIso, playerName, espnStats, playerSearchResults);
+        String promptText = PROMPT_TEMPLATE.formatted(dateTime, playerName, espnStats, playerSearchResults);
 
         log.info("Generating deep player analysis for: {}", playerName);
         executionContext.progressTracker().step(name()).update(0.8, "Synthesizing player analysis");
@@ -136,7 +136,7 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
     private String runPlayerSearches(SportsResearchWorkflowContext context,
                                      WorkflowExecutionContext executionContext,
                                      String playerName) {
-        String currentDate = context.getCurrentDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        String currentDate = context.currentDateTime();
         List<String> queries = List.of(
                 "%s NBA stats this season per game averages".formatted(playerName),
                 "%s recent game log results".formatted(playerName),

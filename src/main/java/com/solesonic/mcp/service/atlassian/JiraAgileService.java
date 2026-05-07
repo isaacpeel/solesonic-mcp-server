@@ -218,7 +218,7 @@ public class JiraAgileService {
             AgileQueryWorkflowContext workflowContext
     ) {
         AgileQueryResult agileQueryResult = workflowContext.getAgileQueryResult();
-        String userMessage = workflowContext.getUserMessage();
+        String userMessage = workflowContext.userMessage();
 
         if (agileQueryResult.isTransitionQuery()) {
             return executeBulkTransition(mcpSyncRequestContext, board, workflowContext);
