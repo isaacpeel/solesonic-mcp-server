@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.solesonic.mcp.prompt.PromptConstants.*;
 import static com.solesonic.mcp.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
@@ -28,6 +29,7 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
     public static final String STEP_NAME = "synthesize-sports-analysis";
 
     private static final Logger log = LoggerFactory.getLogger(SynthesizeSportsAnalysisStep.class);
+    public static final String NO_RESULTS = "--NO RESULTS--";
 
     @Value("classpath:prompt/sports/synthesize-sports-analysis.st")
     private Resource synthesizeSportAnalysisResource;
@@ -61,9 +63,9 @@ public class SynthesizeSportsAnalysisStep implements WorkflowStep<SportsResearch
                 .collect(java.util.stream.Collectors.joining(", "));
 
 
-        String scheduleResults = sportsResearchWorkflowContext.getScheduleSearchSummary();
-        String newsResults = sportsResearchWorkflowContext.getNewsSearchSummary();
-        String statsResults =  sportsResearchWorkflowContext.getStatisticsSearchSummary();
+        String scheduleResults = Objects.requireNonNullElse(sportsResearchWorkflowContext.getScheduleSearchSummary(), NO_RESULTS);
+        String newsResults = Objects.requireNonNullElse(sportsResearchWorkflowContext.getNewsSearchSummary(), NO_RESULTS);
+        String statsResults = Objects.requireNonNullElse(sportsResearchWorkflowContext.getStatisticsSearchSummary(), NO_RESULTS);
 
         String todayDate = todayDate();
         PromptTemplate synthesizeSportAnalysisTemplate = new PromptTemplate(synthesizeSportAnalysisResource);
