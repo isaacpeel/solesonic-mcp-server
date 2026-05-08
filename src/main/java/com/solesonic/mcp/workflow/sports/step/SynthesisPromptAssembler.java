@@ -29,6 +29,7 @@ import static com.solesonic.mcp.workflow.sports.model.SportsQuestionType.STANDIN
 import static com.solesonic.mcp.workflow.sports.model.SportsQuestionType.STATISTICS;
 import static com.solesonic.mcp.workflow.sports.model.SportsQuestionType.TRADE_NEWS;
 import static com.solesonic.mcp.workflow.sports.step.SynthesisSection.NEWS;
+import static com.solesonic.mcp.workflow.sports.step.SynthesisSection.ROSTER;
 import static com.solesonic.mcp.workflow.sports.step.SynthesisSection.SCHEDULE;
 import static com.solesonic.mcp.workflow.sports.step.SynthesisSection.STATS;
 import static com.solesonic.mcp.workflow.sports.step.SynthesisSection.TERMINOLOGY;
@@ -41,8 +42,8 @@ public class SynthesisPromptAssembler {
     static {
         INTENT_SECTIONS = new EnumMap<>(SportsQuestionType.class);
         INTENT_SECTIONS.put(SCHEDULE_LOOKUP, EnumSet.of(SCHEDULE));
-        INTENT_SECTIONS.put(GAME_PREVIEW, EnumSet.of(SCHEDULE, NEWS));
-        INTENT_SECTIONS.put(PLAYER_ANALYSIS, EnumSet.of(STATS, NEWS, TERMINOLOGY));
+        INTENT_SECTIONS.put(GAME_PREVIEW, EnumSet.of(SCHEDULE, NEWS, ROSTER));
+        INTENT_SECTIONS.put(PLAYER_ANALYSIS, EnumSet.of(STATS, NEWS, ROSTER, TERMINOLOGY));
         INTENT_SECTIONS.put(STANDINGS, EnumSet.of(STATS));
         INTENT_SECTIONS.put(GENERAL_NEWS, EnumSet.of(NEWS));
         INTENT_SECTIONS.put(STATISTICS, EnumSet.of(STATS, TERMINOLOGY));
@@ -146,6 +147,7 @@ public class SynthesisPromptAssembler {
             case SCHEDULE -> Objects.requireNonNullElse(workflowContext.getScheduleSearchSummary(), "--NO RESULTS--");
             case NEWS -> Objects.requireNonNullElse(workflowContext.getNewsSearchSummary(), "--NO RESULTS--");
             case STATS -> Objects.requireNonNullElse(workflowContext.getStatisticsSearchSummary(), "--NO RESULTS--");
+            case ROSTER -> Objects.requireNonNullElse(workflowContext.getEspnRosterData(), "--NO ROSTER DATA--");
             case TERMINOLOGY -> throw new IllegalStateException("TERMINOLOGY has no variable and should never be resolved");
         };
     }

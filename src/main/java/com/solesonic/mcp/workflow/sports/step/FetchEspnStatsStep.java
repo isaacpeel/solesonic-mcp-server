@@ -1,7 +1,6 @@
 package com.solesonic.mcp.workflow.sports.step;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.mcp.service.espn.EspnService;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
@@ -27,10 +26,10 @@ public class FetchEspnStatsStep implements WorkflowStep<SportsResearchWorkflowCo
             SportsQuestionType.PLAYER_ANALYSIS
     );
 
-    private final TavilySearchService tavilySearchService;
+    private final EspnService espnService;
 
-    public FetchEspnStatsStep(TavilySearchService tavilySearchService) {
-        this.tavilySearchService = tavilySearchService;
+    public FetchEspnStatsStep(EspnService espnService) {
+        this.espnService = espnService;
     }
 
     @Override
@@ -67,34 +66,21 @@ public class FetchEspnStatsStep implements WorkflowStep<SportsResearchWorkflowCo
         context.setCurrentStage(SportsWorkflowStage.FETCHING_ESPN_STATS);
         executionContext.progressTracker().step(name()).update(0.2, "Fetching team statistics from ESPN");
 
-        List<String> statsUrls = resolvedTeams.stream()
-                .map(EspnTeamProfile::statsUrl)
+        List<String> teamAbbreviations = resolvedTeams.stream()
+                .map(EspnTeamProfile::abbreviation)
                 .toList();
 
-        log.info("Fetching ESPN stats pages: {}", statsUrls);
+        log.info("Fetching ESPN stats via API. Teams: {}", teamAbbreviations);
 
         try {
-            TavilyExtractResponse response = tavilySearchService.extract(statsUrls);
-            String statsData = formatExtractResults(response);
+            String statsData = espnService.getStatsData(teamAbbreviations);
             context.setEspnStatsData(statsData);
             executionContext.progressTracker().step(name()).done("ESPN stats data fetched");
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
-            log.error("Failed to fetch ESPN stats pages", exception);
+            log.error("Failed to fetch ESPN stats data", exception);
             context.setEspnStatsData("ESPN statistics data unavailable.");
             return WorkflowDecision.continueWorkflow();
         }
-    }
-
-    private String formatExtractResults(TavilyExtractResponse response) {
-        if (response == null || response.results() == null || response.results().isEmpty()) {
-            return "No ESPN statistics data retrieved.";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (var result : response.results()) {
-            builder.append("=== ESPN Stats: ").append(result.url()).append(" ===\n");
-            builder.append(result.rawContent()).append("\n\n");
-        }
-        return builder.toString();
     }
 }

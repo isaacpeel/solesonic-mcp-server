@@ -1,7 +1,6 @@
 package com.solesonic.mcp.workflow.sports.step;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.mcp.service.espn.EspnService;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
@@ -22,17 +21,15 @@ public class FetchEspnStandingsStep implements WorkflowStep<SportsResearchWorkfl
 
     private static final Logger log = LoggerFactory.getLogger(FetchEspnStandingsStep.class);
 
-    private static final String ESPN_STANDINGS_URL = "https://www.espn.com/nba/standings";
-
     private static final Set<SportsQuestionType> STANDINGS_RELEVANT_TYPES = Set.of(
             SportsQuestionType.STANDINGS,
             SportsQuestionType.GAME_PREVIEW
     );
 
-    private final TavilySearchService tavilySearchService;
+    private final EspnService espnService;
 
-    public FetchEspnStandingsStep(TavilySearchService tavilySearchService) {
-        this.tavilySearchService = tavilySearchService;
+    public FetchEspnStandingsStep(EspnService espnService) {
+        this.espnService = espnService;
     }
 
     @Override
@@ -60,30 +57,17 @@ public class FetchEspnStandingsStep implements WorkflowStep<SportsResearchWorkfl
         sportsResearchWorkflowContext.setCurrentStage(FETCHING_ESPN_STANDINGS);
         workflowExecutionContext.progressTracker().step(name()).update(0.2, "Fetching NBA standings from ESPN");
 
-        log.info("Fetching ESPN standings: {}", ESPN_STANDINGS_URL);
+        log.info("Fetching ESPN standings via API");
 
         try {
-            TavilyExtractResponse response = tavilySearchService.extract(List.of(ESPN_STANDINGS_URL));
-            String standingsData = formatExtractResults(response);
+            String standingsData = espnService.getStandingsData();
             sportsResearchWorkflowContext.setEspnStandingsData(standingsData);
             workflowExecutionContext.progressTracker().step(name()).done("ESPN standings data fetched");
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
-            log.error("Failed to fetch ESPN standings page", exception);
+            log.error("Failed to fetch ESPN standings data", exception);
             sportsResearchWorkflowContext.setEspnStandingsData("ESPN standings data unavailable.");
             return WorkflowDecision.continueWorkflow();
         }
-    }
-
-    private String formatExtractResults(TavilyExtractResponse response) {
-        if (response == null || response.results() == null || response.results().isEmpty()) {
-            return "No ESPN standings data retrieved.";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (var result : response.results()) {
-            builder.append("=== ESPN Standings: ").append(result.url()).append(" ===\n");
-            builder.append(result.rawContent()).append("\n\n");
-        }
-        return builder.toString();
     }
 }

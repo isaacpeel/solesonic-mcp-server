@@ -33,6 +33,16 @@ public enum SynthesisSection {
                     """,
         "statsResults"
     ),
+    ROSTER(
+            """
+                    =============================================
+                    CURRENT TEAM ROSTERS (ESPN)
+                    =============================================
+                    {rosterData}
+
+                    """,
+        "rosterData"
+    ),
     TERMINOLOGY(
             """
                 =============================================

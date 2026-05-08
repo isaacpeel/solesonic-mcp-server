@@ -1,9 +1,17 @@
 package com.solesonic.mcp.service.espn;
 
+import com.solesonic.mcp.model.espn.EspnAthlete;
 import com.solesonic.mcp.model.espn.EspnCompetition;
+import com.solesonic.mcp.model.espn.EspnConference;
 import com.solesonic.mcp.model.espn.EspnEvent;
+import com.solesonic.mcp.model.espn.EspnRosterResponse;
 import com.solesonic.mcp.model.espn.EspnScheduleResponse;
 import com.solesonic.mcp.model.espn.EspnScheduleSummary;
+import com.solesonic.mcp.model.espn.EspnStandingStat;
+import com.solesonic.mcp.model.espn.EspnStandingsEntry;
+import com.solesonic.mcp.model.espn.EspnStandingsResponse;
+import com.solesonic.mcp.model.espn.EspnStatsCategory;
+import com.solesonic.mcp.model.espn.EspnStatsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -69,5 +77,93 @@ public class EspnService {
         EspnCompetition competition = event.competitions().get(0);
         if (competition.status() == null || competition.status().type() == null) return false;
         return "post".equals(competition.status().type().state());
+    }
+
+    public String getRosterData(List<String> teamAbbreviations) {
+        if (teamAbbreviations == null || teamAbbreviations.isEmpty()) {
+            return "No team roster data available.";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String teamAbbreviation : teamAbbreviations) {
+            EspnRosterResponse response = espnClient.fetchTeamRoster(teamAbbreviation);
+            if (response == null || response.athletes() == null || response.athletes().isEmpty()) {
+                log.warn("ESPN roster returned no athletes for team: {}", teamAbbreviation);
+                builder.append("No roster data available for ").append(teamAbbreviation.toUpperCase()).append(".\n\n");
+                continue;
+            }
+            builder.append("=== ESPN Roster: ").append(teamAbbreviation.toUpperCase()).append(" ===\n");
+            for (EspnAthlete athlete : response.athletes()) {
+                String position = athlete.position() != null ? athlete.position().abbreviation() : "?";
+                String jersey = athlete.jersey() != null ? "#" + athlete.jersey() : "";
+                builder.append(jersey).append(" ").append(athlete.fullName()).append(" (").append(position).append(")\n");
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    public String getStandingsData() {
+        EspnStandingsResponse response = espnClient.fetchStandings();
+        if (response == null || response.children() == null || response.children().isEmpty()) {
+            log.warn("ESPN standings returned no data");
+            return "No standings data available.";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (EspnConference conference : response.children()) {
+            builder.append("=== ").append(conference.name()).append(" ===\n");
+            if (conference.standings() == null || conference.standings().entries() == null) {
+                continue;
+            }
+            for (EspnStandingsEntry entry : conference.standings().entries()) {
+                if (entry.team() == null) continue;
+                String wins = findStatDisplayValue(entry.stats(), "wins");
+                String losses = findStatDisplayValue(entry.stats(), "losses");
+                String winPercent = findStatDisplayValue(entry.stats(), "winPercent");
+                builder.append(entry.team().displayName())
+                        .append(": ").append(wins).append("-").append(losses)
+                        .append(" (").append(winPercent).append(")\n");
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    public String getStatsData(List<String> teamAbbreviations) {
+        if (teamAbbreviations == null || teamAbbreviations.isEmpty()) {
+            return "No team stats data available.";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String teamAbbreviation : teamAbbreviations) {
+            EspnStatsResponse response = espnClient.fetchTeamStats(teamAbbreviation);
+            if (response == null) {
+                log.warn("ESPN stats returned no data for team: {}", teamAbbreviation);
+                builder.append("No stats available for ").append(teamAbbreviation.toUpperCase()).append(".\n\n");
+                continue;
+            }
+            String teamLabel = response.team() != null ? response.team().displayName() : teamAbbreviation.toUpperCase();
+            String record = response.team() != null && response.team().recordSummary() != null
+                    ? " (" + response.team().recordSummary() + ")" : "";
+            builder.append("=== ESPN Stats: ").append(teamLabel).append(record).append(" ===\n");
+            if (response.results() != null && response.results().stats() != null
+                    && response.results().stats().categories() != null) {
+                for (EspnStatsCategory category : response.results().stats().categories()) {
+                    builder.append(category.displayName()).append(":\n");
+                    for (var stat : category.stats()) {
+                        builder.append("  ").append(stat.abbreviation()).append(": ").append(stat.displayValue()).append("\n");
+                    }
+                }
+            }
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    private String findStatDisplayValue(List<EspnStandingStat> stats, String statName) {
+        if (stats == null) return "?";
+        return stats.stream()
+                .filter(stat -> statName.equals(stat.name()))
+                .findFirst()
+                .map(EspnStandingStat::displayValue)
+                .orElse("?");
     }
 }

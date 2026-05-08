@@ -1,7 +1,6 @@
 package com.solesonic.mcp.workflow.sports.step;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.mcp.service.espn.EspnService;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
@@ -28,10 +27,10 @@ public class FetchEspnRosterStep implements WorkflowStep<SportsResearchWorkflowC
             SportsQuestionType.TRADE_NEWS
     );
 
-    private final TavilySearchService tavilySearchService;
+    private final EspnService espnService;
 
-    public FetchEspnRosterStep(TavilySearchService tavilySearchService) {
-        this.tavilySearchService = tavilySearchService;
+    public FetchEspnRosterStep(EspnService espnService) {
+        this.espnService = espnService;
     }
 
     @Override
@@ -67,34 +66,21 @@ public class FetchEspnRosterStep implements WorkflowStep<SportsResearchWorkflowC
         context.setCurrentStage(SportsWorkflowStage.FETCHING_ESPN_ROSTER);
         executionContext.progressTracker().step(name()).update(0.2, "Fetching current rosters from ESPN");
 
-        List<String> rosterUrls = resolvedTeams.stream()
-                .map(EspnTeamProfile::rosterUrl)
+        List<String> teamAbbreviations = resolvedTeams.stream()
+                .map(EspnTeamProfile::abbreviation)
                 .toList();
 
-        log.info("Fetching ESPN roster pages: {}", rosterUrls);
+        log.info("Fetching ESPN roster via API. Teams: {}", teamAbbreviations);
 
         try {
-            TavilyExtractResponse response = tavilySearchService.extract(rosterUrls);
-            String rosterData = formatExtractResults(response);
+            String rosterData = espnService.getRosterData(teamAbbreviations);
             context.setEspnRosterData(rosterData);
             executionContext.progressTracker().step(name()).done("ESPN roster data fetched");
             return WorkflowDecision.continueWorkflow();
         } catch (Exception exception) {
-            log.error("Failed to fetch ESPN roster pages", exception);
+            log.error("Failed to fetch ESPN roster data", exception);
             context.setEspnRosterData("ESPN roster data unavailable.");
             return WorkflowDecision.continueWorkflow();
         }
-    }
-
-    private String formatExtractResults(TavilyExtractResponse response) {
-        if (response == null || response.results() == null || response.results().isEmpty()) {
-            return "No ESPN roster data retrieved.";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (var result : response.results()) {
-            builder.append("=== ESPN Roster: ").append(result.url()).append(" ===\n");
-            builder.append(result.rawContent()).append("\n\n");
-        }
-        return builder.toString();
     }
 }
