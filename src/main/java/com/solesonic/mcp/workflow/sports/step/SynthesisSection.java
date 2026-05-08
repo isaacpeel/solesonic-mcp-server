@@ -4,31 +4,42 @@ import static com.solesonic.mcp.prompt.PromptConstants.NBA_TERMINOLOGY_CONTENT;
 
 public enum SynthesisSection {
     SCHEDULE(
-        "=============================================\n" +
-        "SCHEDULE SEARCH RESULTS\n" +
-        "=============================================\n" +
-        "{scheduleResults}\n\n",
+            """
+                    =============================================
+                    SCHEDULE SEARCH RESULTS
+                    =============================================
+                    {scheduleResults}
+                    
+                    """,
         "scheduleResults"
     ),
     NEWS(
-        "=============================================\n" +
-        "RECENT NEWS AND INJURY REPORTS\n" +
-        "=============================================\n" +
-        "{newsResults}\n\n",
+            """
+                    =============================================
+                    RECENT NEWS AND INJURY REPORTS
+                    =============================================
+                    {newsResults}
+                    
+                    """,
         "newsResults"
     ),
     STATS(
-        "=============================================\n" +
-        "STATISTICS AND PERFORMANCE DATA\n" +
-        "=============================================\n" +
-        "{statsResults}\n\n",
+            """
+                    =============================================
+                    STATISTICS AND PERFORMANCE DATA
+                    =============================================
+                    {statsResults}
+                    
+                    """,
         "statsResults"
     ),
     TERMINOLOGY(
-        "=============================================\n" +
-        "NBA TERMINOLOGY\n" +
-        "=============================================\n" +
-        NBA_TERMINOLOGY_CONTENT + "\n",
+            """
+                =============================================
+                NBA TERMINOLOGY
+                =============================================
+                """ +
+        "\n"+NBA_TERMINOLOGY_CONTENT + "\n",
         null
     );
 
