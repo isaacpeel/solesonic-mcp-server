@@ -25,9 +25,7 @@ public class EspnClientConfig {
     public WebClient espnApiWebClient(JsonMapper jsonMapper) {
         return WebClient.builder()
                 .baseUrl(espnApiUri)
-                .defaultHeaders(httpHeaders -> {
-                    httpHeaders.setAccept(List.of(MediaType.APPLICATION_JSON));
-                })
+                .defaultHeaders(httpHeaders -> httpHeaders.setAccept(List.of(MediaType.APPLICATION_JSON)))
                 .codecs(configurer -> {
                     configurer.defaultCodecs().jacksonJsonEncoder(new JacksonJsonEncoder(jsonMapper));
                     configurer.defaultCodecs().jacksonJsonDecoder(new JacksonJsonDecoder(jsonMapper));

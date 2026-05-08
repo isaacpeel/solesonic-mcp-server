@@ -4,6 +4,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+@SuppressWarnings("unused")
 public class PromptConstants {
 
     public static final ZoneId EASTERN = ZoneId.of("America/New_York");

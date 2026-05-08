@@ -5,10 +5,12 @@ import com.solesonic.mcp.prompt.PromptConstants;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public record EspnScheduleSummary(List<EspnEvent> games) {
 
     public boolean hasGames() {
@@ -122,8 +124,8 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     private String buildSeriesInfo(List<EspnNote> notes) {
         if (notes == null || notes.isEmpty()) return null;
         return notes.stream()
-                .filter(note -> note.headline() != null)
                 .map(EspnNote::headline)
+                .filter(Objects::nonNull)
                 .collect(Collectors.joining("; "));
     }
 }

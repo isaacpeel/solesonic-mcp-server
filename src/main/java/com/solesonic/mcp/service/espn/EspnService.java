@@ -57,7 +57,7 @@ public class EspnService {
                 .collect(Collectors.toMap(
                         EspnEvent::id,
                         event -> event,
-                        (first, second) -> first,
+                        (first, _) -> first,
                         LinkedHashMap::new
                 ))
                 .values()
@@ -73,9 +73,14 @@ public class EspnService {
     }
 
     private boolean isCompleted(EspnEvent event) {
-        if (event.competitions() == null || event.competitions().isEmpty()) return false;
-        EspnCompetition competition = event.competitions().get(0);
-        if (competition.status() == null || competition.status().type() == null) return false;
+        if (event.competitions() == null || event.competitions().isEmpty()) {
+            return false;
+        }
+
+        EspnCompetition competition = event.competitions().getFirst();
+        if (competition.status() == null || competition.status().type() == null) {
+            return false;
+        }
         return "post".equals(competition.status().type().state());
     }
 
