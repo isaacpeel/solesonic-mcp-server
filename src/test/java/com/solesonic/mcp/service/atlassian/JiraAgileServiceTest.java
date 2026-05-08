@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -20,30 +21,41 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 @ExtendWith(MockitoExtension.class)
 class JiraAgileServiceTest {
+
     @Mock
     private WebClient webClient;
 
-    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
-    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+    @Mock
+    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+
+    @Mock
+    private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private JiraIssueService jiraIssueService;
+
+    @Mock
+    private ChatClient chatClient;
 
     private JiraAgileService service;
 
     @BeforeEach
     void setUp() {
-        requestHeadersUriSpec = mock(WebClient.RequestHeadersUriSpec.class);
-        requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        service = new JiraAgileService(webClient);
+        service = new JiraAgileService(webClient, jiraIssueService, chatClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
+        ReflectionTestUtils.setField(service, "jiraUrlTemplate", "https://test.atlassian.net/browse/{key}");
     }
 
     @Test
-    void listBoards_shouldReturnJson_fromApi() {
-        doReturn(requestHeadersUriSpec).when(webClient).get();
+    void listBoards_shouldReturnBoards_fromApi() {
+        Boards expectedBoards = new Boards(List.of(new Board(1, "self", "Board 1", "scrum")), 50, 1, true);
+
+        when(webClient.get()).thenReturn(requestHeadersUriSpec);
         doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
-        doReturn(Mono.just(new Boards(List.of(new Board(1, "self", "Board 1", "scrum")), 50, 1, true)))
-                .when(requestHeadersSpec).exchangeToMono(any());
+        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(expectedBoards));
 
         ListBoardsRequest listBoardsRequest = new ListBoardsRequest(0, 50, null, null, null);
         Boards boards = service.listBoards(listBoardsRequest);
@@ -54,11 +66,12 @@ class JiraAgileServiceTest {
     }
 
     @Test
-    void getBoard_shouldReturnJson_fromApi() {
-        doReturn(requestHeadersUriSpec).when(webClient).get();
+    void getBoard_shouldReturnBoard_fromApi() {
+        Board expectedBoard = new Board(1, "self", "Board", "scrum");
+
+        when(webClient.get()).thenReturn(requestHeadersUriSpec);
         doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
-        doReturn(Mono.just(new Board(1, "self", "Board", "scrum")))
-                .when(requestHeadersSpec).exchangeToMono(any());
+        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(expectedBoard));
 
         Board board = service.getBoard("1");
 

@@ -8,19 +8,19 @@ Overview
 Discovery and Invocation
 - After `initialize`, clients can list prompts, inspect prompt details, and invoke a prompt to obtain instructions.
 - Typical MCP methods (client dependent):
-  - `prompts/list` — discover available prompts
-  - `prompts/get` — fetch a specific prompt’s schema/parameters
-  - `prompts/execute` — render a prompt by providing required parameters
+  - `prompts/list` -- discover available prompts
+  - `prompts/get` -- fetch a specific prompt's schema/parameters
+  - `prompts/execute` -- render a prompt by providing required parameters
 
 Parameters
 - Common parameters across prompts:
-  - `userMessage` — primary user input or question
-  - `agentName` — optional agent identity for tailored instructions
+  - `userMessage` -- primary user input or question
+  - `agentName` -- optional agent identity for tailored instructions
   - Additional prompt-specific parameters as listed below
 
 Dynamic Tool Injection
 - Each prompt includes the current tool catalog and relevant tool context when rendered.
-- This makes prompts “self-updating” — no hard-coded lists in prompt text.
+- This makes prompts "self-updating" -- no hard-coded lists in prompt text.
 - Web Search tools are injected into all general prompts by default.
 
 Available Prompts
@@ -51,14 +51,14 @@ Available Prompts
   - Description: Structured issue creation with summary, description, acceptance criteria, and optional assignee.
   - When to use: Turning a set of requirements into a Jira issue.
   - Parameters: { `userMessage`: string, `agentName`: string (optional) }
-  - Injected tools: `create_jira_issue`, `assignee_id_lookup`; Web Search tools.
+  - Injected tools: `create_jira_issue`; Web Search tools.
 
-- elicitation prompts (Requirements Elicitation)
-  - Title: Elicitation (multi-turn)
-  - Description: Guides users through structured information gathering to refine the problem statement and desired outcomes.
-  - When to use: At the beginning of ambiguous or underspecified tasks; often precedes Jira issue creation.
-  - Parameters: { `userMessage`: string, `agentName`: string (optional) }
-  - Injected tools: Web Search tools and relevant domain tools depending on the target workflow.
+- task-prompt (Task Prompt)
+  - Title: Task Prompt
+  - Description: A task execution prompt that runs a named tool against a given input.
+  - When to use: Directing the agent to execute a specific tool by name with a user-supplied message.
+  - Parameters: { `userMessage`: string, `taskTool`: string }
+  - Note: `taskTool` is the name of the tool to invoke. `userMessage` is passed as the input to that tool.
 
 Example: Discover and Execute a Prompt (HTTP JSON-RPC)
 - List prompts

@@ -1,13 +1,14 @@
 package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.mcp.model.atlassian.agile.Board;
-import com.solesonic.mcp.model.atlassian.agile.BoardIssues;
-import com.solesonic.mcp.model.atlassian.agile.Boards;
 import com.solesonic.mcp.service.atlassian.JiraAgileService;
+import com.solesonic.mcp.tool.provider.AgileMetaProvider;
+import com.solesonic.mcp.workflow.AgileQueryWorkflow;
+import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -16,52 +17,11 @@ import org.springframework.stereotype.Service;
 public class JiraAgileTools {
     private static final Logger log = LoggerFactory.getLogger(JiraAgileTools.class);
 
-    public static final String LIST_JIRA_BOARDS = "list_jira_boards";
-    public static final String GET_JIRA_BOARD = "get_jira_board";
-    public static final String GET_JIRA_BOARD_CONFIGURATION = "get_jira_board_configuration";
-    public static final String GET_JIRA_BOARD_ISSUES = "get_jira_board_issues";
-
-    private static final String LIST_JIRA_BOARDS_DESCRIPTION = """
-            Retrieves a paginated list of all Jira agile boards accessible to the user.
-            Returns board metadata including IDs, names, types (Scrum/Kanban), and associated projects.
-            Supports filtering by board type, name, project, or account, and pagination for large result sets.
-            Use this when you need to discover available boards, find a specific board, or enumerate workspace boards.
-            """;
-
-    private static final String LIST_JIRA_BOARDS_INPUT_DESCRIPTION = """
-            Optional filters and pagination settings for listing boards.
-            All fields are optional: specify startAt/maxResults for pagination, type to filter by board type (scrum/kanban),
-            name for text matching, projectKeyOrId to scope to a specific project, or accountId to filter by board owner.
-            """;
-
-    private static final String GET_JIRA_BOARD_DESCRIPTION = """
-            Retrieves detailed information about a specific Jira agile board by its unique identifier.
-            Returns board properties including name, type (Scrum or Kanban), location, and associated project details.
-            Use this when you need to inspect board metadata, verify board existence, or gather board configuration context.
-            """;
-
-    private static final String GET_JIRA_BOARD_CONFIGURATION_DESCRIPTION = """
-            Retrieves the complete configuration settings for a specific Jira agile board.
-            Returns board configuration including columns, swimlanes, estimation settings, filters, and workflow mappings.
-            Use this when you need to understand board structure, analyze workflow configuration, or audit board settings.
-            """;
+    public static final String AGILE_WORKFLOW = "agile-workflow";
 
     private static final String BOARD_ID_DESCRIPTION = """
             The unique identifier of the Jira board to retrieve.
             This is typically a numeric string that can be found in board URLs or from the list_jira_boards tool.
-            """;
-
-    private static final String GET_JIRA_BOARD_ISSUES_DESCRIPTION = """
-            Retrieves all issues from a specific Jira agile board (Scrum or Kanban).
-            Returns issue details including keys, summaries, statuses, assignees, and other fields.
-            Supports filtering via JQL (Jira Query Language) and pagination for large result sets.
-            Use this when you need to analyze board contents, track sprint progress, or export issue data.
-            """;
-
-    private static final String GET_JIRA_BOARD_INPUT_DESCRIPTION = """
-            Configuration for retrieving board issues.
-            Must include the board ID (required).
-            Optionally specify JQL filter, pagination (startAt/maxResults), and query validation.
             """;
 
     private static final String START_AT_DESCRIPTION = "The starting index for pagination (0-based). Use this to retrieve subsequent pages of results.";
@@ -75,11 +35,18 @@ public class JiraAgileTools {
     private static final String BOARD_ISSUES_MAX_RESULTS_DESCRIPTION = "The maximum number of issues to return per page. If not specified, defaults to 15.";
     private static final String VALIDATE_QUERY_DESCRIPTION = "Whether to validate the JQL query syntax before execution. Set to true to catch JQL errors early.";
 
-    private final JiraAgileService jiraAgileService;
+    private static final String AGILE_WORKFLOW_DESCRIPTION = """
+            A guided workflow to assist with agile boards.
+            """;
 
-    public JiraAgileTools(JiraAgileService jiraAgileService) {
+    private final JiraAgileService jiraAgileService;
+    private final AgileQueryWorkflow agileQueryWorkflow;
+
+    public JiraAgileTools(JiraAgileService jiraAgileService, AgileQueryWorkflow agileQueryWorkflow) {
         this.jiraAgileService = jiraAgileService;
+        this.agileQueryWorkflow = agileQueryWorkflow;
     }
+
 
     public record ListBoardsRequest(@McpToolParam(required = false, description = START_AT_DESCRIPTION)
                                     Integer startAt,
@@ -105,48 +72,15 @@ public class JiraAgileTools {
 
     public record BoardBacklogIssuesRequest(String boardId, String jql, Integer startAt, Integer maxResults, Boolean validateQuery) {}
 
-    @McpTool(name = LIST_JIRA_BOARDS, description = LIST_JIRA_BOARDS_DESCRIPTION)
+    @McpTool(name = AGILE_WORKFLOW,
+            description = AGILE_WORKFLOW_DESCRIPTION,
+            metaProvider = AgileMetaProvider.class)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-LIST')")
-    public Boards listJiraBoards(@McpToolParam(description = LIST_JIRA_BOARDS_INPUT_DESCRIPTION) ListBoardsRequest listBoardsRequest) {
-        log.info("Listing Jira boards: {}", listBoardsRequest);
-
-        return jiraAgileService.listBoards(listBoardsRequest);
-    }
-
-    @McpTool(name = GET_JIRA_BOARD, description = GET_JIRA_BOARD_DESCRIPTION)
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-GET')")
-    public Board getJiraBoard(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
-        log.info("Getting Jira board: {}", boardId);
-        return jiraAgileService.getBoard(boardId);
-    }
-
-    @McpTool(name = GET_JIRA_BOARD_CONFIGURATION, description = GET_JIRA_BOARD_CONFIGURATION_DESCRIPTION)
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-CONFIG')")
-    public String getJiraBoardConfiguration(@McpToolParam(description = BOARD_ID_DESCRIPTION) String boardId) {
-        log.info("Fetching configuration for Jira board: {}", boardId);
-        return jiraAgileService.getBoardConfiguration(boardId);
-    }
-
-    @McpTool(name = GET_JIRA_BOARD_ISSUES, description = GET_JIRA_BOARD_ISSUES_DESCRIPTION)
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-ISSUES')")
-    public BoardIssues getJiraBoardIssues(@McpToolParam(description = GET_JIRA_BOARD_INPUT_DESCRIPTION) BoardIssuesRequest boardIssuesRequest) {
-        log.info("Getting Jira board issues");
-
-        if(boardIssuesRequest == null) {
-            log.error("Board issues request is null.");
-            throw new IllegalArgumentException("Board issues request is null");
-        }
-
-        if(boardIssuesRequest.boardId == null) {
-            log.error("Board ID is null.");
-            throw new IllegalArgumentException("Board ID is null");
-        }
-
-        log.info("Fetching issues for board: {}", boardIssuesRequest.boardId());
-        BoardIssues boardIssues = jiraAgileService.getBoardIssues(boardIssuesRequest);
-
-        log.info("Found Jira board issues");
-
-        return boardIssues;
+    public String agileWorkflow(
+            McpSyncRequestContext mcpSyncRequestContext,
+            @McpToolParam(description = "The user's natural language question about their agile boards or issues.") String userMessage
+    ) {
+        AgileQueryWorkflowContext workflowContext = agileQueryWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
+        return jiraAgileService.handleBoardSelection(mcpSyncRequestContext, workflowContext);
     }
 }

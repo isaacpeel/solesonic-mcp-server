@@ -34,6 +34,7 @@ import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.springframework.http.HttpMethod.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+@SuppressWarnings("unused")
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -58,7 +59,6 @@ public class MpcSecurityConfig {
     public static final String OPENID = "openid";
     public static final String PROFILE = "profile";
     public static final String EMAIL = "email";
-
 
     private final AuthoritiesService authoritiesService;
 

@@ -9,8 +9,8 @@ Prerequisites
 Local run (no Docker)
 - Build: ./mvnw clean verify
 - Start:
-  - Default: java -jar target/solesonic-mcp-server-1.1.0.jar
-  - With profiles (enable HTTPS): java -Dspring.profiles.active=prod,ssl -jar target/solesonic-mcp-server-1.1.0.jar
+  - Default: java -jar target/solesonic-mcp-server-1.2.0.jar
+  - With profiles (enable HTTPS): java -Dspring.profiles.active=prod,ssl -jar target/solesonic-mcp-server-1.2.0.jar
 - Defaults:
   - Base URL: https://localhost:9443
   - MCP endpoint: POST /mcp
