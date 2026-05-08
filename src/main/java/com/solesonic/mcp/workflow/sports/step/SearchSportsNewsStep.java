@@ -54,13 +54,13 @@ public class SearchSportsNewsStep implements WorkflowStep<SportsResearchWorkflow
     public WorkflowDecision execute(SportsResearchWorkflowContext sportsResearchWorkflowContext, WorkflowExecutionContext workflowExecutionContext) {
         sportsResearchWorkflowContext.setCurrentStage(SEARCHING_NEWS);
 
-        workflowExecutionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
-
         SportsQueryIntent sportsQueryIntent = sportsResearchWorkflowContext.getSportsQueryIntent();
 
         if (Collections.disjoint(sportsQueryIntent.questionTypes(), APPLICABLE_INTENTS)) {
             return WorkflowDecision.continueWorkflow();
         }
+
+        workflowExecutionContext.progressTracker().step(name()).update(0.1, "Searching for recent news and injury reports");
 
         String todayDate = todayDate();
         StringBuilder summary = new StringBuilder();
