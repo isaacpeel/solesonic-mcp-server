@@ -5,6 +5,9 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class PromptConstants {
+
+    public static final ZoneId EASTERN = ZoneId.of("America/New_York");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
     public static final String USER_MESSAGE = "userMessage";
     public static final String TODAY_DATE = "todayDate";
     public static final String QUESTION_TYPE = "questionType";
@@ -53,11 +56,10 @@ public class PromptConstants {
             """;
 
     public static String todayDate() {
-        ZonedDateTime easternTime = ZonedDateTime.now(ZoneId.of("America/New_York"));
+        return formatDateTime(ZonedDateTime.now(EASTERN));
+    }
 
-        // Pattern including time and zone (e.g., 2026-04-30 21:31:00 EST)
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
-
-        return easternTime.format(formatter);
+    public static String formatDateTime(ZonedDateTime dateTime) {
+        return dateTime.withZoneSameInstant(EASTERN).format(DATE_TIME_FORMATTER);
     }
 }

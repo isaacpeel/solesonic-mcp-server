@@ -1,7 +1,7 @@
 package com.solesonic.mcp.workflow.sports.step;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.mcp.model.espn.EspnScheduleSummary;
+import com.solesonic.mcp.service.espn.EspnService;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.mcp.workflow.sports.model.EspnTeamProfile;
 import org.slf4j.Logger;
@@ -15,44 +15,26 @@ public class FetchEspnScheduleStep {
 
     private static final Logger log = LoggerFactory.getLogger(FetchEspnScheduleStep.class);
 
-    private static final String ESPN_NBA_SCHEDULE_URL = "https://www.espn.com/nba/schedule";
+    private final EspnService espnService;
 
-    private final TavilySearchService tavilySearchService;
-
-    public FetchEspnScheduleStep(TavilySearchService tavilySearchService) {
-        this.tavilySearchService = tavilySearchService;
+    public FetchEspnScheduleStep(EspnService espnService) {
+        this.espnService = espnService;
     }
 
-    public String fetch(SportsResearchWorkflowContext context) {
+    public EspnScheduleSummary fetch(SportsResearchWorkflowContext context) {
         List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();
 
-        List<String> urls = (resolvedTeams != null && !resolvedTeams.isEmpty())
-                ? resolvedTeams.stream().map(EspnTeamProfile::scheduleUrl).toList()
-                : List.of(ESPN_NBA_SCHEDULE_URL);
+        List<String> teamAbbreviations = (resolvedTeams != null && !resolvedTeams.isEmpty())
+                ? resolvedTeams.stream().map(EspnTeamProfile::abbreviation).toList()
+                : List.of();
 
-        log.info("Fetching ESPN schedule pages: {}", urls);
+        log.info("Fetching ESPN schedule via API. Teams: {}", teamAbbreviations);
+
         try {
-            TavilyExtractResponse response = tavilySearchService.extract(urls);
-            return formatExtractResults(response);
+            return espnService.getScheduleSummary(teamAbbreviations);
         } catch (Exception exception) {
-            log.warn("ESPN schedule extraction failed: {}", exception.getMessage());
-            return null;
+            log.warn("ESPN schedule API fetch failed: {}", exception.getMessage());
+            return new EspnScheduleSummary(List.of());
         }
-    }
-
-    private String formatExtractResults(TavilyExtractResponse response) {
-        if (response == null || response.results() == null || response.results().isEmpty()) {
-            return null;
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (var result : response.results()) {
-            if (result.rawContent() != null && !result.rawContent().isBlank()) {
-                builder.append("=== ESPN Schedule: ").append(result.url()).append(" ===\n");
-                builder.append(result.rawContent()).append("\n\n");
-            }
-        }
-
-        return builder.isEmpty() ? null : builder.toString();
     }
 }

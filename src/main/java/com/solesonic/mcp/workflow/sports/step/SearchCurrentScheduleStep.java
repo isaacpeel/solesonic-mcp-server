@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.sports.step;
 
+import com.solesonic.mcp.model.espn.EspnScheduleSummary;
 import com.solesonic.mcp.workflow.framework.WorkflowDecision;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowStep;
@@ -52,12 +53,12 @@ public class SearchCurrentScheduleStep implements WorkflowStep<SportsResearchWor
         String currentDate = sportsResearchWorkflowContext.currentDateTime();
         String teamQuery = buildTeamQueryString(sportsQueryIntent);
 
-        // Tier 1: Direct ESPN extract — team-specific URLs if resolved, otherwise general NBA schedule
-        String espnResult = fetchEspnScheduleStep.fetch(sportsResearchWorkflowContext);
+        // Tier 1: ESPN JSON API — structured, no scraping
+        EspnScheduleSummary espnScheduleSummary = fetchEspnScheduleStep.fetch(sportsResearchWorkflowContext);
 
-        if (isSufficient(espnResult)) {
+        if (espnScheduleSummary.hasUpcomingOrLiveGames()) {
             log.info("Schedule found on ESPN — skipping NBA.com and Tavily");
-            sportsResearchWorkflowContext.setScheduleSearchSummary(espnResult);
+            sportsResearchWorkflowContext.setScheduleSearchSummary(espnScheduleSummary.toFormattedString());
             executionContext.progressTracker().step(name()).done("Schedule found on ESPN");
             return WorkflowDecision.continueWorkflow();
         }
