@@ -186,7 +186,9 @@ public class DeepPlayerAnalysisStep implements WorkflowStep<SportsResearchWorkfl
     }
 
     private String formatSearchResults(TavilySearchResponse response) {
-        if (response == null) return "No results.\n";
+        if (response == null) {
+            return "No results.\n";
+        }
         StringBuilder builder = new StringBuilder();
         if (response.answer() != null && !response.answer().isBlank()) {
             builder.append("Summary: ").append(response.answer()).append("\n\n");

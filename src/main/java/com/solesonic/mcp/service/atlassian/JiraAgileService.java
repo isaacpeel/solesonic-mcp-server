@@ -200,7 +200,9 @@ public class JiraAgileService {
 
     private void emitProgress(AgileQueryWorkflowContext workflowContext, String message) {
         WorkflowExecutionContext executionContext = workflowContext.getExecutionContext();
-        if (executionContext == null) return;
+        if (executionContext == null) {
+            return;
+        }
         executionContext.notificationService().publish(
                 WorkflowEvent.stepProgress(
                         executionContext.workflowName(),

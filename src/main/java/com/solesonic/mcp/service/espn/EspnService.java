@@ -120,7 +120,9 @@ public class EspnService {
                 continue;
             }
             for (EspnStandingsEntry entry : conference.standings().entries()) {
-                if (entry.team() == null) continue;
+                if (entry.team() == null) {
+                    continue;
+                }
                 String wins = findStatDisplayValue(entry.stats(), "wins");
                 String losses = findStatDisplayValue(entry.stats(), "losses");
                 String winPercent = findStatDisplayValue(entry.stats(), "winPercent");
@@ -164,7 +166,9 @@ public class EspnService {
     }
 
     private String findStatDisplayValue(List<EspnStandingStat> stats, String statName) {
-        if (stats == null) return "?";
+        if (stats == null) {
+            return "?";
+        }
         return stats.stream()
                 .filter(stat -> statName.equals(stat.name()))
                 .findFirst()

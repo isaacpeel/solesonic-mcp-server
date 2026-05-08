@@ -18,7 +18,9 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     public boolean hasUpcomingOrLiveGames() {
-        if (games == null) return false;
+        if (games == null) {
+            return false;
+        }
         return games.stream()
                 .anyMatch(event -> {
                     String state = stateOf(event);
@@ -27,21 +29,27 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     public List<EspnEvent> liveGames() {
-        if (games == null) return List.of();
+        if (games == null) {
+            return List.of();
+        }
         return games.stream()
                 .filter(event -> "in".equals(stateOf(event)))
                 .toList();
     }
 
     public Optional<EspnEvent> nextUpcomingGame() {
-        if (games == null) return Optional.empty();
+        if (games == null) {
+            return Optional.empty();
+        }
         return games.stream()
                 .filter(event -> "pre".equals(stateOf(event)))
                 .min(java.util.Comparator.comparing(EspnEvent::date));
     }
 
     public String toFormattedString() {
-        if (!hasGames()) return null;
+        if (!hasGames()) {
+            return null;
+        }
         StringBuilder builder = new StringBuilder();
         builder.append("=== NBA Schedule (ESPN) ===\n\n");
         for (EspnEvent event : games) {
@@ -76,12 +84,17 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     private EspnCompetition firstCompetition(EspnEvent event) {
-        if (event.competitions() == null || event.competitions().isEmpty()) return null;
-        return event.competitions().get(0);
+        if (event.competitions() == null || event.competitions().isEmpty()) {
+            return null;
+        }
+
+        return event.competitions().getFirst();
     }
 
     private String buildMatchup(List<EspnCompetitor> competitors) {
-        if (competitors == null || competitors.isEmpty()) return null;
+        if (competitors == null || competitors.isEmpty()) {
+            return null;
+        }
 
         String awayAbbreviation = competitors.stream()
                 .filter(competitor -> "away".equals(competitor.homeAway()))
@@ -99,7 +112,9 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     private String formatDate(String isoDate) {
-        if (isoDate == null) return null;
+        if (isoDate == null) {
+            return null;
+        }
         try {
             ZonedDateTime dateTime = ZonedDateTime.parse(isoDate, DateTimeFormatter.ISO_DATE_TIME);
             return PromptConstants.formatDateTime(dateTime);
@@ -109,12 +124,16 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     private String buildStatusDetail(EspnStatus status) {
-        if (status == null || status.type() == null) return null;
+        if (status == null || status.type() == null) {
+            return null;
+        }
         return status.type().shortDetail();
     }
 
     private String buildBroadcast(List<EspnBroadcast> broadcasts) {
-        if (broadcasts == null || broadcasts.isEmpty()) return null;
+        if (broadcasts == null || broadcasts.isEmpty()) {
+            return null;
+        }
         return broadcasts.stream()
                 .filter(broadcast -> broadcast.names() != null)
                 .flatMap(broadcast -> broadcast.names().stream())
@@ -122,7 +141,9 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
     }
 
     private String buildSeriesInfo(List<EspnNote> notes) {
-        if (notes == null || notes.isEmpty()) return null;
+        if (notes == null || notes.isEmpty()) {
+            return null;
+        }
         return notes.stream()
                 .map(EspnNote::headline)
                 .filter(Objects::nonNull)
