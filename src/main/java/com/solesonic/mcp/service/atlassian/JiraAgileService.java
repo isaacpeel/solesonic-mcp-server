@@ -248,7 +248,7 @@ public class JiraAgileService {
         }
 
         emitProgress(workflowContext, "Collecting issues to transition on board '%s'…".formatted(board.name()));
-        List<String> issueKeys = collectAllMatchingIssueKeys(board, jqlFilter, 0);
+        List<String> issueKeys = collectAllMatchingIssueKeys(board, jqlFilter);
 
         if (issueKeys.isEmpty()) {
             return "No issues found matching the filter on board **%s**.".formatted(board.name());
@@ -402,9 +402,9 @@ public class JiraAgileService {
         return summary.toString();
     }
 
-    private List<String> collectAllMatchingIssueKeys(Board board, String jqlFilter, int startAt) {
+    private List<String> collectAllMatchingIssueKeys(Board board, String jqlFilter) {
         List<String> allKeys = new ArrayList<>();
-        int currentStartAt = startAt;
+        int currentStartAt = 0;
 
         while (true) {
             JiraAgileTools.BoardIssuesRequest boardIssuesRequest = new JiraAgileTools.BoardIssuesRequest(
