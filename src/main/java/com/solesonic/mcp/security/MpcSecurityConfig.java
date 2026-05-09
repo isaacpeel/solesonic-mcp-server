@@ -78,6 +78,9 @@ public class MpcSecurityConfig {
     @SuppressWarnings("unused")
     private String clientRegistrationResource;
 
+    @Value("${solesonic.sports-agent.security.enabled:true}")
+    private boolean sportsAgentSecurityEnabled;
+
     public MpcSecurityConfig(AuthoritiesService authoritiesService) {
         this.authoritiesService = authoritiesService;
     }
@@ -135,12 +138,25 @@ public class MpcSecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint())
                 )
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authz -> authz
-                        .requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                        .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/mcp/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(authz -> {
+                    authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                         .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                         .requestMatchers(HttpMethod.OPTIONS, "/mcp/**").permitAll()
+                         .requestMatchers("/.well-known/agent-card.json").permitAll()
+                         .requestMatchers("/card").permitAll();
+
+                    if (sportsAgentSecurityEnabled) {
+                        authz.requestMatchers(POST, "/").hasAuthority("ROLE_MCP-WEB-SEARCH")
+                             .requestMatchers(GET, "/tasks/*").hasAuthority("ROLE_MCP-WEB-SEARCH")
+                             .requestMatchers(POST, "/tasks/*/cancel").hasAuthority("ROLE_MCP-WEB-SEARCH");
+                    } else {
+                        authz.requestMatchers(POST, "/").permitAll()
+                             .requestMatchers(GET, "/tasks/*").permitAll()
+                             .requestMatchers(POST, "/tasks/*/cancel").permitAll();
+                    }
+
+                    authz.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder())

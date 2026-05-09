@@ -1,7 +1,6 @@
 package com.solesonic.mcp.prompt;
 
 import com.solesonic.mcp.command.SportsCommandProvider;
-import com.solesonic.mcp.tool.sports.SportsResearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +14,6 @@ import java.util.Map;
 
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
-import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
 
 @SuppressWarnings("unused")
 @Service
@@ -24,7 +22,6 @@ public class SportsPromptProvider {
 
     private static final String AGENT_NAME = "agentName";
     private static final String INPUT = "input";
-    private static final String AVAILABLE_TOOLS = "available_tools";
 
     private static final String DESCRIPTION = "Research sportsball schedules, game previews, player stats, and news using live web search.";
 
@@ -43,12 +40,9 @@ public class SportsPromptProvider {
     ) {
         log.info("Getting sports research prompt.");
 
-        String availableToolsList = availableTools(SportsResearchTools.class);
-
         Map<String, Object> templateVariables = Map.of(
                 AGENT_NAME, agentName,
-                INPUT, userMessage,
-                AVAILABLE_TOOLS, availableToolsList
+                INPUT, userMessage
         );
 
         return buildPromptResult("sports-prompt", this.sportsPrompt, templateVariables);

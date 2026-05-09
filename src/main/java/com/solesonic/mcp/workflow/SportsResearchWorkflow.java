@@ -8,7 +8,6 @@ import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowDefinition;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,14 +28,10 @@ public class SportsResearchWorkflow {
         this.executionContextFactory = executionContextFactory;
     }
 
-    public SportsResearchWorkflowContext startWorkflow(
-            McpSyncRequestContext mcpSyncRequestContext,
-            String userMessage
-    ) {
+    public SportsResearchWorkflowContext startWorkflow(String userMessage) {
         log.info("Starting NBA research workflow");
 
         WorkflowExecutionContext executionContext = executionContextFactory.create(
-                mcpSyncRequestContext,
                 SportsResearchWorkflowDefinition.WORKFLOW_NAME,
                 sportsResearchWorkflowDefinition.stepWeights()
         );

@@ -31,6 +31,22 @@ public class WorkflowExecutionContextFactory {
         );
     }
 
+    public WorkflowExecutionContext create(
+            String workflowName,
+            Map<String, Double> stepWeights
+    ) {
+        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> {});
+        WorkflowNotificationService notificationService = new LoggingWorkflowNotificationService(progressReporter);
+
+        return new WorkflowExecutionContext(
+                workflowName,
+                UUID.randomUUID().toString(),
+                notificationService,
+                stepWeights,
+                Map.of()
+        );
+    }
+
     private String resolveCorrelationId(Map<String, Object> requestMetadata) {
         if (requestMetadata == null || requestMetadata.isEmpty()) {
             return UUID.randomUUID().toString();

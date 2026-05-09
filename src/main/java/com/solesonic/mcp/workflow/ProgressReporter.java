@@ -21,7 +21,7 @@ public final class ProgressReporter {
         this.lastPercent = new AtomicInteger(0);
     }
 
-    ProgressReporter(BiConsumer<Integer, String> emitter) {
+    public ProgressReporter(BiConsumer<Integer, String> emitter) {
         this.emitter = Objects.requireNonNull(emitter, "emitter must not be null");
         this.lastPercent = new AtomicInteger(0);
     }
