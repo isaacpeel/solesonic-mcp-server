@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 @Component
 public class WorkflowExecutionContextFactory {
@@ -28,6 +29,23 @@ public class WorkflowExecutionContextFactory {
                 notificationService,
                 stepWeights,
                 requestMetadata
+        );
+    }
+
+    public WorkflowExecutionContext create(
+            BiConsumer<Integer, String> progressEmitter,
+            String workflowName,
+            Map<String, Double> stepWeights
+    ) {
+        ProgressReporter progressReporter = new ProgressReporter(progressEmitter);
+        WorkflowNotificationService notificationService = new LoggingWorkflowNotificationService(progressReporter);
+
+        return new WorkflowExecutionContext(
+                workflowName,
+                UUID.randomUUID().toString(),
+                notificationService,
+                stepWeights,
+                Map.of()
         );
     }
 

@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+
 @Component
 public class SportsResearchWorkflow {
     private static final Logger log = LoggerFactory.getLogger(SportsResearchWorkflow.class);
@@ -28,10 +30,14 @@ public class SportsResearchWorkflow {
         this.executionContextFactory = executionContextFactory;
     }
 
-    public SportsResearchWorkflowContext startWorkflow(String userMessage) {
+    public SportsResearchWorkflowContext startWorkflow(
+            String userMessage,
+            BiConsumer<Integer, String> progressEmitter
+    ) {
         log.info("Starting NBA research workflow");
 
         WorkflowExecutionContext executionContext = executionContextFactory.create(
+                progressEmitter,
                 SportsResearchWorkflowDefinition.WORKFLOW_NAME,
                 sportsResearchWorkflowDefinition.stepWeights()
         );
@@ -46,5 +52,9 @@ public class SportsResearchWorkflow {
         }
 
         return workflowContext;
+    }
+
+    public SportsResearchWorkflowContext startWorkflow(String userMessage) {
+        return startWorkflow(userMessage, (percent, message) -> {});
     }
 }

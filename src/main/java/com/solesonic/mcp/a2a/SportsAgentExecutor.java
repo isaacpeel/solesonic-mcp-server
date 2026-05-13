@@ -7,6 +7,8 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.Message;
+import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +37,13 @@ public class SportsAgentExecutor implements AgentExecutor {
 
         try {
             SportsResearchWorkflowContext workflowContext =
-                    sportsResearchWorkflow.startWorkflow(userMessage);
+                    sportsResearchWorkflow.startWorkflow(userMessage, (percent, progressMessage) -> {
+                        Message statusMessage = updater.newAgentMessage(
+                                List.of(new TextPart(progressMessage)),
+                                null
+                        );
+                        updater.updateStatus(TaskState.WORKING, statusMessage);
+                    });
 
             String analysis = workflowContext.getFinalAnalysis();
             if (analysis == null || analysis.isBlank()) {
