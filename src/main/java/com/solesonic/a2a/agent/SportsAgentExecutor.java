@@ -1,7 +1,7 @@
 package com.solesonic.a2a.agent;
 
-import com.solesonic.mcp.workflow.SportsResearchWorkflow;
-import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
+import com.solesonic.a2a.workflow.SportsResearchWorkflow;
+import com.solesonic.a2a.workflow.sports.SportsResearchWorkflowContext;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;

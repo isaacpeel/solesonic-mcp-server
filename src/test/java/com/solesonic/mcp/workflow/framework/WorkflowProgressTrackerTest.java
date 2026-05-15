@@ -1,5 +1,9 @@
 package com.solesonic.mcp.workflow.framework;
 
+import com.solesonic.a2a.workflow.framework.WorkflowEvent;
+import com.solesonic.a2a.workflow.framework.WorkflowEventType;
+import com.solesonic.a2a.workflow.framework.WorkflowNotificationService;
+import com.solesonic.a2a.workflow.framework.WorkflowProgressTracker;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

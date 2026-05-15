@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow;
 
+import com.solesonic.a2a.workflow.ProgressReporter;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

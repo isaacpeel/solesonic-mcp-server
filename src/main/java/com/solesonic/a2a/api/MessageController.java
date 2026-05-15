@@ -7,12 +7,13 @@ import io.a2a.spec.SendMessageResponse;
 import io.a2a.spec.SendStreamingMessageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/a2a")
-//@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTION')")
+@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTE')")
 public class MessageController {
 
     private final TaskService taskService;

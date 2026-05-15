@@ -60,6 +60,9 @@ public class MpcSecurityConfig {
     public static final String OPENID = "openid";
     public static final String PROFILE = "profile";
     public static final String EMAIL = "email";
+    public static final String MCP_PREFIX = "/mcp/**";
+    public static final String AGENT_CARD_POSTIX = "/.well-known/agent-card.json";
+    public static final String AGENT_PREFIX = "/a2a/**";
 
     private final AuthoritiesService authoritiesService;
 
@@ -138,12 +141,11 @@ public class MpcSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authz -> {
                     authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                         .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                         .requestMatchers(HttpMethod.OPTIONS, "/mcp/**").permitAll()
-                         .requestMatchers("/.well-known/agent-card.json").permitAll()
-                         .requestMatchers("/a2a").permitAll()
-                         .requestMatchers("/a2a/**").hasAuthority("ROLE_MCP-WEB-SEARCH")
-                         .anyRequest().authenticated();
+                            .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                            .requestMatchers(HttpMethod.OPTIONS, MCP_PREFIX).permitAll()
+                            .requestMatchers(AGENT_CARD_POSTIX).permitAll()
+                            .requestMatchers(AGENT_PREFIX).authenticated()
+                            .anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
@@ -173,7 +175,7 @@ public class MpcSecurityConfig {
 
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(SC_UNAUTHORIZED);
-            response.setHeader(WWW_AUTHENTICATE, "\"%s%s\"".formatted(baseResource, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE));
+            response.setHeader(WWW_AUTHENTICATE, "\"%s%s\"" .formatted(baseResource, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE));
         };
     }
 

@@ -6,11 +6,11 @@ import com.solesonic.mcp.model.atlassian.agile.BoardIssues;
 import com.solesonic.mcp.model.atlassian.agile.Boards;
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
-import com.solesonic.mcp.workflow.agile.AgileQueryResult;
-import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
+import com.solesonic.a2a.workflow.agile.AgileQueryResult;
+import com.solesonic.a2a.workflow.agile.AgileQueryWorkflowContext;
 import com.solesonic.mcp.tool.McpConfirmations;
-import com.solesonic.mcp.workflow.framework.WorkflowEvent;
-import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
+import com.solesonic.a2a.workflow.framework.WorkflowEvent;
+import com.solesonic.a2a.workflow.framework.WorkflowExecutionContext;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.*;
-import static com.solesonic.mcp.workflow.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
+import static com.solesonic.a2a.workflow.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 
 @Service
 public class JiraAgileService {

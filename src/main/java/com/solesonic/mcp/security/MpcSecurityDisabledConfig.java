@@ -12,7 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class MpcSecurityDisabledConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authz -> authz.anyRequest().permitAll());

@@ -1,8 +1,8 @@
 package com.solesonic.a2a.agent;
 
-import com.solesonic.mcp.workflow.AgileQueryWorkflow;
-import com.solesonic.mcp.workflow.agile.AgileQueryResult;
-import com.solesonic.mcp.workflow.agile.AgileQueryWorkflowContext;
+import com.solesonic.a2a.workflow.AgileQueryWorkflow;
+import com.solesonic.a2a.workflow.agile.AgileQueryResult;
+import com.solesonic.a2a.workflow.agile.AgileQueryWorkflowContext;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;

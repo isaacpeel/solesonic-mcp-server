@@ -1,14 +1,18 @@
 package com.solesonic.mcp.workflow.jira;
 
-import com.solesonic.mcp.workflow.framework.WorkflowDecision;
-import com.solesonic.mcp.workflow.framework.WorkflowDefinition;
-import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
-import com.solesonic.mcp.workflow.framework.WorkflowNotificationService;
-import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
-import com.solesonic.mcp.workflow.framework.WorkflowPendingInput;
-import com.solesonic.mcp.workflow.framework.WorkflowQuestion;
-import com.solesonic.mcp.workflow.framework.WorkflowRunner;
-import com.solesonic.mcp.workflow.framework.WorkflowStep;
+import com.solesonic.a2a.workflow.framework.WorkflowDecision;
+import com.solesonic.a2a.workflow.framework.WorkflowDefinition;
+import com.solesonic.a2a.workflow.framework.WorkflowExecutionContext;
+import com.solesonic.a2a.workflow.framework.WorkflowNotificationService;
+import com.solesonic.a2a.workflow.framework.WorkflowOutcome;
+import com.solesonic.a2a.workflow.framework.WorkflowPendingInput;
+import com.solesonic.a2a.workflow.framework.WorkflowQuestion;
+import com.solesonic.a2a.workflow.framework.WorkflowRunner;
+import com.solesonic.a2a.workflow.framework.WorkflowStep;
+import com.solesonic.a2a.workflow.jira.CreateJiraWorkflowContext;
+import com.solesonic.a2a.workflow.jira.CreateJiraWorkflowDefinition;
+import com.solesonic.a2a.workflow.jira.CreateJiraWorkflowService;
+import com.solesonic.a2a.workflow.jira.WorkflowStage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

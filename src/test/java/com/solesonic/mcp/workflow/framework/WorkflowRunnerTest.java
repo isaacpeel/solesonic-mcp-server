@@ -1,5 +1,6 @@
 package com.solesonic.mcp.workflow.framework;
 
+import com.solesonic.a2a.workflow.framework.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

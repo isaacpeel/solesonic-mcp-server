@@ -1,10 +1,10 @@
 package com.solesonic.a2a.agent;
 
-import com.solesonic.mcp.workflow.CreateJiraWorkflow;
-import com.solesonic.mcp.workflow.framework.UserInputRequiredException;
-import com.solesonic.mcp.workflow.framework.WorkflowPendingInput;
-import com.solesonic.mcp.workflow.framework.WorkflowQuestion;
-import com.solesonic.mcp.workflow.model.JiraIssueCreatePayload;
+import com.solesonic.a2a.workflow.CreateJiraWorkflow;
+import com.solesonic.a2a.workflow.framework.UserInputRequiredException;
+import com.solesonic.a2a.workflow.framework.WorkflowPendingInput;
+import com.solesonic.a2a.workflow.framework.WorkflowQuestion;
+import com.solesonic.a2a.workflow.model.JiraIssueCreatePayload;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;

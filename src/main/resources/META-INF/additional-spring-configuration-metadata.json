@@ -19,5 +19,10 @@
       "name": "solesonic.mcp.resource",
       "type": "java.lang.String",
       "description": "The resource URI to use for dynamically registered clients."
+    },
+    {
+      "name": "solesonic.agent.security.enabled",
+      "type": "java.lang.String",
+      "description": "Disables security for local dev."
     }
   ] }

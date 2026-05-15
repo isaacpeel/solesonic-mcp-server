@@ -2,8 +2,6 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
 import com.solesonic.mcp.service.atlassian.JiraIssueService;
-import com.solesonic.mcp.tool.provider.CreateJiraMetaProvider;
-import com.solesonic.mcp.workflow.CreateJiraWorkflow;
 import com.solesonic.mcp.tool.McpConfirmations;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import org.slf4j.Logger;
@@ -24,83 +22,20 @@ import java.util.UUID;
 public class JiraIssueTools {
 
     private static final Logger log = LoggerFactory.getLogger(JiraIssueTools.class);
-    public static final String CREATE_JIRA_ISSUE = "create_jira_issue";
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
     public static final String GET_JIRA_ISSUE = "get_jira_issue";
     public static final String CHAT_ID = "chatId";
 
-    public static final String JIRA_ISSUE_TEMPLATE = """
-            ## Jira Issue Created
-
-            **[%s](%s)**
-
-            **Summary:** %s
-
-            **Description:**
-            %s
-
-            **Acceptance Criteria:**
-            %s
-            **Assignee:** %s
-            """;
-
     private final JiraIssueService jiraIssueService;
-    private final CreateJiraWorkflow createJiraWorkflow;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public JiraIssueTools(JiraIssueService jiraIssueService,
-                          CreateJiraWorkflow createJiraWorkflow) {
+    public JiraIssueTools(JiraIssueService jiraIssueService) {
         this.jiraIssueService = jiraIssueService;
-        this.createJiraWorkflow = createJiraWorkflow;
     }
 
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {
-    }
-
-    @SuppressWarnings("unused")
-    @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
-    @McpTool(name = CREATE_JIRA_ISSUE, description = "Workflow to create a jira issue.", metaProvider = CreateJiraMetaProvider.class)
-    public String createJiraWorkflow(
-            McpSyncRequestContext mcpSyncRequestContext,
-            @McpToolParam(description = "The users request.") String userMessage
-    ) {
-        var jiraIssueCreatePayload = createJiraWorkflow.startWorkflow(mcpSyncRequestContext, userMessage);
-
-        CreateJiraRequest createJiraRequest = new CreateJiraRequest(
-                jiraIssueCreatePayload.summary(),
-                jiraIssueCreatePayload.description(),
-                jiraIssueCreatePayload.acceptanceCriteria(),
-                jiraIssueCreatePayload.assigneeLookupResult().assigneeId());
-
-        log.info("Invoking create jira tool");
-        log.debug("Summary: {}", createJiraRequest.summary);
-        log.debug("Description: {}", createJiraRequest.description);
-        log.debug("Assignee ID: {}", createJiraRequest.assigneeId);
-
-        JiraIssue jiraIssue = jiraIssueService.convert(jiraIssueCreatePayload);
-        JiraIssue created = jiraIssueService.create(jiraIssue);
-
-        log.debug("Created jira issue: {}", created);
-        String jiraUri = jiraUrlTemplate.replace("{key}", created.key());
-        log.debug("Using jira uri: {}", jiraUri);
-
-        StringBuilder acceptanceCriteriaLines = new StringBuilder();
-        createJiraRequest.acceptanceCriteria().forEach(criterion ->
-                acceptanceCriteriaLines.append("- ").append(criterion.strip().replace("\n", " ")).append("\n")
-        );
-
-        String assigneeDisplay = jiraIssueCreatePayload.assigneeLookupResult().assigneeName();
-
-        return JIRA_ISSUE_TEMPLATE.formatted(
-                created.key(),
-                jiraUri,
-                createJiraRequest.summary(),
-                createJiraRequest.description(),
-                acceptanceCriteriaLines,
-                assigneeDisplay
-        );
     }
 
     @SuppressWarnings("unused")
