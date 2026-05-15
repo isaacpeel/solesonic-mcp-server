@@ -1,4 +1,4 @@
-package com.solesonic.a2a.config;
+package com.solesonic.a2a.agent;
 
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
@@ -10,27 +10,32 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 @Configuration
-public class SportsAgentConfiguration {
+public class SportsAgentCardConfig {
 
     @Bean
     public AgentCard sportsAgentCard(@Value("${solesonic.sports-agent.url}") String agentBaseUrl) {
+
+        AgentCapabilities agentCapabilities = new AgentCapabilities.Builder()
+                .streaming(true)
+                .pushNotifications(true)
+                .build();
+
+        AgentSkill nbaSkill = new AgentSkill.Builder()
+                .id("nba-agent")
+                .name("NBA Agent")
+                .description("Research current NBA schedules, standings, players, trades, and injuries")
+                .tags(List.of("sports", "nba"))
+                .build();
+
         return new AgentCard.Builder()
                 .name("nba-sports-ball")
                 .description("Researches current NBA schedules, standings, players, trades, and injuries from live sources")
                 .url(agentBaseUrl + "/a2a")
                 .version("1.0.0")
-                .capabilities(new AgentCapabilities.Builder()
-                        .streaming(true)
-                        .pushNotifications(true)
-                        .build())
+                .capabilities(agentCapabilities)
                 .defaultInputModes(List.of("text"))
                 .defaultOutputModes(List.of("text"))
-                .skills(List.of(new AgentSkill.Builder()
-                        .id("nba-agent")
-                        .name("NBA Agent")
-                        .description("Research current NBA schedules, standings, players, trades, and injuries")
-                        .tags(List.of("sports", "nba"))
-                        .build()))
+                .skills(List.of(nbaSkill))
                 .protocolVersion("0.3.0")
                 .build();
     }

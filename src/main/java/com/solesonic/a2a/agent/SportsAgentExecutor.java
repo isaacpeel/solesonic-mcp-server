@@ -10,6 +10,7 @@ import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Message;
 import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -27,34 +28,39 @@ public class SportsAgentExecutor implements AgentExecutor {
     }
 
     @Override
-    public void execute(RequestContext context, EventQueue queue) throws JSONRPCError {
-        TaskUpdater updater = new TaskUpdater(context, queue);
-        if (context.getTask() == null) updater.submit();
-        updater.startWork();
+    public void execute(RequestContext requestContext, EventQueue eventQueue) throws JSONRPCError {
+        TaskUpdater taskUpdater = new TaskUpdater(requestContext, eventQueue);
 
-        String userMessage = extractText(context);
+        if (requestContext.getTask() == null) {
+            taskUpdater.submit();
+        }
+
+        taskUpdater.startWork();
+
+        String userMessage = extractText(requestContext);
         log.info("NBA research agent invoked: userMessage={}", userMessage);
 
         try {
-            SportsResearchWorkflowContext workflowContext =
+            SportsResearchWorkflowContext sportsResearchWorkflowContext =
                     sportsResearchWorkflow.startWorkflow(userMessage, (_, progressMessage) -> {
-                        Message statusMessage = updater.newAgentMessage(
-                                List.of(new TextPart(progressMessage)),
-                                null
-                        );
-                        updater.updateStatus(TaskState.WORKING, statusMessage);
+
+                        Message statusMessage = taskUpdater.newAgentMessage(
+                                List.of(new TextPart(progressMessage)), null);
+
+                        taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
                     });
 
-            String analysis = workflowContext.getFinalAnalysis();
-            if (analysis == null || analysis.isBlank()) {
+            String analysis = sportsResearchWorkflowContext.getFinalAnalysis();
+
+            if (StringUtils.isEmpty(analysis)) {
                 analysis = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
             }
 
-            updater.addArtifact(List.of(new TextPart(analysis)), null, null, null);
-            updater.complete();
+            taskUpdater.addArtifact(List.of(new TextPart(analysis)), null, null, null);
+            taskUpdater.complete();
         } catch (Exception exception) {
             log.error("NBA research agent failed: userMessage={}", userMessage, exception);
-            updater.fail();
+            taskUpdater.fail();
         }
     }
 
@@ -64,8 +70,8 @@ public class SportsAgentExecutor implements AgentExecutor {
         updater.cancel();
     }
 
-    private static String extractText(RequestContext context) {
-        return context.getMessage()
+    private static String extractText(RequestContext requestContext) {
+        return requestContext.getMessage()
                 .getParts()
                 .stream()
                 .filter(part -> part instanceof TextPart)

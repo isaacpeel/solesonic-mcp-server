@@ -44,6 +44,7 @@
     <properties>
         <java.version>25</java.version>
         <spring-ai.version>2.0.0-M6</spring-ai.version>
+        <a2a-java-sdk.version>0.3.3.Final</a2a-java-sdk.version>
     </properties>
 
     <dependencies>
@@ -136,9 +137,29 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springaicommunity</groupId>
-            <artifactId>spring-ai-a2a-server-autoconfigure</artifactId>
-            <version>0.2.0</version>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-spec</artifactId>
+            <version>${a2a-java-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-common</artifactId>
+            <version>${a2a-java-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-server-common</artifactId>
+            <version>${a2a-java-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-client</artifactId>
+            <version>${a2a-java-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-transport-jsonrpc</artifactId>
+            <version>${a2a-java-sdk.version}</version>
         </dependency>
     </dependencies>
     <dependencyManagement>

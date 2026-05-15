@@ -6,7 +6,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-class SolesonicMcpServerApplicationTests {
+class SolesonicMcpServerTests {
 
     @Test
     void contextLoads() {

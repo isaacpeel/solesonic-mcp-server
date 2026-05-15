@@ -1,4 +1,4 @@
-package com.solesonic.mcp;
+package com.solesonic;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6,10 +6,10 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @ConfigurationPropertiesScan
 @SpringBootApplication
-public class SolesonicMcpServerApplication {
+public class SolesonicMcpServer {
 
     static void main(String[] args) {
-        SpringApplication.run(SolesonicMcpServerApplication.class, args);
+        SpringApplication.run(SolesonicMcpServer.class, args);
     }
 
 }
