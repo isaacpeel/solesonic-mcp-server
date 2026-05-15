@@ -19,26 +19,25 @@ public class AgentCardController {
 
     private final AgentCardService agentCardService;
 
-    public AgentCardController(AgentCardService agentCardService1, AgentCardService agentCardService) {
-        this.agentCardService = agentCardService1;
+    public AgentCardController(AgentCardService agentCardService) {
+        this.agentCardService = agentCardService;
     }
 
     @GetMapping(path = "/agents")
     public List<String> allAgentCardUris() {
-        return agentCardService.allAgentCards().stream()
-                .map(agentCard->agentCard.url()+"/.well-known/agent.json")
-                .toList();
+        log.info("Getting all agent card URIs.");
+        return agentCardService.allAgentCardUris();
     }
 
     @GetMapping(path = "/{agent}/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public AgentCard getAgentCard(@PathVariable String agent) {
-        log.debug("Serving agent card: {}", agent);
+        log.info("Serving agent card: {}", agent);
         return agentCardService.agentCardByName(agent);
     }
 
     @GetMapping(path = "/{agent}/card", produces = MediaType.APPLICATION_JSON_VALUE)
     public AgentCard getAgentCardV1(@PathVariable String agent) {
-        log.debug("Serving agent card via /sports/card: {}", agent);
+        log.info("Serving agent card via /sports/card: {}", agent);
         return getAgentCard(agent);
     }
 }

@@ -52,6 +52,12 @@ public class AgentCardService {
         return List.copyOf(agentCardsById.values());
     }
 
+    public List<String> allAgentCardUris() {
+        return allAgentCards().stream()
+                .map(agentCard->agentCard.url()+"/.well-known/agent.json")
+                .toList();
+    }
+
     public List<String> allAgentCardIds() {
         return List.copyOf(agentCardsById.keySet());
     }
