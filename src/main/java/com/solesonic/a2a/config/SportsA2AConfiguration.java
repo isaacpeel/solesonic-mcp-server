@@ -27,8 +27,12 @@ public class SportsA2AConfiguration {
                                                PushNotificationConfigStore pushNotificationConfigStore,
                                                PushNotificationSender pushNotificationSender,
                                                Executor a2aExecutor) {
-        return DefaultRequestHandler.create(sportsAgentExecutor, taskStore, queueManager,
-                pushNotificationConfigStore, pushNotificationSender, a2aExecutor);
+        return DefaultRequestHandler.create(sportsAgentExecutor,
+                taskStore,
+                queueManager,
+                pushNotificationConfigStore,
+                pushNotificationSender,
+                a2aExecutor);
     }
 
     @Bean(name = "sportsTaskService")

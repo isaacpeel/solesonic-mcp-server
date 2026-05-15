@@ -38,6 +38,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@ConditionalOnProperty(name = "solesonic.agent.security.enabled", havingValue = "true", matchIfMissing = true)
 public class MpcSecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(MpcSecurityConfig.class);
 
@@ -77,9 +78,6 @@ public class MpcSecurityConfig {
     @Value("${solesonic.mcp.resource}")
     @SuppressWarnings("unused")
     private String clientRegistrationResource;
-
-    @Value("${solesonic.sports-agent.security.enabled:true}")
-    private boolean sportsAgentSecurityEnabled;
 
     public MpcSecurityConfig(AuthoritiesService authoritiesService) {
         this.authoritiesService = authoritiesService;
@@ -143,15 +141,9 @@ public class MpcSecurityConfig {
                          .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
                          .requestMatchers(HttpMethod.OPTIONS, "/mcp/**").permitAll()
                          .requestMatchers("/.well-known/agent-card.json").permitAll()
-                         .requestMatchers("/card").permitAll();
-
-                    if (sportsAgentSecurityEnabled) {
-                        authz.requestMatchers(POST, "/a2a/**").hasAuthority("ROLE_MCP-WEB-SEARCH");
-                    } else {
-                        authz.requestMatchers(POST, "/a2a/**").permitAll();
-                    }
-
-                    authz.anyRequest().authenticated();
+                         .requestMatchers("/a2a").permitAll()
+                         .requestMatchers("/a2a/**").hasAuthority("ROLE_MCP-WEB-SEARCH")
+                         .anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt

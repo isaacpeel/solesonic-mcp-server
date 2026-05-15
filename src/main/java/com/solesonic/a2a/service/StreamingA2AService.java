@@ -29,16 +29,18 @@ public class StreamingA2AService {
     private final JsonMapper jsonMapper;
     private final ServerCallContextFactory serverCallContextFactory;
 
-    public StreamingA2AService(RequestHandler requestHandler, JsonMapper jsonMapper, ServerCallContextFactory serverCallContextFactory) {
+    public StreamingA2AService(RequestHandler requestHandler,
+                               JsonMapper jsonMapper,
+                               ServerCallContextFactory serverCallContextFactory) {
         this.requestHandler = requestHandler;
         this.jsonMapper = jsonMapper;
         this.serverCallContextFactory = serverCallContextFactory;
     }
 
-    public SseEmitter stream(SendStreamingMessageRequest request) {
-        ServerCallContext context = serverCallContextFactory.create();
-        return executeStreamRpc(request.getId(), MESSAGE_STREAM,
-                () -> requestHandler.onMessageSendStream(request.getParams(), context));
+    public SseEmitter stream(SendStreamingMessageRequest sendStreamingMessageRequest) {
+        ServerCallContext serverCallContext = serverCallContextFactory.create();
+        return executeStreamRpc(sendStreamingMessageRequest.getId(), MESSAGE_STREAM,
+                () -> requestHandler.onMessageSendStream(sendStreamingMessageRequest.getParams(), serverCallContext));
     }
 
     public SseEmitter resubscribe(TaskResubscriptionRequest taskResubscriptionRequest) {
