@@ -32,7 +32,7 @@ public class AgileAgentCardConfig {
         return new AgentCard.Builder()
                 .name("agile-query-agent")
                 .description("Parses natural language Jira board queries into structured JQL filters and query plans")
-                .url(agentBaseUrl + "/agile/a2a")
+                .url(agentBaseUrl + "/a2a/agile")
                 .version("1.0.0")
                 .capabilities(agentCapabilities)
                 .defaultInputModes(List.of("text"))

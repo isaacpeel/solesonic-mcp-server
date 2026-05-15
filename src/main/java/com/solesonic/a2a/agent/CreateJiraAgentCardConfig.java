@@ -30,7 +30,7 @@ public class CreateJiraAgentCardConfig {
         return new AgentCard.Builder()
                 .name("create-jira-agent")
                 .description("Generates a structured Jira issue payload from a natural language user story request")
-                .url(agentBaseUrl + "/jira/a2a")
+                .url(agentBaseUrl + "/a2a/jira")
                 .version("1.0.0")
                 .capabilities(agentCapabilities)
                 .defaultInputModes(List.of("text"))

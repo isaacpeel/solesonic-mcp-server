@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 /**
  * A2A executor for the Create Jira workflow.
- *
+ * <p>
  * USER_INPUT_REQUIRED: when the workflow cannot resolve required fields it throws
  * UserInputRequiredException. This executor translates that to TaskState.INPUT_REQUIRED and
  * formats the clarification questions for the A2A client. The task is left open so the client
