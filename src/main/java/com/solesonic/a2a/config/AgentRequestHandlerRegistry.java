@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 @Component
 public class AgentRequestHandlerRegistry {
 
+    public static final String A_2_A_EXECUTOR = "a2aExecutor";
     private final Map<String, RequestHandler> handlersByAgentId;
 
     public AgentRequestHandlerRegistry(
@@ -27,7 +28,7 @@ public class AgentRequestHandlerRegistry {
             QueueManager queueManager,
             PushNotificationConfigStore pushNotificationConfigStore,
             PushNotificationSender pushNotificationSender,
-            @Qualifier("a2aExecutor") Executor a2aExecutor) {
+            @Qualifier(A_2_A_EXECUTOR) Executor a2aExecutor) {
 
         this.handlersByAgentId = agentExecutors.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(
@@ -42,12 +43,12 @@ public class AgentRequestHandlerRegistry {
     }
 
     public RequestHandler getHandler(String agentId) {
-        RequestHandler handler = handlersByAgentId.get(agentId);
+        RequestHandler requestHandler = handlersByAgentId.get(agentId);
 
-        if (handler == null) {
+        if (requestHandler == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent not found: " + agentId);
         }
 
-        return handler;
+        return requestHandler;
     }
 }
