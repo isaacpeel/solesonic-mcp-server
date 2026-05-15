@@ -1,4 +1,4 @@
-package com.solesonic.mcp.a2a;
+package com.solesonic.a2a.config;
 
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
@@ -15,9 +15,9 @@ public class SportsAgentConfiguration {
     @Bean
     public AgentCard sportsAgentCard(@Value("${solesonic.sports-agent.url}") String agentBaseUrl) {
         return new AgentCard.Builder()
-                .name("NBA Sports Research Agent")
+                .name("nba-sports-ball")
                 .description("Researches current NBA schedules, standings, players, trades, and injuries from live sources")
-                .url(agentBaseUrl + "/")
+                .url(agentBaseUrl + "/a2a")
                 .version("1.0.0")
                 .capabilities(new AgentCapabilities.Builder()
                         .streaming(true)
@@ -26,8 +26,8 @@ public class SportsAgentConfiguration {
                 .defaultInputModes(List.of("text"))
                 .defaultOutputModes(List.of("text"))
                 .skills(List.of(new AgentSkill.Builder()
-                        .id("nba-research")
-                        .name("NBA Research")
+                        .id("nba-agent")
+                        .name("NBA Agent")
                         .description("Research current NBA schedules, standings, players, trades, and injuries")
                         .tags(List.of("sports", "nba"))
                         .build()))

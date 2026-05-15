@@ -146,13 +146,9 @@ public class MpcSecurityConfig {
                          .requestMatchers("/card").permitAll();
 
                     if (sportsAgentSecurityEnabled) {
-                        authz.requestMatchers(POST, "/").hasAuthority("ROLE_MCP-WEB-SEARCH")
-                             .requestMatchers(GET, "/tasks/*").hasAuthority("ROLE_MCP-WEB-SEARCH")
-                             .requestMatchers(POST, "/tasks/*/cancel").hasAuthority("ROLE_MCP-WEB-SEARCH");
+                        authz.requestMatchers(POST, "/a2a/**").hasAuthority("ROLE_MCP-WEB-SEARCH");
                     } else {
-                        authz.requestMatchers(POST, "/").permitAll()
-                             .requestMatchers(GET, "/tasks/*").permitAll()
-                             .requestMatchers(POST, "/tasks/*/cancel").permitAll();
+                        authz.requestMatchers(POST, "/a2a/**").permitAll();
                     }
 
                     authz.anyRequest().authenticated();

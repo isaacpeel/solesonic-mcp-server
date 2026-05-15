@@ -1,4 +1,4 @@
-package com.solesonic.mcp.a2a;
+package com.solesonic.a2a.agent;
 
 import com.solesonic.mcp.workflow.SportsResearchWorkflow;
 import com.solesonic.mcp.workflow.sports.SportsResearchWorkflowContext;
@@ -37,7 +37,7 @@ public class SportsAgentExecutor implements AgentExecutor {
 
         try {
             SportsResearchWorkflowContext workflowContext =
-                    sportsResearchWorkflow.startWorkflow(userMessage, (percent, progressMessage) -> {
+                    sportsResearchWorkflow.startWorkflow(userMessage, (_, progressMessage) -> {
                         Message statusMessage = updater.newAgentMessage(
                                 List.of(new TextPart(progressMessage)),
                                 null

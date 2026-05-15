@@ -1,4 +1,4 @@
-package com.solesonic.mcp.a2a;
+package com.solesonic.a2a.config;
 
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.server.tasks.BasePushNotificationSender;
