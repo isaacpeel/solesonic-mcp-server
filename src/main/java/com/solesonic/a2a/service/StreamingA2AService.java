@@ -1,5 +1,6 @@
 package com.solesonic.a2a.service;
 
+import com.solesonic.a2a.config.AgentRequestHandlerRegistry;
 import com.solesonic.a2a.config.ServerCallContextFactory;
 import io.a2a.server.ServerCallContext;
 import io.a2a.server.requesthandlers.RequestHandler;
@@ -7,6 +8,7 @@ import io.a2a.spec.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.adapter.JdkFlowAdapter;
 import tools.jackson.databind.json.JsonMapper;
@@ -15,6 +17,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
+@Service
 public class StreamingA2AService {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingA2AService.class);
@@ -25,25 +28,27 @@ public class StreamingA2AService {
     public static final String MESSAGE_STREAM = "message/stream";
     public static final String TASKS_RESUBSCRIBE = "tasks/resubscribe";
 
-    private final RequestHandler requestHandler;
+    private final AgentRequestHandlerRegistry agentRequestHandlerRegistry;
     private final JsonMapper jsonMapper;
     private final ServerCallContextFactory serverCallContextFactory;
 
-    public StreamingA2AService(RequestHandler requestHandler,
+    public StreamingA2AService(AgentRequestHandlerRegistry agentRequestHandlerRegistry,
                                JsonMapper jsonMapper,
                                ServerCallContextFactory serverCallContextFactory) {
-        this.requestHandler = requestHandler;
+        this.agentRequestHandlerRegistry = agentRequestHandlerRegistry;
         this.jsonMapper = jsonMapper;
         this.serverCallContextFactory = serverCallContextFactory;
     }
 
-    public SseEmitter stream(SendStreamingMessageRequest sendStreamingMessageRequest) {
+    public SseEmitter stream(String agentId, SendStreamingMessageRequest sendStreamingMessageRequest) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext serverCallContext = serverCallContextFactory.create();
         return executeStreamRpc(sendStreamingMessageRequest.getId(), MESSAGE_STREAM,
                 () -> requestHandler.onMessageSendStream(sendStreamingMessageRequest.getParams(), serverCallContext));
     }
 
-    public SseEmitter resubscribe(TaskResubscriptionRequest taskResubscriptionRequest) {
+    public SseEmitter resubscribe(String agentId, TaskResubscriptionRequest taskResubscriptionRequest) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext serverCallContext = serverCallContextFactory.create();
 
         return executeStreamRpc(taskResubscriptionRequest.getId(), TASKS_RESUBSCRIBE,

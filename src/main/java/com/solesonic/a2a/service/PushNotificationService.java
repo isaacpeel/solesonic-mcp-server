@@ -1,5 +1,6 @@
 package com.solesonic.a2a.service;
 
+import com.solesonic.a2a.config.AgentRequestHandlerRegistry;
 import com.solesonic.a2a.config.ServerCallContextFactory;
 import io.a2a.server.ServerCallContext;
 import io.a2a.server.requesthandlers.RequestHandler;
@@ -26,36 +27,41 @@ public class PushNotificationService {
     public static final String PUSH_NOTIFICATION_CONFIG_LIST = "pushNotificationConfig/list";
     public static final String PUSH_NOTIFICATION_CONFIG_DELETE = "pushNotificationConfig/delete";
 
-    private final RequestHandler requestHandler;
+    private final AgentRequestHandlerRegistry agentRequestHandlerRegistry;
     private final ServerCallContextFactory serverCallContextFactory;
 
-    public PushNotificationService(RequestHandler requestHandler, ServerCallContextFactory serverCallContextFactory) {
-        this.requestHandler = requestHandler;
+    public PushNotificationService(AgentRequestHandlerRegistry agentRequestHandlerRegistry,
+                                   ServerCallContextFactory serverCallContextFactory) {
+        this.agentRequestHandlerRegistry = agentRequestHandlerRegistry;
         this.serverCallContextFactory = serverCallContextFactory;
     }
 
-    public ResponseEntity<SetTaskPushNotificationConfigResponse> setPushConfig(SetTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<SetTaskPushNotificationConfigResponse> setPushConfig(String agentId, SetTaskPushNotificationConfigRequest request) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
         return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_SET,
                 () -> new SetTaskPushNotificationConfigResponse(request.getId(), requestHandler.onSetTaskPushNotificationConfig(request.getParams(), context)),
                 error -> new SetTaskPushNotificationConfigResponse(request.getId(), error));
     }
 
-    public ResponseEntity<GetTaskPushNotificationConfigResponse> getPushConfig(GetTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<GetTaskPushNotificationConfigResponse> getPushConfig(String agentId, GetTaskPushNotificationConfigRequest request) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
         return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_GET,
                 () -> new GetTaskPushNotificationConfigResponse(request.getId(), requestHandler.onGetTaskPushNotificationConfig(request.getParams(), context)),
                 error -> new GetTaskPushNotificationConfigResponse(request.getId(), error));
     }
 
-    public ResponseEntity<ListTaskPushNotificationConfigResponse> listPushConfigs(ListTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<ListTaskPushNotificationConfigResponse> listPushConfigs(String agentId, ListTaskPushNotificationConfigRequest request) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
         return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_LIST,
                 () -> new ListTaskPushNotificationConfigResponse(request.getId(), requestHandler.onListTaskPushNotificationConfig(request.getParams(), context)),
                 error -> new ListTaskPushNotificationConfigResponse(request.getId(), error));
     }
 
-    public ResponseEntity<DeleteTaskPushNotificationConfigResponse> deletePushConfig(DeleteTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<DeleteTaskPushNotificationConfigResponse> deletePushConfig(String agentId, DeleteTaskPushNotificationConfigRequest request) {
+        RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
         return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_DELETE,
                 () -> {
