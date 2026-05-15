@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * can send a follow-up message. Resume from that follow-up is not yet implemented in the
  * workflow layer — the next message restarts the workflow from scratch.
  */
-@Component
+@Component("create-jira-agent")
 public class CreateJiraAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(CreateJiraAgentExecutor.class);
 

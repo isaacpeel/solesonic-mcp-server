@@ -18,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
-@Component
+@Component("agile-query-agent")
 public class AgileAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(AgileAgentExecutor.class);
 

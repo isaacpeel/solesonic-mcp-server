@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent;
+package com.solesonic.a2a.model;
 
 import java.util.List;
 

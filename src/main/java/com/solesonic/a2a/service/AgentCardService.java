@@ -1,6 +1,6 @@
 package com.solesonic.a2a.service;
 
-import com.solesonic.a2a.agent.AgentCardDefinition;
+import com.solesonic.a2a.model.AgentCardDefinition;
 import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.AgentSkill;
