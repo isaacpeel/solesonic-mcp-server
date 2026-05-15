@@ -10,33 +10,32 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 @Configuration
-public class SportsAgentCardConfig {
-    public static final String SPORTS_AGENT_CARD = "sportsAgentCard";
+public class CreateJiraAgentCardConfig {
 
-    @Bean(name = SPORTS_AGENT_CARD)
-    public AgentCard sportsAgentCard(@Value("${solesonic.sports-agent.url}") String agentBaseUrl) {
+    @Bean(name = "createJiraAgentCard")
+    public AgentCard createJiraAgentCard(@Value("${solesonic.jira-agent.url}") String agentBaseUrl) {
 
         AgentCapabilities agentCapabilities = new AgentCapabilities.Builder()
                 .streaming(true)
                 .pushNotifications(true)
                 .build();
 
-        AgentSkill nbaSkill = new AgentSkill.Builder()
-                .id("nba-agent")
-                .name("NBA Agent")
-                .description("Research current NBA schedules, standings, players, trades, and injuries")
-                .tags(List.of("sports", "nba"))
+        AgentSkill createJiraSkill = new AgentSkill.Builder()
+                .id("create-jira-issue")
+                .name("Create Jira Issue Agent")
+                .description("Generate a Jira issue from a natural language request")
+                .tags(List.of("jira", "issue", "story"))
                 .build();
 
         return new AgentCard.Builder()
-                .name("nba-sports-ball")
-                .description("Researches current NBA schedules, standings, players, trades, and injuries from live sources")
-                .url(agentBaseUrl + "/a2a/sports")
+                .name("create-jira-agent")
+                .description("Generates a structured Jira issue payload from a natural language user story request")
+                .url(agentBaseUrl + "/jira/a2a")
                 .version("1.0.0")
                 .capabilities(agentCapabilities)
                 .defaultInputModes(List.of("text"))
                 .defaultOutputModes(List.of("text"))
-                .skills(List.of(nbaSkill))
+                .skills(List.of(createJiraSkill))
                 .protocolVersion("0.3.0")
                 .build();
     }

@@ -3,6 +3,7 @@ package com.solesonic.a2a.api;
 import com.solesonic.a2a.service.StreamingA2AService;
 import com.solesonic.a2a.service.TaskService;
 import io.a2a.spec.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,12 +15,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequestMapping("/a2a/tasks")
 //@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTION')")
-public class StreamingTaskController {
+public class TaskController {
 
     private final TaskService taskService;
     private final StreamingA2AService streamingA2AService;
 
-    public StreamingTaskController(TaskService taskService, StreamingA2AService streamingA2AService) {
+    public TaskController(@Qualifier("sportsTaskService") TaskService taskService,
+                          @Qualifier("sportsStreamingA2AService") StreamingA2AService streamingA2AService) {
         this.taskService = taskService;
         this.streamingA2AService = streamingA2AService;
     }

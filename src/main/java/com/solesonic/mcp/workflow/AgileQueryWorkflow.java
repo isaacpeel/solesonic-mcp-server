@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
 
+import java.util.function.BiConsumer;
+
 @Component
 public class AgileQueryWorkflow {
     private static final Logger log = LoggerFactory.getLogger(AgileQueryWorkflow.class);
@@ -49,6 +51,29 @@ public class AgileQueryWorkflow {
 
         if (outcome == WorkflowOutcome.FAILED) {
             throw new JiraException("Agile query workflow failed");
+        }
+
+        return workflowContext;
+    }
+
+    public AgileQueryWorkflowContext startWorkflow(
+            String userMessage,
+            BiConsumer<Integer, String> progressEmitter
+    ) {
+        log.info("Starting Agile workflow");
+        WorkflowExecutionContext executionContext = executionContextFactory.create(
+                progressEmitter,
+                AgileQueryWorkflowDefinition.WORKFLOW_NAME,
+                agileQueryWorkflowDefinition.stepWeights()
+        );
+
+        AgileQueryWorkflowContext workflowContext = new AgileQueryWorkflowContext(userMessage);
+        workflowContext.setExecutionContext(executionContext);
+
+        WorkflowOutcome outcome = agileQueryWorkflowService.run(workflowContext, executionContext);
+
+        if (outcome == WorkflowOutcome.FAILED) {
+            throw new IllegalStateException("Agile query workflow failed");
         }
 
         return workflowContext;

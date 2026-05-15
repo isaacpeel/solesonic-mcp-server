@@ -7,7 +7,6 @@ import io.a2a.spec.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.adapter.JdkFlowAdapter;
 import tools.jackson.databind.json.JsonMapper;
@@ -16,7 +15,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
-@Service
 public class StreamingA2AService {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingA2AService.class);

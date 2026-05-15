@@ -1,6 +1,7 @@
 package com.solesonic.mcp.workflow;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
+import com.solesonic.mcp.workflow.framework.UserInputRequiredException;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContext;
 import com.solesonic.mcp.workflow.framework.WorkflowExecutionContextFactory;
 import com.solesonic.mcp.workflow.framework.WorkflowOutcome;
@@ -12,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.stereotype.Component;
+
+import java.util.function.BiConsumer;
 
 @Component
 public class CreateJiraWorkflow {
@@ -56,6 +59,39 @@ public class CreateJiraWorkflow {
 
         if (payload == null) {
             throw new JiraException("Create Jira workflow completed without payload");
+        }
+
+        return payload;
+    }
+
+    public JiraIssueCreatePayload startWorkflow(
+            String userMessage,
+            BiConsumer<Integer, String> progressEmitter
+    ) {
+        log.info("Starting Create Jira workflow");
+
+        WorkflowExecutionContext executionContext = executionContextFactory.create(
+                progressEmitter,
+                CreateJiraWorkflowDefinition.WORKFLOW_NAME,
+                createJiraWorkflowDefinition.stepWeights()
+        );
+
+        CreateJiraWorkflowContext workflowContext = new CreateJiraWorkflowContext(userMessage);
+
+        WorkflowOutcome outcome = createJiraWorkflowService.run(workflowContext, executionContext);
+
+        if (outcome == WorkflowOutcome.USER_INPUT_REQUIRED) {
+            throw new UserInputRequiredException(workflowContext.getPendingInput());
+        }
+
+        if (outcome == WorkflowOutcome.FAILED) {
+            throw new IllegalStateException("Create Jira workflow failed");
+        }
+
+        JiraIssueCreatePayload payload = workflowContext.getFinalPayload();
+
+        if (payload == null) {
+            throw new IllegalStateException("Create Jira workflow produced no payload");
         }
 
         return payload;
