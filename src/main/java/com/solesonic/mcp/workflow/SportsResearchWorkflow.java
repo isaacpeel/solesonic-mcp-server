@@ -55,6 +55,6 @@ public class SportsResearchWorkflow {
     }
 
     public SportsResearchWorkflowContext startWorkflow(String userMessage) {
-        return startWorkflow(userMessage, (percent, message) -> {});
+        return startWorkflow(userMessage, (_, _) -> {});
     }
 }

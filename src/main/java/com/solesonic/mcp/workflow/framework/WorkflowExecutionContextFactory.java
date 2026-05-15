@@ -53,7 +53,7 @@ public class WorkflowExecutionContextFactory {
             String workflowName,
             Map<String, Double> stepWeights
     ) {
-        ProgressReporter progressReporter = new ProgressReporter((percent, message) -> {});
+        ProgressReporter progressReporter = new ProgressReporter((_, _) -> {});
         WorkflowNotificationService notificationService = new LoggingWorkflowNotificationService(progressReporter);
 
         return new WorkflowExecutionContext(
