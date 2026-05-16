@@ -69,6 +69,7 @@ public class AgentCardService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public List<String> allAgentCardIds() {
         return List.copyOf(agentCardsById.keySet());
     }
@@ -77,6 +78,7 @@ public class AgentCardService {
         return Optional.ofNullable(agentCardsById.get(agentId));
     }
 
+    @SuppressWarnings("unused")
     public AgentCard agentCardByName(String name) {
         return allAgentCards().stream()
                 .filter(agentCard -> agentCard.name().equals(name))
