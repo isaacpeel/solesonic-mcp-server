@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Component("nba-sports-ball")
+@Component("nba")
 public class SportsAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(SportsAgentExecutor.class);
 

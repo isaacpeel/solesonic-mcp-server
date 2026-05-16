@@ -22,7 +22,7 @@
     },
     {
       "name": "solesonic.agent.security.enabled",
-      "type": "java.lang.String",
+      "type": "java.lang.Boolean",
       "description": "Disables security for local dev."
     }
   ] }

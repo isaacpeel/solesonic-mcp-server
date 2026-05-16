@@ -3,7 +3,6 @@
   "name": "agile-query-agent",
   "description": "Parses natural language Jira board queries into structured JQL filters and query plans",
   "version": "1.0.0",
-  "urlPath": "/a2a/agile-query-agent",
   "protocolVersion": "0.3.0",
   "capabilities": {
     "streaming": true,

@@ -3,7 +3,6 @@
   "name": "create-jira-agent",
   "description": "Generates a structured Jira issue payload from a natural language user story request",
   "version": "1.0.0",
-  "urlPath": "/a2a/create-jira-agent",
   "protocolVersion": "0.3.0",
   "capabilities": {
     "streaming": true,

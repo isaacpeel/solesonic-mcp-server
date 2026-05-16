@@ -1,9 +1,8 @@
 {
-  "id": "nba-sports-ball",
-  "name": "nba-sports-ball",
+  "id": "nba",
+  "name": "nba",
   "description": "Researches current NBA schedules, standings, players, trades, and injuries from live sources",
   "version": "1.0.0",
-  "urlPath": "/a2a/nba-sports-ball",
   "protocolVersion": "0.3.0",
   "capabilities": {
     "streaming": true,
