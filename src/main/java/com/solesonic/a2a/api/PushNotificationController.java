@@ -4,10 +4,12 @@ import com.solesonic.a2a.service.PushNotificationService;
 import io.a2a.spec.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/a2a/{agentName}/tasks/push-notification-configs")
+@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTE')")
 public class PushNotificationController {
 
     private final PushNotificationService pushNotificationService;
