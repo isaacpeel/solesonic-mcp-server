@@ -23,7 +23,6 @@ public class AuthoritiesService {
     public Collection<GrantedAuthority> extractGroupAuthorities(Jwt jwt) {
         Object groupsClaim = jwt.getClaim(GROUPS);
 
-
         if (groupsClaim instanceof List<?> groups) {
             return groups.stream()
                     .filter(String.class::isInstance)
@@ -45,7 +44,7 @@ public class AuthoritiesService {
             return  roles.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
-                    .peek(role -> log.trace("User belongs to role: {}", role))
+                    .peek(role -> log.info("User belongs to role: {}", role))
                     .map(role -> new SimpleGrantedAuthority(ROLE + role.toUpperCase()))
                     .map(GrantedAuthority.class::cast)
                     .toList();

@@ -61,7 +61,7 @@ public class MpcSecurityConfig {
     public static final String PROFILE = "profile";
     public static final String EMAIL = "email";
     public static final String MCP_PREFIX = "/mcp/**";
-    public static final String AGENT_CARD_POSTIX = "/.well-known/agent-card.json";
+    public static final String AGENT_CARD_POSTFIX = "/.well-known/agent-card.json";
     public static final String AGENT_PREFIX = "/a2a/**";
 
     private final AuthoritiesService authoritiesService;
@@ -143,7 +143,7 @@ public class MpcSecurityConfig {
                     authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
                             .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
                             .requestMatchers(HttpMethod.OPTIONS, MCP_PREFIX).permitAll()
-                            .requestMatchers(AGENT_CARD_POSTIX).permitAll()
+                            .requestMatchers(AGENT_CARD_POSTFIX).permitAll()
                             .requestMatchers(AGENT_PREFIX).authenticated()
                             .anyRequest().authenticated();
                 })
