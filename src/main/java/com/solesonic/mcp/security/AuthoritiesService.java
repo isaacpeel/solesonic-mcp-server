@@ -40,6 +40,8 @@ public class AuthoritiesService {
     public Collection<GrantedAuthority> extractRoleAuthorities(Jwt jwt) {
         Object rolesClaim = jwt.getClaim(ROLES);
 
+        log.info("Roles claim: {}", rolesClaim);
+
         if (rolesClaim instanceof List<?> roles) {
             return  roles.stream()
                     .filter(String.class::isInstance)
