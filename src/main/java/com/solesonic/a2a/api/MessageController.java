@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/a2a")
-@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTE')")
+@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTION')")
 public class MessageController {
 
     private final TaskService taskService;
