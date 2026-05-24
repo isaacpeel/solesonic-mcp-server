@@ -4,10 +4,12 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: solesonic-mcp-server
+    ports:
       - "8181:8080"
-    network_mode: "host"
     env_file:
       - .env
+    extra_hosts:
+      - "izzy-bot:host-gateway"
     volumes:
       - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
     restart: no
