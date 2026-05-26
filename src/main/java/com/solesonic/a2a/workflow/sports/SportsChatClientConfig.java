@@ -1,6 +1,8 @@
 package com.solesonic.a2a.workflow.sports;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
@@ -18,18 +20,20 @@ public class SportsChatClientConfig {
     public static final String SPORTS_INTENT_CLIENT = "sports-intent-client";
 
     private final OllamaApi ollamaApi;
+    private final ChatMemory chatMemory;
 
-    public SportsChatClientConfig(OllamaApi ollamaApi) {
+    public SportsChatClientConfig(OllamaApi ollamaApi, ChatMemory chatMemory) {
         this.ollamaApi = ollamaApi;
+        this.chatMemory = chatMemory;
     }
 
     @Bean(SPORTS_CHAT_CLIENT)
     public ChatClient sportsClient() {
         OllamaChatOptions ollamaChatOptions = OllamaChatOptions.builder()
                 .model(OLLAMA_MODEL)
-                .numThread(24)
+                .numThread(8)
                 .numGPU(999)
-                .mainGPU(0)
+                .mainGPU(1)
                 .numCtx(131072)
                 .numBatch(1024)
                 .build();
@@ -44,7 +48,11 @@ public class SportsChatClientConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
+        MessageChatMemoryAdvisor messageChatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
+                .build();
+
         return ChatClient.builder(ollamaChatModel)
+                .defaultAdvisors(messageChatMemoryAdvisor)
                 .build();
     }
 
@@ -52,7 +60,7 @@ public class SportsChatClientConfig {
     public ChatClient sportsIntentClient() {
         OllamaChatOptions ollamaChatOptions = OllamaChatOptions.builder()
                 .model(SPORTS_INTENT_MODEL)
-                .numThread(24)
+                .numThread(0)
                 .numGPU(999)
                 .mainGPU(0)
                 .numCtx(131072)
@@ -69,7 +77,11 @@ public class SportsChatClientConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
+        MessageChatMemoryAdvisor messageChatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
+                .build();
+
         return ChatClient.builder(ollamaChatModel)
+                .defaultAdvisors(messageChatMemoryAdvisor)
                 .build();
     }
 }

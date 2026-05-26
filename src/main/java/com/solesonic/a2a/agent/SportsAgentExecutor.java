@@ -4,15 +4,16 @@ import com.solesonic.a2a.workflow.sports.SportsState;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
+import io.a2a.server.tasks.TaskStore;
 import io.a2a.server.tasks.TaskUpdater;
-import io.a2a.spec.JSONRPCError;
-import io.a2a.spec.Message;
-import io.a2a.spec.TaskState;
-import io.a2a.spec.TextPart;
+import io.a2a.spec.*;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,20 +21,28 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static org.bsc.langgraph4j.GraphDefinition.END;
+import static org.bsc.langgraph4j.GraphDefinition.START;
+
 @Component("nba")
 public class SportsAgentExecutor implements AgentExecutor {
-
     private static final Logger log = LoggerFactory.getLogger(SportsAgentExecutor.class);
 
     public static final String PROGRESS_CALLBACK_KEY = "progressCallback";
 
-    private static final String FALLBACK_ANALYSIS =
-            "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
+    private static final String FALLBACK_ANALYSIS = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
 
     private final CompiledGraph<SportsState> sportsResearchGraph;
+    private final ChatMemory chatMemory;
+    private final TaskStore taskStore;
 
-    public SportsAgentExecutor(CompiledGraph<SportsState> sportsResearchGraph) {
+    public SportsAgentExecutor(
+            CompiledGraph<SportsState> sportsResearchGraph,
+            ChatMemory chatMemory,
+            TaskStore taskStore) {
         this.sportsResearchGraph = sportsResearchGraph;
+        this.chatMemory = chatMemory;
+        this.taskStore = taskStore;
     }
 
     @Override
@@ -47,18 +56,29 @@ public class SportsAgentExecutor implements AgentExecutor {
         taskUpdater.startWork();
 
         String userMessage = extractText(requestContext);
-        log.info("NBA research agent invoked: userMessage={}", userMessage);
+        String conversationId = requestContext.getContextId();
+        log.info("NBA research agent invoked: userMessage={}, conversationId={}", userMessage, conversationId);
+
+        seedMemoryFromReferencedTasks(requestContext, conversationId);
 
         Consumer<String> progressCallback = message -> {
-            Message statusMessage = taskUpdater.newAgentMessage(List.of(new TextPart(message)), null);
+            log.debug("Progress callback with message: {}", message);
+
+            List<Part<?>> messageParts = List.of(new TextPart(message));
+
+            Message statusMessage = taskUpdater.newAgentMessage(messageParts, null);
             taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
         };
 
-        Map<String, Object> input = Map.of(SportsState.USER_MESSAGE, userMessage);
+        Map<String, Object> input = Map.of(
+                SportsState.USER_MESSAGE, userMessage,
+                SportsState.CONVERSATION_ID, conversationId
+        );
 
         RunnableConfig runnableConfig = RunnableConfig.builder()
                 .addMetadata(PROGRESS_CALLBACK_KEY, progressCallback)
                 .build();
+
         AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
 
         try {
@@ -66,18 +86,25 @@ public class SportsAgentExecutor implements AgentExecutor {
                     .forEachAsync(output -> {
                         finalStateRef.set(output.state());
 
-                        if (!output.isEND()) {
-                            Message statusMessage = taskUpdater.newAgentMessage(
-                                    List.of(new TextPart("Completed: " + output.node())), null);
+                            String node = output.node();
+
+                            log.debug("Processing output: {}", node);
+
+                            switch(node) {
+                                case START -> node = "Started: sportsball agent.";
+                                case END -> node = "Sports ball agent synthesizing";
+                                default -> node = "Completed: " +node;
+                            }
+
+                            List<Part<?>> messageParts = List.of(new TextPart(node));
+                            Message statusMessage = taskUpdater.newAgentMessage(messageParts, null);
+
                             taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
-                        }
                     })
                     .join();
 
             SportsState finalState = finalStateRef.get();
-            String analysis = finalState != null
-                    ? finalState.finalAnalysis().orElse(FALLBACK_ANALYSIS)
-                    : FALLBACK_ANALYSIS;
+            String analysis = finalState != null ? finalState.finalAnalysis().orElse(FALLBACK_ANALYSIS) : FALLBACK_ANALYSIS;
 
             taskUpdater.addArtifact(List.of(new TextPart(analysis)), null, null, null);
             taskUpdater.complete();
@@ -91,6 +118,47 @@ public class SportsAgentExecutor implements AgentExecutor {
     public void cancel(RequestContext context, EventQueue queue) throws JSONRPCError {
         TaskUpdater updater = new TaskUpdater(context, queue);
         updater.cancel();
+    }
+
+    private void seedMemoryFromReferencedTasks(RequestContext requestContext, String conversationId) {
+        List<String> referenceTaskIds = requestContext.getMessage().getReferenceTaskIds();
+        if (referenceTaskIds == null || referenceTaskIds.isEmpty()) {
+            return;
+        }
+
+        if (!chatMemory.get(conversationId).isEmpty()) {
+            return;
+        }
+
+        for (String referencedTaskId : referenceTaskIds) {
+            Task referencedTask = taskStore.get(referencedTaskId);
+            if (referencedTask == null) {
+                continue;
+            }
+
+            String priorUserQuestion = referencedTask.getHistory() == null ? null :
+                    referencedTask.getHistory().stream()
+                            .filter(historyMessage -> historyMessage.getRole() == Message.Role.USER)
+                            .flatMap(historyMessage -> historyMessage.getParts().stream())
+                            .filter(part -> part instanceof TextPart)
+                            .map(part -> ((TextPart) part).getText())
+                            .findFirst()
+                            .orElse(null);
+
+            if (priorUserQuestion == null) {
+                continue;
+            }
+
+            referencedTask.getArtifacts().stream()
+                    .flatMap(artifact -> artifact.parts().stream())
+                    .filter(part -> part instanceof TextPart)
+                    .map(part -> ((TextPart) part).getText())
+                    .findFirst()
+                    .ifPresent(artifactText -> chatMemory.add(conversationId, List.of(
+                            new UserMessage(priorUserQuestion),
+                            new AssistantMessage(artifactText)
+                    )));
+        }
     }
 
     private static String extractText(RequestContext requestContext) {

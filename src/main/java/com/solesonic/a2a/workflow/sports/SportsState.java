@@ -12,6 +12,7 @@ import java.util.Optional;
 public class SportsState extends AgentState {
 
     public static final String USER_MESSAGE = "userMessage";
+    public static final String CONVERSATION_ID = "conversationId";
     public static final String CURRENT_DATE_TIME = "currentDateTime";
     public static final String SPORTS_QUERY_INTENT = "sportsQueryIntent";
     public static final String RESOLVED_TEAMS = "resolvedTeams";
@@ -33,6 +34,10 @@ public class SportsState extends AgentState {
 
     public Optional<String> userMessage() {
         return value(USER_MESSAGE);
+    }
+
+    public Optional<String> conversationId() {
+        return value(CONVERSATION_ID);
     }
 
     public Optional<String> currentDateTime() {

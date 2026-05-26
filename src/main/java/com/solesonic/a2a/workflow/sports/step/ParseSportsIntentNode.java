@@ -14,12 +14,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.solesonic.a2a.workflow.sports.SportsChatClientConfig.SPORTS_INTENT_CLIENT;
 import static com.solesonic.mcp.prompt.PromptConstants.*;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
+import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 
 @Component
 public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
@@ -31,13 +33,15 @@ public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
 
     private final ChatClient chatClient;
 
-    public ParseSportsIntentNode(@Qualifier(SPORTS_INTENT_CLIENT) ChatClient chatClient) {
+    public ParseSportsIntentNode(
+            @Qualifier(SPORTS_INTENT_CLIENT) ChatClient chatClient) {
         this.chatClient = chatClient;
     }
 
     @Override
     public CompletableFuture<Map<String, Object>> apply(SportsState state) {
         try {
+            Optional<String> conversationId = state.conversationId();
             String userMessage = state.userMessage().orElseThrow();
             String currentDateTime = todayDate();
 
@@ -51,6 +55,7 @@ public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
             Prompt sportsIntentPrompt = sportsIntentTemplate.create(promptVars);
 
             SportsQueryIntent sportsQueryIntent = chatClient.prompt(sportsIntentPrompt)
+                    .advisors(advisorSpec -> conversationId.ifPresent(id -> advisorSpec.param(CONVERSATION_ID, id)))
                     .call()
                     .entity(SportsQueryIntent.class);
 

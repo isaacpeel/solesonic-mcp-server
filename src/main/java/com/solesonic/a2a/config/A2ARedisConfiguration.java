@@ -4,49 +4,25 @@ import com.solesonic.a2a.redis.RedisEventEnqueueHookFactory;
 import com.solesonic.a2a.redis.RedisQueueManager;
 import com.solesonic.a2a.redis.RedisTaskStore;
 import io.a2a.server.config.DefaultValuesConfigProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.memory.repository.redis.RedisChatMemoryRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import redis.clients.jedis.JedisPooled;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Duration;
 import java.util.concurrent.Executor;
 
 @Configuration
 public class A2ARedisConfiguration {
-
-    private static final Logger logger = LoggerFactory.getLogger(A2ARedisConfiguration.class);
-
     public static final String A_2_A_AGENT_EXECUTOR = "a2a-agent-executor-";
+    public static final String SPORTS_CHAT_MEMORY = "sportsChatMemory";
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
-
-    private final RedisConnectionFactory redisConnectionFactory;
-
-    public A2ARedisConfiguration(RedisConnectionFactory redisConnectionFactory) {
-        this.redisConnectionFactory = redisConnectionFactory;
-    }
-
-    @EventListener(ApplicationReadyEvent.class)
-    public void logRedisConnectionStatus() {
-        logger.info("Redis configured: host={} port={}", redisHost, redisPort);
-        try {
-            String pong = redisConnectionFactory.getConnection().ping();
-            logger.info("Redis connection OK ({})", pong);
-        } catch (Exception exception) {
-            logger.error("Redis connection FAILED: host={} port={} error={}", redisHost, redisPort, exception.getMessage());
-        }
-    }
 
     @Bean
     public RedisTaskStore redisTaskStore(StringRedisTemplate stringRedisTemplate, JsonMapper jsonMapper) {
@@ -71,9 +47,32 @@ public class A2ARedisConfiguration {
     }
 
     @Bean
+    public RedisChatMemoryRepository redisChatMemoryRepository(@Value("${spring.ai.chat.memory.redis.host}") String host,
+                                                               @Value("${spring.ai.chat.memory.redis.port}") int port,
+                                                               @Value("${spring.ai.chat.memory.redis.key-prefix}") String keyPrefix,
+                                                               @Value("${spring.ai.chat.memory.redis.index-name}") String indexName) {
+        JedisPooled jedisClient = new JedisPooled(host, port);
+
+        return RedisChatMemoryRepository.builder()
+                .jedisClient(jedisClient)
+                .indexName(indexName)
+                .keyPrefix(keyPrefix)
+                .timeToLive(Duration.ofHours(24))
+                .build();
+    }
+
+    @Bean(SPORTS_CHAT_MEMORY)
+    public ChatMemory sportsChatMemory(RedisChatMemoryRepository chatMemoryRepository) {
+        return MessageWindowChatMemory.builder()
+                .chatMemoryRepository(chatMemoryRepository)
+                .maxMessages(20)
+                .build();
+    }
+
+    @Bean
     public Executor a2aExecutor() {
-        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(A_2_A_AGENT_EXECUTOR);
-        executor.setVirtualThreads(true);
-        return executor;
+        SimpleAsyncTaskExecutor simpleAsyncTaskExecutor = new SimpleAsyncTaskExecutor(A_2_A_AGENT_EXECUTOR);
+        simpleAsyncTaskExecutor.setVirtualThreads(true);
+        return simpleAsyncTaskExecutor;
     }
 }

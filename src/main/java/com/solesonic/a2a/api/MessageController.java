@@ -40,6 +40,7 @@ public class MessageController {
     public SseEmitter streamMessage(@PathVariable String agentName,
                                     @RequestBody SendStreamingMessageRequest request) {
         log.info("Sending stream agent message: {}", agentName);
+        log.info("Sending streaming request with id: {}", request.getId());
 
         return streamingA2AService.stream(agentName, request);
     }

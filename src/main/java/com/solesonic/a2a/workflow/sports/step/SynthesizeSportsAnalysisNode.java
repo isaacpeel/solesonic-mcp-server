@@ -10,11 +10,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.solesonic.a2a.workflow.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
+import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 
 @Component
 public class SynthesizeSportsAnalysisNode implements AsyncNodeAction<SportsState> {
@@ -35,6 +37,7 @@ public class SynthesizeSportsAnalysisNode implements AsyncNodeAction<SportsState
     public CompletableFuture<Map<String, Object>> apply(SportsState state) {
         try {
             Prompt synthesisPrompt = synthesisPromptAssembler.assemble(state);
+            Optional<String> conversationId = state.conversationId();
 
             log.info("Synthesizing sports analysis for intent: {}",
                     state.sportsQueryIntent()
@@ -42,6 +45,7 @@ public class SynthesizeSportsAnalysisNode implements AsyncNodeAction<SportsState
                             .orElse("unknown"));
 
             String analysis = chatClient.prompt(synthesisPrompt)
+                    .advisors(advisorSpec -> conversationId.ifPresent(id -> advisorSpec.param(CONVERSATION_ID, id)))
                     .call()
                     .content();
 

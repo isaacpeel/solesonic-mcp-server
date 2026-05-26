@@ -16,6 +16,7 @@ public class PromptConstants {
     public static final String NEWS_RESULTS = "newsResults";
     public static final String STATS_RESULTS = "statsResults";
     public static final String NBA_TERMINOLOGY = "nbaTerminology";
+    public static final String CONVERSATION_HISTORY = "conversationHistory";
 
     public static final String NBA_TERMINOLOGY_CONTENT = """
             NBA TERMINOLOGY REFERENCE:
