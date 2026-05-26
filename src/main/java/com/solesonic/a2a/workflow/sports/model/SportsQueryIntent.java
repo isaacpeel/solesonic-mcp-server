@@ -17,7 +17,7 @@ public record SportsQueryIntent(
         List<String> teams,
         List<String> players,
         String timeContext
-) {
+) implements java.io.Serializable {
 
     public boolean hasTeams() {
         return CollectionUtils.isNotEmpty(teams);

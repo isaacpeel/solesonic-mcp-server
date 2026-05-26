@@ -33,6 +33,8 @@ public class EspnService {
     }
 
     public EspnScheduleSummary getScheduleSummary(List<String> teamAbbreviations) {
+        log.info("Getting schedule summary");
+
         if (teamAbbreviations == null || teamAbbreviations.isEmpty()) {
             return buildScoreboardSummary();
         }
@@ -40,12 +42,16 @@ public class EspnService {
     }
 
     private EspnScheduleSummary buildScoreboardSummary() {
-        EspnScheduleResponse response = espnClient.fetchScoreboard();
-        if (response == null || response.events() == null || response.events().isEmpty()) {
+        log.info("building scoreboard summary");
+
+        EspnScheduleResponse espnScheduleResponse = espnClient.fetchScoreboard();
+
+        if (espnScheduleResponse == null || espnScheduleResponse.events() == null || espnScheduleResponse.events().isEmpty()) {
             log.warn("ESPN scoreboard returned no events");
             return new EspnScheduleSummary(List.of());
         }
-        return new EspnScheduleSummary(response.events());
+
+        return new EspnScheduleSummary(espnScheduleResponse.events());
     }
 
     private EspnScheduleSummary buildTeamScheduleSummary(List<String> teamAbbreviations) {
@@ -151,6 +157,7 @@ public class EspnService {
             String record = response.team() != null && response.team().recordSummary() != null
                     ? " (" + response.team().recordSummary() + ")" : "";
             builder.append("=== ESPN Stats: ").append(teamLabel).append(record).append(" ===\n");
+
             if (response.results() != null && response.results().stats() != null
                     && response.results().stats().categories() != null) {
                 for (EspnStatsCategory category : response.results().stats().categories()) {

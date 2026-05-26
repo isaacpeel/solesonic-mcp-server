@@ -15,9 +15,7 @@ public final class McpConfirmations {
 
     public static ElicitResult confirm(McpSyncRequestContext context, String message, Map<String, Object> meta) {
         return context.elicit(
-                ElicitRequest.builder()
-                        .message(message)
-                        .requestedSchema(CONFIRMATION_SCHEMA)
+                ElicitRequest.builder(message, CONFIRMATION_SCHEMA)
                         .meta(meta)
                         .build()
         );
@@ -25,9 +23,7 @@ public final class McpConfirmations {
 
     public static ElicitResult confirm(McpSyncRequestContext context, String message) {
         return context.elicit(
-                ElicitRequest.builder()
-                        .message(message)
-                        .requestedSchema(CONFIRMATION_SCHEMA)
+                ElicitRequest.builder(message, CONFIRMATION_SCHEMA)
                         .build()
         );
     }

@@ -1,6 +1,7 @@
 package com.solesonic.a2a.workflow.sports.step;
 
 import com.solesonic.a2a.workflow.sports.SportsResearchWorkflowContext;
+import com.solesonic.a2a.workflow.sports.SportsState;
 import com.solesonic.a2a.workflow.sports.model.SportsQueryIntent;
 import com.solesonic.a2a.workflow.sports.model.SportsQuestionType;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -90,6 +91,18 @@ public class SynthesisPromptAssembler {
         return new PromptTemplate(assembledTemplate).create(variables);
     }
 
+    public Prompt assemble(SportsState sportsState) {
+        SportsQueryIntent sportsQueryIntent = sportsState.sportsQueryIntent().orElseThrow();
+
+        Set<SynthesisSection> synthesisSections = resolveSections(sportsQueryIntent);
+        Resource instructionsResource = resolveInstructionsResource(sportsQueryIntent);
+
+        String assembledTemplate = buildTemplateString(synthesisSections, instructionsResource);
+        Map<String, Object> variables = buildVariableMap(synthesisSections, sportsState);
+
+        return new PromptTemplate(assembledTemplate).create(variables);
+    }
+
     private String buildTemplateString(Set<SynthesisSection> sections, Resource instructionsResource) {
         StringBuilder templateBuilder = new StringBuilder(readResource(headerResource));
         for (SynthesisSection section : sections) {
@@ -117,7 +130,9 @@ public class SynthesisPromptAssembler {
             SportsQuestionType singleType = sportsQueryIntent.questionTypes().getFirst();
             return INTENT_SECTIONS.getOrDefault(singleType, EnumSet.allOf(SynthesisSection.class));
         }
+
         Set<SynthesisSection> unionSections = EnumSet.noneOf(SynthesisSection.class);
+
         for (SportsQuestionType questionType : sportsQueryIntent.questionTypes()) {
             Set<SynthesisSection> typeSections = INTENT_SECTIONS.get(questionType);
             if (typeSections != null) {
@@ -142,12 +157,34 @@ public class SynthesisPromptAssembler {
         };
     }
 
+    private Map<String, Object> buildVariableMap(Set<SynthesisSection> sections, SportsState state) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put(USER_MESSAGE, state.userMessage().orElseThrow());
+        variables.put(TODAY_DATE, todayDate());
+        for (SynthesisSection section : sections) {
+            if (section.hasVariable()) {
+                variables.put(section.getVariableKey(), resolveVariableValue(section, state));
+            }
+        }
+        return variables;
+    }
+
     private String resolveVariableValue(SynthesisSection section, SportsResearchWorkflowContext workflowContext) {
         return switch (section) {
             case SCHEDULE -> Objects.requireNonNullElse(workflowContext.getScheduleSearchSummary(), "--NO RESULTS--");
             case NEWS -> Objects.requireNonNullElse(workflowContext.getNewsSearchSummary(), "--NO RESULTS--");
             case STATS -> Objects.requireNonNullElse(workflowContext.getStatisticsSearchSummary(), "--NO RESULTS--");
             case ROSTER -> Objects.requireNonNullElse(workflowContext.getEspnRosterData(), "--NO ROSTER DATA--");
+            case TERMINOLOGY -> throw new IllegalStateException("TERMINOLOGY has no variable and should never be resolved");
+        };
+    }
+
+    private String resolveVariableValue(SynthesisSection section, SportsState state) {
+        return switch (section) {
+            case SCHEDULE -> state.scheduleSearchSummary().orElse("--NO RESULTS--");
+            case NEWS -> state.newsSearchSummary().orElse("--NO RESULTS--");
+            case STATS -> state.statisticsSearchSummary().orElse("--NO RESULTS--");
+            case ROSTER -> state.espnRosterData().orElse("--NO ROSTER DATA--");
             case TERMINOLOGY -> throw new IllegalStateException("TERMINOLOGY has no variable and should never be resolved");
         };
     }

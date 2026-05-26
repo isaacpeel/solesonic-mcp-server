@@ -11,7 +11,7 @@ public record EspnTeamProfile(
         String scheduleUrl,
         String rosterUrl,
         String statsUrl
-) {
+) implements java.io.Serializable {
     private static final String ESPN_TEAM_BASE = "https://www.espn.com/nba/team/%s/_/name/%s/%s";
 
     public static EspnTeamProfile of(String fullName, String abbreviation, String urlSlug) {

@@ -43,6 +43,7 @@ public class StreamingA2AService {
     public SseEmitter stream(String agentId, SendStreamingMessageRequest sendStreamingMessageRequest) {
         RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext serverCallContext = serverCallContextFactory.create();
+
         return executeStreamRpc(sendStreamingMessageRequest.getId(), MESSAGE_STREAM,
                 () -> requestHandler.onMessageSendStream(sendStreamingMessageRequest.getParams(), serverCallContext));
     }

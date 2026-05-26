@@ -45,6 +45,7 @@
         <java.version>25</java.version>
         <spring-ai.version>2.0.0-M7</spring-ai.version>
         <a2a-java-sdk.version>0.3.3.Final</a2a-java-sdk.version>
+        <langgraph4j.version>1.8.17</langgraph4j.version>
     </properties>
 
     <dependencies>
@@ -113,13 +114,6 @@
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
@@ -165,6 +159,12 @@
             <groupId>io.github.a2asdk</groupId>
             <artifactId>a2a-java-sdk-transport-jsonrpc</artifactId>
             <version>${a2a-java-sdk.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bsc.langgraph4j</groupId>
+            <artifactId>langgraph4j-core</artifactId>
+            <version>${langgraph4j.version}</version>
         </dependency>
     </dependencies>
     <dependencyManagement>

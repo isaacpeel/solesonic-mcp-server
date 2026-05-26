@@ -48,7 +48,7 @@ public record EspnScheduleSummary(List<EspnEvent> games) {
 
     public String toFormattedString() {
         if (!hasGames()) {
-            return null;
+            return "";
         }
         StringBuilder builder = new StringBuilder();
         builder.append("=== NBA Schedule (ESPN) ===\n\n");

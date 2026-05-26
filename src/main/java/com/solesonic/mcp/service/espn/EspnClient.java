@@ -30,14 +30,15 @@ public class EspnClient {
 
     public EspnScheduleResponse fetchScoreboard() {
         log.info("Fetching ESPN NBA scoreboard");
+
         try {
             EspnScheduleResponse response = webClient.get()
                     .uri(SCOREBOARD_ENDPOINT)
                     .retrieve()
                     .bodyToMono(EspnScheduleResponse.class)
                     .block();
-            log.info("ESPN scoreboard fetched. Events: {}",
-                    response != null && response.events() != null ? response.events().size() : 0);
+
+            log.info("ESPN scoreboard fetched. Events: {}", response != null && response.events() != null ? response.events().size() : 0);
             return response;
         } catch (Exception exception) {
             log.warn("ESPN scoreboard fetch failed: {}", exception.getMessage());
