@@ -55,8 +55,7 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
             StringBuilder summary = new StringBuilder();
             List<String> newsQueries = buildNewsQueries(sportsQueryIntent, todayDate);
 
-            for (int queryIndex = 0; queryIndex < newsQueries.size(); queryIndex++) {
-                String query = newsQueries.get(queryIndex);
+            for (String query : newsQueries) {
                 try {
                     log.info("Executing sports news search: {}", query);
 

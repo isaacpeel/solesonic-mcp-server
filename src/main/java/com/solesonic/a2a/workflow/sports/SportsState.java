@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@SuppressWarnings("unused")
 public class SportsState extends AgentState {
 
     public static final String USER_MESSAGE = "userMessage";

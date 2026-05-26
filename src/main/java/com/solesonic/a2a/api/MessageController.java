@@ -45,7 +45,9 @@ public class MessageController {
     }
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
-    public ResponseEntity<Void> handleAsyncTimeout(AsyncRequestTimeoutException exception) {
+    public ResponseEntity<Void> handleAsyncTimeout(AsyncRequestTimeoutException asyncRequestTimeoutException) {
+        log.error("Async timeout exception", asyncRequestTimeoutException);
+
         return ResponseEntity.noContent().build();
     }
 }

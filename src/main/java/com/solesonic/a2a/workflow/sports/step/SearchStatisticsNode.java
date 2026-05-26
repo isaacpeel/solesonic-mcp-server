@@ -61,8 +61,7 @@ public class SearchStatisticsNode implements AsyncNodeAction<SportsState> {
             StringBuilder summary = new StringBuilder();
             List<String> statsQueries = buildStatsQueries(sportsQueryIntent);
 
-            for (int queryIndex = 0; queryIndex < statsQueries.size(); queryIndex++) {
-                String query = statsQueries.get(queryIndex);
+            for (String query : statsQueries) {
                 try {
                     log.info("Executing statistics search: {}", query);
 
