@@ -1,8 +1,7 @@
 package com.solesonic.a2a.workflow.chain;
 
-import com.solesonic.a2a.workflow.WeightedProgressCoordinator;
-
 import java.util.List;
+import java.util.Optional;
 
 public class UserStoryPromptChain {
     private final List<UserStoryChainStep> steps;
@@ -11,14 +10,13 @@ public class UserStoryPromptChain {
         this.steps = steps;
     }
 
-    public UserStoryChainContext run(String rawRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
+    public UserStoryChainContext run(String rawRequest, Optional<String> conversationId) {
         UserStoryChainContext context = new UserStoryChainContext(rawRequest);
 
         for (UserStoryChainStep step : steps) {
-            step.execute(context, taskProgress);
+            step.execute(context, conversationId);
         }
 
-        taskProgress.done("User story generated");
         return context;
     }
 }

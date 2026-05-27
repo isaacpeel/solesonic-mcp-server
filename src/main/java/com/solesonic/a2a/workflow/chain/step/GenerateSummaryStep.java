@@ -1,6 +1,5 @@
 package com.solesonic.a2a.workflow.chain.step;
 
-import com.solesonic.a2a.workflow.WeightedProgressCoordinator;
 import com.solesonic.a2a.workflow.chain.UserStoryChainContext;
 import com.solesonic.a2a.workflow.chain.UserStoryChainStep;
 import org.slf4j.Logger;
@@ -14,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static com.solesonic.a2a.workflow.chain.UserStoryChainConfig.USER_STORY_CHAT_CLIENT;
 
@@ -33,9 +33,8 @@ public class GenerateSummaryStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context, WeightedProgressCoordinator.TaskProgress taskProgress) {
+    public void execute(UserStoryChainContext context, Optional<String> conversationId) {
         log.info("execute GenerateSummaryStep");
-        taskProgress.update(0.55, "Creating story summary");
 
         String detailedStory = context.getDetailedStory();
         Map<String, Object> summaryInputs = Map.of(INPUT, detailedStory);

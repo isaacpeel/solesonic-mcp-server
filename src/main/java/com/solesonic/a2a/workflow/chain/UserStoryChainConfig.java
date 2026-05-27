@@ -43,8 +43,7 @@ public class UserStoryChainConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
-        return ChatClient.builder(ollamaChatModel)
-                .build();
+        return ChatClient.builder(ollamaChatModel).build();
     }
 
     @Bean

@@ -1,6 +1,5 @@
 package com.solesonic.a2a.workflow.chain.step;
 
-import com.solesonic.a2a.workflow.WeightedProgressCoordinator;
 import com.solesonic.a2a.workflow.chain.UserStoryChainContext;
 import com.solesonic.a2a.workflow.chain.UserStoryChainStep;
 import org.slf4j.Logger;
@@ -17,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.solesonic.a2a.workflow.chain.UserStoryChainConfig.USER_STORY_CHAT_CLIENT;
 
@@ -39,9 +39,8 @@ public class GenerateAcceptanceCriteriaStep implements UserStoryChainStep {
     }
 
     @Override
-    public void execute(UserStoryChainContext context, WeightedProgressCoordinator.TaskProgress taskProgress) {
+    public void execute(UserStoryChainContext context, Optional<String> conversationId) {
         log.info("execute GenerateAcceptanceCriteriaStep");
-        taskProgress.update(0.85, "Generating acceptance criteria");
 
         String rawRequest = context.getRawRequest();
         String summary = context.getSummary();

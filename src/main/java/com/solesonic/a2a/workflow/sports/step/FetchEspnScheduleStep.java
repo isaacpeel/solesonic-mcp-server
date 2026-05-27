@@ -2,7 +2,6 @@ package com.solesonic.a2a.workflow.sports.step;
 
 import com.solesonic.mcp.model.espn.EspnScheduleSummary;
 import com.solesonic.mcp.service.espn.EspnService;
-import com.solesonic.a2a.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.a2a.workflow.sports.SportsState;
 import com.solesonic.a2a.workflow.sports.model.EspnTeamProfile;
 import org.slf4j.Logger;
@@ -20,16 +19,6 @@ public class FetchEspnScheduleStep {
 
     public FetchEspnScheduleStep(EspnService espnService) {
         this.espnService = espnService;
-    }
-
-    public EspnScheduleSummary fetch(SportsResearchWorkflowContext context) {
-        List<EspnTeamProfile> resolvedTeams = context.getResolvedTeams();
-
-        List<String> teamAbbreviations = (resolvedTeams != null && !resolvedTeams.isEmpty())
-                ? resolvedTeams.stream().map(EspnTeamProfile::abbreviation).toList()
-                : List.of();
-
-        return fetchForTeams(teamAbbreviations);
     }
 
     public EspnScheduleSummary fetch(SportsState state) {

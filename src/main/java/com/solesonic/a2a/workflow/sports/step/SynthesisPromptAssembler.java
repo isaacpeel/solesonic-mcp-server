@@ -1,6 +1,5 @@
 package com.solesonic.a2a.workflow.sports.step;
 
-import com.solesonic.a2a.workflow.sports.SportsResearchWorkflowContext;
 import com.solesonic.a2a.workflow.sports.SportsState;
 import com.solesonic.a2a.workflow.sports.model.SportsQueryIntent;
 import com.solesonic.a2a.workflow.sports.model.SportsQuestionType;
@@ -16,7 +15,6 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import static com.solesonic.mcp.prompt.PromptConstants.TODAY_DATE;
@@ -78,19 +76,6 @@ public class SynthesisPromptAssembler {
     @Value("classpath:prompt/sports/instructions-general.st")
     private Resource generalInstructionsResource;
 
-    public Prompt assemble(SportsResearchWorkflowContext workflowContext) {
-        SportsQueryIntent sportsQueryIntent = workflowContext.getSportsQueryIntent();
-        assert sportsQueryIntent != null;
-
-        Set<SynthesisSection> sections = resolveSections(sportsQueryIntent);
-        Resource instructionsResource = resolveInstructionsResource(sportsQueryIntent);
-
-        String assembledTemplate = buildTemplateString(sections, instructionsResource);
-        Map<String, Object> variables = buildVariableMap(sections, workflowContext);
-
-        return new PromptTemplate(assembledTemplate).create(variables);
-    }
-
     public Prompt assemble(SportsState sportsState) {
         SportsQueryIntent sportsQueryIntent = sportsState.sportsQueryIntent().orElseThrow();
 
@@ -111,18 +96,6 @@ public class SynthesisPromptAssembler {
         templateBuilder.append("=============================================\n\n");
         templateBuilder.append(readResource(instructionsResource));
         return templateBuilder.toString();
-    }
-
-    private Map<String, Object> buildVariableMap(Set<SynthesisSection> sections, SportsResearchWorkflowContext workflowContext) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put(USER_MESSAGE, workflowContext.userMessage());
-        variables.put(TODAY_DATE, todayDate());
-        for (SynthesisSection section : sections) {
-            if (section.hasVariable()) {
-                variables.put(section.getVariableKey(), resolveVariableValue(section, workflowContext));
-            }
-        }
-        return variables;
     }
 
     private Set<SynthesisSection> resolveSections(SportsQueryIntent sportsQueryIntent) {
@@ -167,16 +140,6 @@ public class SynthesisPromptAssembler {
             }
         }
         return variables;
-    }
-
-    private String resolveVariableValue(SynthesisSection section, SportsResearchWorkflowContext workflowContext) {
-        return switch (section) {
-            case SCHEDULE -> Objects.requireNonNullElse(workflowContext.getScheduleSearchSummary(), "--NO RESULTS--");
-            case NEWS -> Objects.requireNonNullElse(workflowContext.getNewsSearchSummary(), "--NO RESULTS--");
-            case STATS -> Objects.requireNonNullElse(workflowContext.getStatisticsSearchSummary(), "--NO RESULTS--");
-            case ROSTER -> Objects.requireNonNullElse(workflowContext.getEspnRosterData(), "--NO ROSTER DATA--");
-            case TERMINOLOGY -> throw new IllegalStateException("TERMINOLOGY has no variable and should never be resolved");
-        };
     }
 
     private String resolveVariableValue(SynthesisSection section, SportsState state) {

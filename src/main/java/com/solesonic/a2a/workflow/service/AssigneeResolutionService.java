@@ -3,7 +3,6 @@ package com.solesonic.a2a.workflow.service;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.User;
 import com.solesonic.mcp.service.atlassian.JiraUserService;
-import com.solesonic.a2a.workflow.WeightedProgressCoordinator;
 import com.solesonic.a2a.workflow.model.AssigneeLookupResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,16 +37,14 @@ public class AssigneeResolutionService {
         this.chatClient = chatClient;
     }
 
-    public AssigneeLookupResult resolve(String userRequest, WeightedProgressCoordinator.TaskProgress taskProgress) {
+    public AssigneeLookupResult resolve(String userRequest) {
         log.info("resolve AssigneeResolutionService");
-        taskProgress.update(0.20, "Looking up assignee");
 
         PromptTemplate assigneeLookupTemplate = new PromptTemplate(jiraAssigneeLookupPrompt);
         Map<String, Object> inputs = Map.of(INPUT, userRequest);
         Prompt assigneeLookup = assigneeLookupTemplate.create(inputs);
 
         String assigneeToLookup = chatClient.prompt(assigneeLookup).call().content();
-        taskProgress.update(0.55, "Searching assignable users");
 
         List<User> users = jiraUserService.search(assigneeToLookup);
 
@@ -56,7 +53,6 @@ public class AssigneeResolutionService {
                 .orElseThrow(() -> new JiraException("Assignee lookup failed for required assignee: " + assigneeToLookup));
 
         log.info("Found assignee: {}", user.displayName());
-        taskProgress.done("Found assignee: " + user.displayName());
 
         return new AssigneeLookupResult(true, user.accountId(), "RESOLVED", user.displayName());
     }

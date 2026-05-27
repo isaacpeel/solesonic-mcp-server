@@ -1,9 +1,6 @@
 package com.solesonic.a2a.agent;
 
-import com.solesonic.a2a.workflow.CreateJiraWorkflow;
-import com.solesonic.a2a.workflow.framework.UserInputRequiredException;
-import com.solesonic.a2a.workflow.framework.WorkflowPendingInput;
-import com.solesonic.a2a.workflow.framework.WorkflowQuestion;
+import com.solesonic.a2a.workflow.jira.JiraState;
 import com.solesonic.a2a.workflow.model.JiraIssueCreatePayload;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
@@ -11,34 +8,36 @@ import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.JSONRPCError;
 import io.a2a.spec.Message;
+import io.a2a.spec.Part;
 import io.a2a.spec.TaskState;
 import io.a2a.spec.TextPart;
+import org.bsc.langgraph4j.CompiledGraph;
+import org.bsc.langgraph4j.RunnableConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * A2A executor for the Create Jira workflow.
- * <p>
- * USER_INPUT_REQUIRED: when the workflow cannot resolve required fields it throws
- * UserInputRequiredException. This executor translates that to TaskState.INPUT_REQUIRED and
- * formats the clarification questions for the A2A client. The task is left open so the client
- * can send a follow-up message. Resume from that follow-up is not yet implemented in the
- * workflow layer — the next message restarts the workflow from scratch.
- */
+import static org.bsc.langgraph4j.GraphDefinition.END;
+import static org.bsc.langgraph4j.GraphDefinition.START;
+
 @Component("create-jira-agent")
 public class CreateJiraAgentExecutor implements AgentExecutor {
+
     private static final Logger log = LoggerFactory.getLogger(CreateJiraAgentExecutor.class);
 
-    private final CreateJiraWorkflow createJiraWorkflow;
+    private static final String ASSIGNEE_REQUIRED_MESSAGE =
+            "Please provide the name of the person to assign this Jira issue to.";
+
+    private final CompiledGraph<JiraState> createJiraGraph;
     private final JsonMapper jsonMapper;
 
-    public CreateJiraAgentExecutor(CreateJiraWorkflow createJiraWorkflow, JsonMapper jsonMapper) {
-        this.createJiraWorkflow = createJiraWorkflow;
+    public CreateJiraAgentExecutor(CompiledGraph<JiraState> createJiraGraph, JsonMapper jsonMapper) {
+        this.createJiraGraph = createJiraGraph;
         this.jsonMapper = jsonMapper;
     }
 
@@ -53,25 +52,56 @@ public class CreateJiraAgentExecutor implements AgentExecutor {
         taskUpdater.startWork();
 
         String userMessage = extractText(requestContext);
-        log.info("Create Jira agent invoked: userMessage={}", userMessage);
+        String conversationId = requestContext.getContextId();
+        log.info("Create Jira agent invoked: userMessage={}, conversationId={}", userMessage, conversationId);
+
+        Map<String, Object> input = Map.of(
+                JiraState.USER_MESSAGE, userMessage,
+                JiraState.CONVERSATION_ID, conversationId
+        );
+
+        RunnableConfig runnableConfig = RunnableConfig.builder().build();
+        AtomicReference<JiraState> finalStateRef = new AtomicReference<>();
 
         try {
-            JiraIssueCreatePayload payload =
-                    createJiraWorkflow.startWorkflow(userMessage, (_, progressMessage) -> {
-                        Message statusMessage = taskUpdater.newAgentMessage(
-                                List.of(new TextPart(progressMessage)), null);
-                        taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
-                    });
+            createJiraGraph.stream(input, runnableConfig)
+                    .forEachAsync(output -> {
+                        finalStateRef.set(output.state());
 
-            String payloadJson = jsonMapper.writeValueAsString(payload);
+                        String node = output.node();
+                        log.debug("Processing output: {}", node);
+
+                        switch (node) {
+                            case START -> node = "Started: create Jira agent.";
+                            case END -> node = "Create Jira agent completed.";
+                            default -> node = "Completed: " + node;
+                        }
+
+                        List<Part<?>> messageParts = List.of(new TextPart(node));
+                        Message statusMessage = taskUpdater.newAgentMessage(messageParts, null);
+                        taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
+                    })
+                    .join();
+
+            JiraState finalState = finalStateRef.get();
+
+            if (finalState != null && finalState.assigneeNotResolved().orElse(false)) {
+                Message inputRequiredMessage = taskUpdater.newAgentMessage(
+                        List.of(new TextPart(ASSIGNEE_REQUIRED_MESSAGE)), null);
+                taskUpdater.updateStatus(TaskState.INPUT_REQUIRED, inputRequiredMessage);
+                return;
+            }
+
+            JiraIssueCreatePayload payload = finalState != null
+                    ? finalState.finalPayload().orElse(null)
+                    : null;
+
+            String payloadJson = payload != null
+                    ? jsonMapper.writeValueAsString(payload)
+                    : "{}";
 
             taskUpdater.addArtifact(List.of(new TextPart(payloadJson)), "jira-issue-payload", null, null);
             taskUpdater.complete();
-        } catch (UserInputRequiredException userInputRequiredException) {
-            String clarificationMessage = formatClarificationMessage(userInputRequiredException.getPendingInput());
-            Message inputRequiredMessage = taskUpdater.newAgentMessage(
-                    List.of(new TextPart(clarificationMessage)), null);
-            taskUpdater.updateStatus(TaskState.INPUT_REQUIRED, inputRequiredMessage);
         } catch (Exception exception) {
             log.error("Create Jira agent failed: userMessage={}", userMessage, exception);
             taskUpdater.fail();
@@ -92,17 +122,5 @@ public class CreateJiraAgentExecutor implements AgentExecutor {
                 .map(part -> ((TextPart) part).getText())
                 .findFirst()
                 .orElse("");
-    }
-
-    private static String formatClarificationMessage(WorkflowPendingInput pendingInput) {
-        if (pendingInput == null || pendingInput.questions() == null || pendingInput.questions().isEmpty()) {
-            return "Additional information is required to create the Jira issue.";
-        }
-
-        String questions = pendingInput.questions().stream()
-                .map(WorkflowQuestion::prompt)
-                .collect(Collectors.joining("\n- ", "- ", ""));
-
-        return "Please provide the following information to complete the Jira issue:\n" + questions;
     }
 }
