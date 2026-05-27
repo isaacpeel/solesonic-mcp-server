@@ -1,8 +1,5 @@
-package com.solesonic.a2a.agent.chain;
+package com.solesonic.a2a.agent.jira;
 
-import com.solesonic.a2a.agent.chain.step.GenerateAcceptanceCriteriaStep;
-import com.solesonic.a2a.agent.chain.step.GenerateDetailedStoryStep;
-import com.solesonic.a2a.agent.chain.step.GenerateSummaryStep;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -13,16 +10,15 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
-
 @Configuration
-public class UserStoryChainConfig {
+public class JiraChatClientConfig {
+
     public static final String OLLAMA_MODEL = "llama3.1:8b";
     public static final String USER_STORY_CHAT_CLIENT = "user-story-chat-client";
 
     private final OllamaApi ollamaApi;
 
-    public UserStoryChainConfig(OllamaApi ollamaApi) {
+    public JiraChatClientConfig(OllamaApi ollamaApi) {
         this.ollamaApi = ollamaApi;
     }
 
@@ -44,18 +40,5 @@ public class UserStoryChainConfig {
                 .build();
 
         return ChatClient.builder(ollamaChatModel).build();
-    }
-
-    @Bean
-    public UserStoryPromptChain userStoryPromptChain(
-            GenerateDetailedStoryStep generateDetailedStoryStep,
-            GenerateSummaryStep summarizeStoryStep,
-            GenerateAcceptanceCriteriaStep generateAcceptanceCriteriaStep
-    ) {
-        return new UserStoryPromptChain(List.of(
-                generateDetailedStoryStep,
-                summarizeStoryStep,
-                generateAcceptanceCriteriaStep
-        ));
     }
 }
