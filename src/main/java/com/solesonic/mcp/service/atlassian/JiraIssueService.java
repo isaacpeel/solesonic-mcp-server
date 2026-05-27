@@ -39,7 +39,8 @@ public class JiraIssueService {
     private final WebClient webClient;
     private final JsonMapper jsonMapper;
 
-    public JiraIssueService(@Qualifier(ATLASSIAN_API_WEB_CLIENT) WebClient webClient, JsonMapper jsonMapper) {
+    public JiraIssueService(@Qualifier(ATLASSIAN_API_WEB_CLIENT) WebClient webClient,
+                            JsonMapper jsonMapper) {
         this.webClient = webClient;
         this.jsonMapper = jsonMapper;
     }
