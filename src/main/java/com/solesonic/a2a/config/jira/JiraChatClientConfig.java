@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.jira;
+package com.solesonic.a2a.config.jira;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;

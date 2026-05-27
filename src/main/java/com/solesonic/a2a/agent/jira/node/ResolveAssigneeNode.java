@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.jira.step;
+package com.solesonic.a2a.agent.jira.node;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.a2a.agent.jira.JiraState;

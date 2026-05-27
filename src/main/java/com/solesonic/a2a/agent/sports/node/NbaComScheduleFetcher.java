@@ -9,15 +9,15 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class FetchNbaComScheduleStep {
+public class NbaComScheduleFetcher {
 
-    private static final Logger log = LoggerFactory.getLogger(FetchNbaComScheduleStep.class);
+    private static final Logger log = LoggerFactory.getLogger(NbaComScheduleFetcher.class);
 
     private static final String NBA_COM_SCHEDULE_URL = "https://www.nba.com/schedule";
 
     private final TavilySearchService tavilySearchService;
 
-    public FetchNbaComScheduleStep(TavilySearchService tavilySearchService) {
+    public NbaComScheduleFetcher(TavilySearchService tavilySearchService) {
         this.tavilySearchService = tavilySearchService;
     }
 

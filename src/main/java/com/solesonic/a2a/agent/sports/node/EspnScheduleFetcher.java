@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class FetchEspnScheduleStep {
+public class EspnScheduleFetcher {
 
-    private static final Logger log = LoggerFactory.getLogger(FetchEspnScheduleStep.class);
+    private static final Logger log = LoggerFactory.getLogger(EspnScheduleFetcher.class);
 
     private final EspnService espnService;
 
-    public FetchEspnScheduleStep(EspnService espnService) {
+    public EspnScheduleFetcher(EspnService espnService) {
         this.espnService = espnService;
     }
 

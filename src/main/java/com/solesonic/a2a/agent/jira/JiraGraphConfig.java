@@ -1,10 +1,10 @@
 package com.solesonic.a2a.agent.jira;
 
-import com.solesonic.a2a.agent.jira.step.AssembleJiraPayloadNode;
-import com.solesonic.a2a.agent.jira.step.GenerateAcceptanceCriteriaNode;
-import com.solesonic.a2a.agent.jira.step.GenerateDetailedDescriptionNode;
-import com.solesonic.a2a.agent.jira.step.GenerateStorySummaryNode;
-import com.solesonic.a2a.agent.jira.step.ResolveAssigneeNode;
+import com.solesonic.a2a.agent.jira.node.AssembleJiraPayloadNode;
+import com.solesonic.a2a.agent.jira.node.GenerateAcceptanceCriteriaNode;
+import com.solesonic.a2a.agent.jira.node.GenerateDetailedDescriptionNode;
+import com.solesonic.a2a.agent.jira.node.GenerateStorySummaryNode;
+import com.solesonic.a2a.agent.jira.node.ResolveAssigneeNode;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;

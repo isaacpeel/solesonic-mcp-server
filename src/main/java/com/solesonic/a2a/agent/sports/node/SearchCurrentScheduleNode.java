@@ -25,14 +25,14 @@ public class SearchCurrentScheduleNode implements AsyncNodeActionWithConfig<Spor
     private static final int SUFFICIENT_CONTENT_MIN_CHARS = 300;
     private static final String NBA = "NBA";
 
-    private final FetchEspnScheduleStep fetchEspnScheduleStep;
-    private final FetchNbaComScheduleStep fetchNbaComScheduleStep;
-    private final SearchTavilyScheduleStep searchTavilyScheduleStep;
+    private final EspnScheduleFetcher fetchEspnScheduleStep;
+    private final NbaComScheduleFetcher fetchNbaComScheduleStep;
+    private final TavilyScheduleFetcher searchTavilyScheduleStep;
 
     public SearchCurrentScheduleNode(
-            FetchEspnScheduleStep fetchEspnScheduleStep,
-            FetchNbaComScheduleStep fetchNbaComScheduleStep,
-            SearchTavilyScheduleStep searchTavilyScheduleStep
+            EspnScheduleFetcher fetchEspnScheduleStep,
+            NbaComScheduleFetcher fetchNbaComScheduleStep,
+            TavilyScheduleFetcher searchTavilyScheduleStep
     ) {
         this.fetchEspnScheduleStep = fetchEspnScheduleStep;
         this.fetchNbaComScheduleStep = fetchNbaComScheduleStep;

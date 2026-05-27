@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.jira.step;
+package com.solesonic.a2a.agent.jira.node;
 
 import com.solesonic.a2a.agent.jira.JiraState;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.a2a.agent.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
+import static com.solesonic.a2a.config.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 

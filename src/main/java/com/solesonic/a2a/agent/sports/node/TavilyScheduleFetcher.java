@@ -10,13 +10,13 @@ import org.springframework.stereotype.Component;
 import static com.solesonic.mcp.config.tavily.TavilyConstants.*;
 
 @Component
-public class SearchTavilyScheduleStep {
+public class TavilyScheduleFetcher {
 
-    private static final Logger log = LoggerFactory.getLogger(SearchTavilyScheduleStep.class);
+    private static final Logger log = LoggerFactory.getLogger(TavilyScheduleFetcher.class);
 
     private final TavilySearchService tavilySearchService;
 
-    public SearchTavilyScheduleStep(TavilySearchService tavilySearchService) {
+    public TavilyScheduleFetcher(TavilySearchService tavilySearchService) {
         this.tavilySearchService = tavilySearchService;
     }
 
