@@ -1,8 +1,8 @@
 package com.solesonic.a2a.agent.agile;
 
-import com.solesonic.a2a.agent.agile.step.AssessOperationScopeNode;
-import com.solesonic.a2a.agent.agile.step.ListBoardsNode;
-import com.solesonic.a2a.agent.agile.step.ParseAgileIntentNode;
+import com.solesonic.a2a.agent.agile.node.AssessOperationScopeNode;
+import com.solesonic.a2a.agent.agile.node.ListBoardsNode;
+import com.solesonic.a2a.agent.agile.node.ParseAgileIntentNode;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;

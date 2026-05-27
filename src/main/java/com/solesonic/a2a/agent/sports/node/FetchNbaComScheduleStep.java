@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.sports.step;
+package com.solesonic.a2a.agent.sports.node;
 
 import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
 import com.solesonic.mcp.service.tavily.TavilySearchService;

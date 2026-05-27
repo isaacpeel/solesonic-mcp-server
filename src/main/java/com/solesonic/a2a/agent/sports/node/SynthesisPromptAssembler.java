@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.sports.step;
+package com.solesonic.a2a.agent.sports.node;
 
 import com.solesonic.a2a.agent.sports.SportsState;
 import com.solesonic.a2a.agent.sports.model.SportsQueryIntent;
@@ -27,11 +27,11 @@ import static com.solesonic.a2a.agent.sports.model.SportsQuestionType.SCHEDULE_L
 import static com.solesonic.a2a.agent.sports.model.SportsQuestionType.STANDINGS;
 import static com.solesonic.a2a.agent.sports.model.SportsQuestionType.STATISTICS;
 import static com.solesonic.a2a.agent.sports.model.SportsQuestionType.TRADE_NEWS;
-import static com.solesonic.a2a.agent.sports.step.SynthesisSection.NEWS;
-import static com.solesonic.a2a.agent.sports.step.SynthesisSection.ROSTER;
-import static com.solesonic.a2a.agent.sports.step.SynthesisSection.SCHEDULE;
-import static com.solesonic.a2a.agent.sports.step.SynthesisSection.STATS;
-import static com.solesonic.a2a.agent.sports.step.SynthesisSection.TERMINOLOGY;
+import static com.solesonic.a2a.agent.sports.node.SynthesisSection.NEWS;
+import static com.solesonic.a2a.agent.sports.node.SynthesisSection.ROSTER;
+import static com.solesonic.a2a.agent.sports.node.SynthesisSection.SCHEDULE;
+import static com.solesonic.a2a.agent.sports.node.SynthesisSection.STATS;
+import static com.solesonic.a2a.agent.sports.node.SynthesisSection.TERMINOLOGY;
 
 @Component
 public class SynthesisPromptAssembler {

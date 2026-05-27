@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.sports.step;
+package com.solesonic.a2a.agent.sports.node;
 
 import com.solesonic.a2a.agent.executor.SportsAgentExecutor;
 import com.solesonic.a2a.agent.sports.SportsState;

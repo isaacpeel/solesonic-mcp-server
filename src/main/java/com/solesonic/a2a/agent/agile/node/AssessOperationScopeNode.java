@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.agile.step;
+package com.solesonic.a2a.agent.agile.node;
 
 import com.solesonic.mcp.model.atlassian.agile.Board;
 import com.solesonic.mcp.service.atlassian.JiraAgileService;

@@ -1,4 +1,4 @@
-package com.solesonic.a2a.agent.sports.step;
+package com.solesonic.a2a.agent.sports.node;
 
 import static com.solesonic.mcp.prompt.PromptConstants.NBA_TERMINOLOGY_CONTENT;
 
