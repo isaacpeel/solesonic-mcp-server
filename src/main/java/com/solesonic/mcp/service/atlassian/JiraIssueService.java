@@ -3,7 +3,7 @@ package com.solesonic.mcp.service.atlassian;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.model.atlassian.jira.*;
 import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
-import com.solesonic.a2a.workflow.model.JiraIssueCreatePayload;
+import com.solesonic.a2a.agent.model.JiraIssueCreatePayload;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
