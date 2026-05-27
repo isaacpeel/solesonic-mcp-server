@@ -57,8 +57,7 @@ public class SportsResearchGraphConfig {
                 .addNode(PARSE_SPORTS_INTENT, parseSportsIntentNode)
                 .addNode(RESOLVE_ESPN_TEAM_URLS, resolveEspnTeamUrlsNode)
                 .addNode(FETCH_ESPN_ROSTER, fetchEspnRosterNode)
-                .addNode(PARALLEL_SEARCH,
-                        new ParallelNode.AsyncParallelNodeAction<>(PARALLEL_SEARCH, searchActions, Map.of()))
+                .addNode(PARALLEL_SEARCH, new ParallelNode.AsyncParallelNodeAction<>(PARALLEL_SEARCH, searchActions, Map.of()))
                 .addNode(SYNTHESIZE_ANALYSIS, synthesizeSportsAnalysisNode)
 
                 .addEdge(START, PARSE_SPORTS_INTENT)
