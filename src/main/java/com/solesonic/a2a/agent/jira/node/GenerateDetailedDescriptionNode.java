@@ -60,6 +60,7 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
                     .call()
                     .content();
 
+            assert detailedDescription != null;
             return completedFuture(Map.of(JiraState.DETAILED_DESCRIPTION, detailedDescription));
         } catch (Exception exception) {
             log.error("Failed to generate detailed description", exception);

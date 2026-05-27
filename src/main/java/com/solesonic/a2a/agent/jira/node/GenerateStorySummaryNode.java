@@ -47,6 +47,7 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
             Prompt summaryPrompt = summaryPromptTemplate.create(Map.of(INPUT, detailedDescription));
             String summary = chatClient.prompt(summaryPrompt).call().content();
 
+            assert summary != null;
             return completedFuture(Map.of(JiraState.STORY_SUMMARY, summary));
         } catch (Exception exception) {
             log.error("Failed to generate story summary", exception);

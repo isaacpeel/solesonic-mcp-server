@@ -64,6 +64,7 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
                     .call()
                     .entity(listConverter);
 
+            assert acceptanceCriteria != null;
             return completedFuture(Map.of(JiraState.ACCEPTANCE_CRITERIA, acceptanceCriteria));
         } catch (Exception exception) {
             log.error("Failed to generate acceptance criteria", exception);
