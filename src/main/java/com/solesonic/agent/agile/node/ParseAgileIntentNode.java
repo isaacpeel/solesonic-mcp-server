@@ -12,17 +12,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.solesonic.agent.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
-import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 
 @Component
 public class ParseAgileIntentNode implements AsyncNodeAction<AgileState> {
@@ -33,19 +30,14 @@ public class ParseAgileIntentNode implements AsyncNodeAction<AgileState> {
     private Resource jiraAgilePrompt;
 
     private final ChatClient chatClient;
-    private final JsonMapper jsonMapper;
 
-    public ParseAgileIntentNode(
-            @Qualifier(AGILE_CHAT_CLIENT) ChatClient chatClient,
-            JsonMapper jsonMapper) {
+    public ParseAgileIntentNode(@Qualifier(AGILE_CHAT_CLIENT) ChatClient chatClient) {
         this.chatClient = chatClient;
-        this.jsonMapper = jsonMapper;
     }
 
     @Override
     public CompletableFuture<Map<String, Object>> apply(AgileState state) {
         try {
-            Optional<String> conversationId = state.conversationId();
             String userMessage = state.userMessage().orElseThrow();
 
             PromptTemplate jiraAgilePromptTemplate = PromptTemplate.builder()
@@ -56,17 +48,13 @@ public class ParseAgileIntentNode implements AsyncNodeAction<AgileState> {
 
             Prompt agilePrompt = jiraAgilePromptTemplate.create(agileParams);
 
-            String responseContent = chatClient.prompt(agilePrompt)
+            AgileQueryResult agileQueryResult = chatClient.prompt(agilePrompt)
                     .user(userMessage)
-                    .advisors(advisorSpec -> conversationId.ifPresent(id -> advisorSpec.param(CONVERSATION_ID, id)))
                     .call()
-                    .content();
+                    .responseEntity(AgileQueryResult.class)
+                    .getEntity();
 
-            log.debug("Agile intent parse LLM response: {}", responseContent);
-
-            assert responseContent != null;
-            AgileQueryResult agileQueryResult = jsonMapper.readValue(responseContent, AgileQueryResult.class);
-
+            assert agileQueryResult != null;
             log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}", agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
 
             return completedFuture(Map.of(AgileState.AGILE_QUERY_RESULT, agileQueryResult));
