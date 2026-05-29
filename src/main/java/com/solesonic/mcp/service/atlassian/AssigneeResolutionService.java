@@ -27,7 +27,7 @@ public class AssigneeResolutionService {
     private final JiraUserService jiraUserService;
     private final ChatClient chatClient;
 
-    @Value("classpath:prompt/jira_assignee_lookup.st")
+    @Value("classpath:prompt/jira/jira_assignee_lookup.st")
     private Resource jiraAssigneeLookupPrompt;
 
     public AssigneeResolutionService(JiraUserService jiraUserService,

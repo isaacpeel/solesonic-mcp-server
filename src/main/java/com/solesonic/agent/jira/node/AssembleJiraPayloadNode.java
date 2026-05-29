@@ -29,10 +29,10 @@ public class AssembleJiraPayloadNode implements AsyncNodeAction<JiraState> {
                 return completedFuture(Map.of());
             }
 
-            String summary = state.storySummary().orElseThrow(() ->
-                    new IllegalStateException("storySummary is required"));
-            String description = state.detailedDescription().orElseThrow(() ->
-                    new IllegalStateException("detailedDescription is required"));
+            String summary = state.storySummary().orElseThrow(() -> new IllegalStateException("storySummary is required"));
+
+            String description = state.detailedDescription().orElseThrow(() -> new IllegalStateException("detailedDescription is required"));
+
             List<String> acceptanceCriteria = state.acceptanceCriteria().orElse(List.of());
 
             JiraIssueCreatePayload payload = new JiraIssueCreatePayload(

@@ -31,7 +31,7 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
 
     public GenerateStorySummaryNode(
             @Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
-            @Value("classpath:prompt/user_story_summary_prompt.st") Resource userStorySummaryPrompt) {
+            @Value("classpath:prompt/jira/user_story_summary_prompt.st") Resource userStorySummaryPrompt) {
         this.chatClient = chatClient;
         this.summaryPromptTemplate = new PromptTemplate(userStorySummaryPrompt);
     }

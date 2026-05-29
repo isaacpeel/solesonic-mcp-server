@@ -34,7 +34,7 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
 
     public GenerateDetailedDescriptionNode(
             @Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
-            @Value("classpath:prompt/user_story_description_prompt.st") Resource userStoryDescriptionPrompt,
+            @Value("classpath:prompt/jira/user_story_description_prompt.st") Resource userStoryDescriptionPrompt,
             ChatMemory chatMemory) {
         this.chatClient = chatClient;
         this.descriptionPromptTemplate = new PromptTemplate(userStoryDescriptionPrompt);

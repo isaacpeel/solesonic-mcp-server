@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
+import static org.bsc.langgraph4j.GraphDefinition.START;
 
 @SuppressWarnings("unused")
 @Service
@@ -109,7 +110,16 @@ public class JiraAgileTools {
                         case END                              -> 100;
                         default                               -> 10;
                     };
-                    progressReporter.emit(progressPercent, "Completed: " + output.node());
+
+                    String node = output.node();
+
+                    switch(node) {
+                        case START -> node = "Agile agent started.";
+                        case END -> node = "Agile agent finished.";
+                        default -> node = "Completed: " + node;
+                    }
+
+                    progressReporter.emit(progressPercent, node);
                 })
                 .join();
 

@@ -36,7 +36,7 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
 
     public GenerateAcceptanceCriteriaNode(
             @Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
-            @Value("classpath:prompt/user_story_acceptance_criteria_prompt.st") Resource userStoryAcceptanceCriteriaPrompt) {
+            @Value("classpath:prompt/jira/user_story_acceptance_criteria_prompt.st") Resource userStoryAcceptanceCriteriaPrompt) {
         this.chatClient = chatClient;
         this.acceptanceCriteriaPromptTemplate = new PromptTemplate(userStoryAcceptanceCriteriaPrompt);
     }
