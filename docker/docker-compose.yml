@@ -7,7 +7,7 @@ services:
     container_name: solesonic-mcp-server
     network_mode: "host"
     env_file:
-      - .env.prod
+      - .env
     environment:
       - SERVER_PORT=8181
     volumes:
