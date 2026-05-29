@@ -32,7 +32,6 @@ public class AgileState extends AgentState {
         return value(AGILE_QUERY_RESULT);
     }
 
-    @SuppressWarnings("unchecked")
     public Optional<List<?>> boards() {
         return value(BOARDS);
     }

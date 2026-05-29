@@ -134,6 +134,7 @@ public class JiraAgileService {
                 .block();
     }
 
+    @SuppressWarnings("unused")
     public String getBoardConfiguration(String boardId) {
         log.debug("Getting Jira board configuration: {}", boardId);
 
@@ -185,6 +186,7 @@ public class JiraAgileService {
         return boardIssues;
     }
 
+    @SuppressWarnings("unused")
     public String buildBoardSelectionMessage(List<Board> boards) {
         StringBuilder message = new StringBuilder();
         message.append("Multiple Jira boards are available. Please enter the ID of the board you'd like to query:\n\n");

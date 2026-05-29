@@ -7,6 +7,7 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+@SuppressWarnings("unused")
 @Service
 public class WeatherTools {
     private static final Logger log = LoggerFactory.getLogger(WeatherTools.class);

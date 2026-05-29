@@ -178,6 +178,7 @@ public class JiraIssueService {
         log.info("Issue {} transitioned successfully", issueKey);
     }
 
+    @SuppressWarnings("unused")
     public JiraIssue convert(JiraIssueCreatePayload jiraIssueCreatePayload) {
         JiraIssueTools.CreateJiraRequest createJiraRequest = new JiraIssueTools.CreateJiraRequest(
                 jiraIssueCreatePayload.summary(),

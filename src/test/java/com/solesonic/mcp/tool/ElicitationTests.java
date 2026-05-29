@@ -352,9 +352,7 @@ public class ElicitationTests {
         when(exchange.getClientCapabilities()).thenReturn(capabilities);
 
         ElicitResult expectedResult = mock(ElicitResult.class);
-        ElicitRequest elicitRequest = ElicitRequest.builder()
-                .message("Test message")
-                .requestedSchema(Map.of("type", "string"))
+        ElicitRequest elicitRequest = ElicitRequest.builder("Test message", Map.of("type", "string"))
                 .build();
 
         when(exchange.createElicitation(elicitRequest)).thenReturn(expectedResult);
@@ -442,7 +440,7 @@ public class ElicitationTests {
         when(exchange.createMessage(any(CreateMessageRequest.class))).thenReturn(expectedResult);
 
         CreateMessageResult result = context.sample(spec -> {
-            spec.message(new TextContent("Test message"));
+            spec.message(TextContent.builder("Test message").build());
             spec.systemPrompt("System prompt");
             spec.temperature(0.7);
             spec.maxTokens(100);
@@ -468,9 +466,9 @@ public class ElicitationTests {
         when(exchange.getClientCapabilities()).thenReturn(capabilities);
 
         CreateMessageResult expectedResult = mock(CreateMessageResult.class);
-        CreateMessageRequest createRequest = CreateMessageRequest.builder()
-                .messages(java.util.List.of(new SamplingMessage(Role.USER, new TextContent("Test"))))
-                .maxTokens(500)
+        CreateMessageRequest createRequest = CreateMessageRequest.builder(
+                java.util.List.of(new SamplingMessage(Role.USER, TextContent.builder("Test").build())),
+                500)
                 .build();
 
         when(exchange.createMessage(createRequest)).thenReturn(expectedResult);
@@ -485,9 +483,9 @@ public class ElicitationTests {
     public void testSamplingWhenNotSupported() {
         when(exchange.getClientCapabilities()).thenReturn(null);
 
-        CreateMessageRequest createRequest = CreateMessageRequest.builder()
-                .messages(java.util.List.of(new SamplingMessage(Role.USER, new TextContent("Test"))))
-                .maxTokens(500)
+        CreateMessageRequest createRequest = CreateMessageRequest.builder(
+                java.util.List.of(new SamplingMessage(Role.USER, TextContent.builder("Test").build())),
+                500)
                 .build();
 
         assertThatThrownBy(() -> context.sample(createRequest)).isInstanceOf(IllegalStateException.class)

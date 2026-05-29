@@ -112,6 +112,7 @@ public class EspnService {
         return builder.toString();
     }
 
+    @SuppressWarnings("unused")
     public String getStandingsData() {
         EspnStandingsResponse response = espnClient.fetchStandings();
         if (response == null || response.children() == null || response.children().isEmpty()) {
@@ -140,6 +141,7 @@ public class EspnService {
         return builder.toString();
     }
 
+    @SuppressWarnings("unused")
     public String getStatsData(List<String> teamAbbreviations) {
         if (teamAbbreviations == null || teamAbbreviations.isEmpty()) {
             return "No team stats data available.";

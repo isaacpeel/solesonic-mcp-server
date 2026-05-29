@@ -31,6 +31,7 @@ public record SportsQueryIntent(
         return CollectionUtils.size(players) == 1;
     }
 
+    @SuppressWarnings("unused")
     public String focusPlayer() {
         return hasFocusPlayer() ? players.getFirst() : null;
     }

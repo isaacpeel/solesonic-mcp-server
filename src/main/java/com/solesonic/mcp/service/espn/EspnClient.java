@@ -59,6 +59,7 @@ public class EspnClient {
         }
     }
 
+    @SuppressWarnings("unused")
     public EspnScheduleResponse fetchGeneralSchedule() {
         log.info("Fetching general ESPN schedule");
         try {

@@ -39,7 +39,6 @@ public class JiraState extends AgentState {
         return value(DETAILED_DESCRIPTION);
     }
 
-    @SuppressWarnings("unchecked")
     public Optional<List<String>> acceptanceCriteria() {
         return value(ACCEPTANCE_CRITERIA);
     }
@@ -52,6 +51,7 @@ public class JiraState extends AgentState {
         return value(ASSIGNEE_NOT_RESOLVED);
     }
 
+    @SuppressWarnings("unused")
     public Optional<JiraIssueCreatePayload> finalPayload() {
         return value(FINAL_PAYLOAD);
     }

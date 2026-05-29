@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("unused")
 @Service
 public class SportsChatClientFactory {
 

@@ -15,6 +15,7 @@ import java.io.Serializable;
  */
 public record AgileQueryResult(String jqlFilter, String queryType, Integer startAt, String targetStatus) implements Serializable {
 
+    @SuppressWarnings("unused")
     public boolean isCountQuery() {
         return "COUNT".equalsIgnoreCase(queryType);
     }
