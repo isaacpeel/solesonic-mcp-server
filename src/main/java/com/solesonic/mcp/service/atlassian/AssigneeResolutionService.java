@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
-import static com.solesonic.a2a.config.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
+import static com.solesonic.agent.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
 
 @Service
 public class AssigneeResolutionService {

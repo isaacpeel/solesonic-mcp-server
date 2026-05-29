@@ -1,8 +1,6 @@
-package com.solesonic.a2a.config.jira;
+package com.solesonic.agent.jira;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
@@ -13,21 +11,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class AgileChatClientConfig {
+public class JiraChatClientConfig {
+
     public static final String OLLAMA_MODEL = "llama3.1:8b";
-    public static final String AGILE_CHAT_CLIENT = "agile-chat-client";
+    public static final String USER_STORY_CHAT_CLIENT = "user-story-chat-client";
 
     private final OllamaApi ollamaApi;
-    private final ChatMemory chatMemory;
 
-    public AgileChatClientConfig(OllamaApi ollamaApi, ChatMemory chatMemory) {
+    public JiraChatClientConfig(OllamaApi ollamaApi) {
         this.ollamaApi = ollamaApi;
-        this.chatMemory = chatMemory;
     }
 
     @Bean
-    @Qualifier(AGILE_CHAT_CLIENT)
-    public ChatClient agileChatClient() {
+    @Qualifier(USER_STORY_CHAT_CLIENT)
+    public ChatClient userStoryChatClient() {
         OllamaChatOptions ollamaChatOptions = OllamaChatOptions.builder()
                 .model(OLLAMA_MODEL)
                 .build();
@@ -42,10 +39,6 @@ public class AgileChatClientConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
-        MessageChatMemoryAdvisor messageChatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
-
-        return ChatClient.builder(ollamaChatModel)
-                .defaultAdvisors(messageChatMemoryAdvisor)
-                .build();
+        return ChatClient.builder(ollamaChatModel).build();
     }
 }

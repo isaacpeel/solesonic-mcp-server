@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.a2a.config.jira.AgileChatClientConfig.AGILE_CHAT_CLIENT;
+import static com.solesonic.agent.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;

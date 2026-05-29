@@ -1,4 +1,4 @@
-package com.solesonic.a2a.config.jira;
+package com.solesonic.agent.agile;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.OllamaChatModel;
@@ -11,20 +11,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class JiraChatClientConfig {
-
+public class AgileChatClientConfig {
     public static final String OLLAMA_MODEL = "llama3.1:8b";
-    public static final String USER_STORY_CHAT_CLIENT = "user-story-chat-client";
+    public static final String AGILE_CHAT_CLIENT = "agile-chat-client";
 
     private final OllamaApi ollamaApi;
 
-    public JiraChatClientConfig(OllamaApi ollamaApi) {
+    public AgileChatClientConfig(OllamaApi ollamaApi) {
         this.ollamaApi = ollamaApi;
     }
 
     @Bean
-    @Qualifier(USER_STORY_CHAT_CLIENT)
-    public ChatClient userStoryChatClient() {
+    @Qualifier(AGILE_CHAT_CLIENT)
+    public ChatClient agileChatClient() {
         OllamaChatOptions ollamaChatOptions = OllamaChatOptions.builder()
                 .model(OLLAMA_MODEL)
                 .build();
@@ -39,6 +38,7 @@ public class JiraChatClientConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
-        return ChatClient.builder(ollamaChatModel).build();
+        return ChatClient.builder(ollamaChatModel)
+                .build();
     }
 }

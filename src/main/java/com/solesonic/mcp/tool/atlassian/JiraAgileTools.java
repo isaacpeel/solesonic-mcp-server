@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
@@ -48,6 +47,9 @@ public class JiraAgileTools {
     private static final String AGILE_WORKFLOW_DESCRIPTION = """
             A guided workflow to assist with agile boards.
             """;
+    public static final String COUNT = "COUNT";
+    public static final String LIST = "LIST";
+    public static final String TRANSITION = "TRANSITION";
 
     private final JiraAgileService jiraAgileService;
     private final CompiledGraph<AgileState> agileResearchGraph;
@@ -88,14 +90,11 @@ public class JiraAgileTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The user's natural language question about their agile boards or issues.") String userMessage
     ) {
-        String conversationId = extractConversationId(mcpSyncRequestContext);
-
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         progressReporter.emit(5, "Parsing intent and loading boards…");
 
         Map<String, Object> graphInput = Map.of(
-                AgileState.USER_MESSAGE, userMessage,
-                AgileState.CONVERSATION_ID, conversationId
+                AgileState.USER_MESSAGE, userMessage
         );
 
         AtomicReference<AgileState> finalStateRef = new AtomicReference<>();
@@ -122,22 +121,15 @@ public class JiraAgileTools {
         String resolvedUserMessage = finalState.userMessage().orElse(userMessage);
 
         return switch (queryResult.queryType().toUpperCase()) {
-            case "COUNT"      -> jiraAgileService.handleCountQuery(board, queryResult);
-            case "LIST"       -> jiraAgileService.handleListQuery(
+            case COUNT -> jiraAgileService.handleCountQuery(board, queryResult);
+            case LIST -> jiraAgileService.handleListQuery(
                                         mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
-            case "TRANSITION" -> jiraAgileService.handleTransitionQuery(
+            case TRANSITION -> jiraAgileService.handleTransitionQuery(
                                         mcpSyncRequestContext, board, queryResult, finalState);
             default           -> "Unrecognised query type: " + queryResult.queryType();
         };
     }
 
-    private static String extractConversationId(McpSyncRequestContext mcpSyncRequestContext) {
-        Map<String, Object> meta = mcpSyncRequestContext.requestMeta();
-        if (meta != null && meta.containsKey("chatId")) {
-            return meta.get("chatId").toString();
-        }
-        return UUID.randomUUID().toString();
-    }
 
     @SuppressWarnings("unchecked")
     private Board requireFirstBoard(AgileState state) {

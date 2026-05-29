@@ -36,7 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.solesonic.a2a.config.jira.AgileChatClientConfig.AGILE_CHAT_CLIENT;
+import static com.solesonic.agent.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.mcp.service.atlassian.AtlassianConstants.*;
 
@@ -222,7 +222,7 @@ public class JiraAgileService {
     ) {
         return collectAndFormatPages(
                 mcpSyncRequestContext, board, queryResult, userMessage,
-                queryResult.resolvedStartAt(), new ArrayList<>()
+                queryResult.resolvedStartAt(), new ArrayList<>(), true
         );
     }
 
@@ -232,7 +232,8 @@ public class JiraAgileService {
             AgileQueryResult queryResult,
             String userMessage,
             int startAt,
-            List<BoardIssue> accumulatedIssues
+            List<BoardIssue> accumulatedIssues,
+            boolean shouldElicit
     ) {
         PagedQueryResult pagedResult = fetchPage(board, queryResult, startAt);
         accumulatedIssues.addAll(pagedResult.issues());
@@ -240,6 +241,13 @@ public class JiraAgileService {
         if (!pagedResult.hasMorePages()) {
             return enrichAndFormatIssueList(board, accumulatedIssues, userMessage,
                     accumulatedIssues.size(), pagedResult.total());
+        }
+
+        if (!shouldElicit) {
+            return collectAndFormatPages(
+                    mcpSyncRequestContext, board, queryResult, userMessage,
+                    pagedResult.nextStartAt(), accumulatedIssues, false
+            );
         }
 
         String elicitMessage = "Loaded issues %d–%d of %d. Would you like to load the next page?"
@@ -254,7 +262,7 @@ public class JiraAgileService {
             return switch (elicitResult.action()) {
                 case ACCEPT -> collectAndFormatPages(
                         mcpSyncRequestContext, board, queryResult, userMessage,
-                        pagedResult.nextStartAt(), accumulatedIssues
+                        pagedResult.nextStartAt(), accumulatedIssues, false
                 );
                 case DECLINE, CANCEL -> enrichAndFormatIssueList(board, accumulatedIssues, userMessage,
                         accumulatedIssues.size(), pagedResult.total());
