@@ -4,7 +4,7 @@ import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
 import com.solesonic.mcp.model.tavily.TavilySearchRequest;
 import com.solesonic.mcp.model.tavily.TavilySearchResponse;
 import com.solesonic.mcp.service.tavily.TavilySearchService;
-import com.solesonic.a2a.agent.ProgressReporter;
+import com.solesonic.a2a.progress.ProgressReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;

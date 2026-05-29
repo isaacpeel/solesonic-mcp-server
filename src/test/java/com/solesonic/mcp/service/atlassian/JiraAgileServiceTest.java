@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
@@ -34,11 +35,17 @@ class JiraAgileServiceTest {
     @Mock
     private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
+    @Mock
+    private JiraIssueService jiraIssueService;
+
+    @Mock
+    private ChatClient chatClient;
+
     private JiraAgileService service;
 
     @BeforeEach
     void setUp() {
-        service = new JiraAgileService(webClient);
+        service = new JiraAgileService(webClient, jiraIssueService, chatClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
     }
 

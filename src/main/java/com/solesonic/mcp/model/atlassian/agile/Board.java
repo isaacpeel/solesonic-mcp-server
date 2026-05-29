@@ -1,4 +1,6 @@
 package com.solesonic.mcp.model.atlassian.agile;
 
-public record Board(Integer id, String self, String name, String type) {
+import java.io.Serializable;
+
+public record Board(Integer id, String self, String name, String type) implements Serializable {
 }

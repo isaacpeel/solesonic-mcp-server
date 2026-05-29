@@ -1,7 +1,8 @@
-package com.solesonic.mcp.tool;/*
+/*
  * Copyright 2025-2025 the original author or authors.
  */
 
+package com.solesonic.mcp.tool;
 
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -12,7 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.mcp.annotation.context.DefaultMcpSyncRequestContext;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.ai.mcp.annotation.context.StructuredElicitResult;
-import tools.jackson.core.type.TypeReference;
+import org.springframework.core.ParameterizedTypeReference;
 
 import java.util.Map;
 
@@ -36,7 +37,7 @@ public class ElicitationTests {
 
     @BeforeEach
     public void setUp() {
-        request = new CallToolRequest("test-tool", Map.of());
+        request = CallToolRequest.builder("test-tool").arguments(Map.of()).build();
         exchange = mock(McpSyncServerExchange.class);
         context = DefaultMcpSyncRequestContext.builder().request(request).exchange(exchange).build();
     }
@@ -45,7 +46,7 @@ public class ElicitationTests {
 
     @Test
     public void testBuilderWithValidParameters() {
-        CallToolRequest testRequest = new CallToolRequest("test-tool", Map.of());
+        CallToolRequest testRequest = CallToolRequest.builder("test-tool").arguments(Map.of()).build();
         McpSyncRequestContext ctx = DefaultMcpSyncRequestContext.builder()
                 .request(testRequest)
                 .exchange(exchange)
@@ -65,7 +66,7 @@ public class ElicitationTests {
 
     @Test
     public void testBuilderWithNullExchange() {
-        CallToolRequest testRequest = new CallToolRequest("test-tool", Map.of());
+        CallToolRequest testRequest = CallToolRequest.builder("test-tool").arguments(Map.of()).build();
         assertThatThrownBy(() -> DefaultMcpSyncRequestContext.builder().request(testRequest).exchange(null).build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Exchange must not be null");
@@ -177,7 +178,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message"),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -214,7 +215,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Person> result = context.elicit(e -> e.message("Test message").meta(requestMeta),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -238,7 +239,7 @@ public class ElicitationTests {
         when(capabilities.elicitation()).thenReturn(elicitation);
         when(exchange.getClientCapabilities()).thenReturn(capabilities);
 
-        assertThatThrownBy(() -> context.elicit((TypeReference<String>) null))
+        assertThatThrownBy(() -> context.elicit((ParameterizedTypeReference<String>) null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Elicitation response type must not be null");
     }
@@ -256,7 +257,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message"),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -285,7 +286,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<PersonWithAddress> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -314,7 +315,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -335,7 +336,7 @@ public class ElicitationTests {
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
         StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message").meta(null),
-                new TypeReference<>() {
+                new ParameterizedTypeReference<>() {
                 });
 
         assertThat(result).isNotNull();
@@ -371,7 +372,7 @@ public class ElicitationTests {
         assertThatThrownBy(() -> context.elicit((ElicitRequest) null)).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Elicitation not supported by the clien");
 
-        assertThatThrownBy(() -> context.elicit(null, (TypeReference<?>) null))
+        assertThatThrownBy(() -> context.elicit(null, (ParameterizedTypeReference<?>) null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Elicitation not supported by the clien");
 
@@ -379,7 +380,7 @@ public class ElicitationTests {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Elicitation not supported by the clien");
 
-        assertThatThrownBy(() -> context.elicit((TypeReference<?>) null)).isInstanceOf(IllegalStateException.class)
+        assertThatThrownBy(() -> context.elicit((ParameterizedTypeReference<?>) null)).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Elicitation not supported by the clien");
 
         assertThatThrownBy(() -> context.elicit((Class<?>) null)).isInstanceOf(IllegalStateException.class)
@@ -503,8 +504,7 @@ public class ElicitationTests {
 
     @Test
     public void testProgressWithPercentage() {
-        CallToolRequest requestWithToken = CallToolRequest.builder()
-                .name("test-tool")
+        CallToolRequest requestWithToken = CallToolRequest.builder("test-tool")
                 .arguments(Map.of())
                 .progressToken("token-123")
                 .build();
@@ -535,8 +535,7 @@ public class ElicitationTests {
 
     @Test
     public void testProgressWithConsumer() {
-        CallToolRequest requestWithToken = CallToolRequest.builder()
-                .name("test-tool")
+        CallToolRequest requestWithToken = CallToolRequest.builder("test-tool")
                 .arguments(Map.of())
                 .progressToken("token-123")
                 .build();
@@ -697,8 +696,7 @@ public class ElicitationTests {
     @Test
     public void testGetRequestMeta() {
         Map<String, Object> meta = Map.of("key", "value");
-        CallToolRequest requestWithMeta = CallToolRequest.builder()
-                .name("test-tool")
+        CallToolRequest requestWithMeta = CallToolRequest.builder("test-tool")
                 .arguments(Map.of())
                 .meta(meta)
                 .build();

@@ -3,10 +3,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      no_cache: true
     container_name: solesonic-mcp-server
     network_mode: "host"
     env_file:
-      - .env
+      - .env.prod
     environment:
       - SERVER_PORT=8181
     volumes:

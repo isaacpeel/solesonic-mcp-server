@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class EspnService {
-
     private static final Logger log = LoggerFactory.getLogger(EspnService.class);
 
     private final EspnClient espnClient;
@@ -36,18 +35,18 @@ public class EspnService {
         log.info("Getting schedule summary");
 
         if (teamAbbreviations == null || teamAbbreviations.isEmpty()) {
-            return buildScoreboardSummary();
+            return buildGeneralScheduleSummary();
         }
         return buildTeamScheduleSummary(teamAbbreviations);
     }
 
-    private EspnScheduleSummary buildScoreboardSummary() {
+    private EspnScheduleSummary buildGeneralScheduleSummary() {
         log.info("building scoreboard summary");
 
         EspnScheduleResponse espnScheduleResponse = espnClient.fetchScoreboard();
 
         if (espnScheduleResponse == null || espnScheduleResponse.events() == null || espnScheduleResponse.events().isEmpty()) {
-            log.warn("ESPN scoreboard returned no events");
+            log.error("ESPN scoreboard returned no events");
             return new EspnScheduleSummary(List.of());
         }
 

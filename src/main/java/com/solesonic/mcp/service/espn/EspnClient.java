@@ -10,12 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import static com.solesonic.mcp.config.espn.EspnConstants.ESPN_API_WEB_CLIENT;
-import static com.solesonic.mcp.config.espn.EspnConstants.SCOREBOARD_ENDPOINT;
-import static com.solesonic.mcp.config.espn.EspnConstants.STANDINGS_ENDPOINT;
-import static com.solesonic.mcp.config.espn.EspnConstants.TEAM_ROSTER_ENDPOINT;
-import static com.solesonic.mcp.config.espn.EspnConstants.TEAM_SCHEDULE_ENDPOINT;
-import static com.solesonic.mcp.config.espn.EspnConstants.TEAM_STATS_ENDPOINT;
+import static com.solesonic.mcp.config.espn.EspnConstants.*;
 
 @Component
 public class EspnClient {
@@ -60,6 +55,20 @@ public class EspnClient {
             return response;
         } catch (Exception exception) {
             log.warn("ESPN team schedule fetch failed for {}: {}", teamAbbreviation, exception.getMessage());
+            return null;
+        }
+    }
+
+    public EspnScheduleResponse fetchGeneralSchedule() {
+        log.info("Fetching general ESPN schedule");
+        try {
+            return webClient.get()
+                    .uri(GENERAL_SCHEDULE_ENDPOINT)
+                    .retrieve()
+                    .bodyToMono(EspnScheduleResponse.class)
+                    .block();
+        } catch (Exception exception) {
+            log.error("ESPN team schedule fetch failed for", exception);
             return null;
         }
     }
