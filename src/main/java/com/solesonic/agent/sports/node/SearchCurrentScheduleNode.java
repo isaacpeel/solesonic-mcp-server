@@ -60,7 +60,8 @@ public class SearchCurrentScheduleNode implements AsyncNodeActionWithConfig<Spor
         if (espnScheduleSummary.hasUpcomingOrLiveGames()) {
             log.info("Schedule found on ESPN — skipping NBA.com and Tavily");
             return completedFuture(Map.of(
-                    SportsState.SCHEDULE_SEARCH_SUMMARY, espnScheduleSummary.toFormattedString()
+                    SportsState.SCHEDULE_SEARCH_SUMMARY, espnScheduleSummary.toFormattedString(),
+                    SportsState.ESPN_SCHEDULE_SUMMARY_OBJECT, espnScheduleSummary
             ));
         }
 

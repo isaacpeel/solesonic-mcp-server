@@ -1,5 +1,6 @@
 package com.solesonic.a2a.executor;
 
+import com.solesonic.agent.sports.SportsResearchGraphConfig;
 import com.solesonic.agent.sports.SportsState;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
@@ -31,6 +32,18 @@ public class SportsAgentExecutor implements AgentExecutor {
     public static final String PROGRESS_CALLBACK_KEY = "progressCallback";
 
     private static final String FALLBACK_ANALYSIS = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
+
+    private static final Map<String, String> NODE_PROGRESS_MESSAGES = Map.of(
+            SportsResearchGraphConfig.PARSE_SPORTS_INTENT,          "Understanding your question...",
+            SportsResearchGraphConfig.RESOLVE_ESPN_TEAM_URLS,       "Looking up team information...",
+            SportsResearchGraphConfig.FETCH_ESPN_ROSTER,            "Fetching team rosters...",
+            SportsResearchGraphConfig.FETCH_ESPN_STANDINGS,         "Fetching current standings...",
+            SportsResearchGraphConfig.SEARCH_SCHEDULE,              "Fetching schedule from ESPN...",
+            SportsResearchGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE,  "Identifying teams from the schedule...",
+            SportsResearchGraphConfig.PARALLEL_SEARCH,              "Searching for current data...",
+            SportsResearchGraphConfig.SEARCH_NEWS_AND_STATS,        "Searching for news and statistics...",
+            SportsResearchGraphConfig.SYNTHESIZE_ANALYSIS,          "Composing response..."
+    );
 
     private final CompiledGraph<SportsState> sportsResearchGraph;
     private final ChatMemory chatMemory;
@@ -86,17 +99,21 @@ public class SportsAgentExecutor implements AgentExecutor {
                     .forEachAsync(output -> {
                         finalStateRef.set(output.state());
 
-                            String node = output.node();
+                            String nodeName = output.node();
 
-                            log.debug("Processing output: {}", node);
+                            log.debug("Processing output: {}", nodeName);
 
-                            switch(node) {
-                                case START -> node = "Started: sportsball agent.";
-                                case END -> node = "Sports ball agent synthesizing";
-                                default -> node = "Completed: " +node;
+                            if (END.equals(nodeName) || START.equals(nodeName)) {
+                                return;
                             }
 
-                            List<Part<?>> messageParts = List.of(new TextPart(node));
+                            String progressMessage = NODE_PROGRESS_MESSAGES.getOrDefault(nodeName, null);
+
+                            if (progressMessage == null) {
+                                return;
+                            }
+
+                            List<Part<?>> messageParts = List.of(new TextPart(progressMessage));
                             Message statusMessage = taskUpdater.newAgentMessage(messageParts, null);
 
                             taskUpdater.updateStatus(TaskState.WORKING, statusMessage);

@@ -112,7 +112,6 @@ public class EspnService {
         return builder.toString();
     }
 
-    @SuppressWarnings("unused")
     public String getStandingsData() {
         EspnStandingsResponse response = espnClient.fetchStandings();
         if (response == null || response.children() == null || response.children().isEmpty()) {

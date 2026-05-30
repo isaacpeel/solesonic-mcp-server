@@ -34,7 +34,7 @@ public class SportsChatClientConfig {
                 .numThread(8)
                 .numGPU(999)
                 .mainGPU(1)
-                .numCtx(131072)
+                .numCtx(16384)
                 .numBatch(1024)
                 .build();
 
@@ -63,7 +63,7 @@ public class SportsChatClientConfig {
                 .numThread(0)
                 .numGPU(999)
                 .mainGPU(0)
-                .numCtx(131072)
+                .numCtx(4096)
                 .numBatch(1024)
                 .build();
 

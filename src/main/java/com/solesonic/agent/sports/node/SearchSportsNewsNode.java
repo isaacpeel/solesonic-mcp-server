@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.solesonic.mcp.config.tavily.TavilyConstants.DEPTH_BASIC;
 import static com.solesonic.mcp.config.tavily.TavilyConstants.TIME_WEEK;
 import static com.solesonic.mcp.config.tavily.TavilyConstants.TOPIC_NEWS;
-import static com.solesonic.mcp.prompt.PromptConstants.todayDate;
+import static com.solesonic.mcp.prompt.PromptConstants.todayDateOnly;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
@@ -51,9 +51,9 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
                 return completedFuture(Map.of());
             }
 
-            String todayDate = todayDate();
+            String searchDate = todayDateOnly();
             StringBuilder summary = new StringBuilder();
-            List<String> newsQueries = buildNewsQueries(sportsQueryIntent, todayDate);
+            List<String> newsQueries = buildNewsQueries(sportsQueryIntent, searchDate);
 
             for (String query : newsQueries) {
                 try {
@@ -85,19 +85,19 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
         }
     }
 
-    private List<String> buildNewsQueries(SportsQueryIntent sportsQueryIntent, String currentMonth) {
+    private List<String> buildNewsQueries(SportsQueryIntent sportsQueryIntent, String searchDate) {
         List<String> queries = new ArrayList<>();
         List<SportsQuestionType> questionTypes = sportsQueryIntent.questionTypes();
 
         if (sportsQueryIntent.hasTeams()) {
             String teamNames = String.join(" ", sportsQueryIntent.teams());
-            queries.add("%s injuries lineup news %s".formatted(teamNames, currentMonth));
+            queries.add("%s injuries lineup news %s".formatted(teamNames, searchDate));
 
             boolean isRosterRelevant = questionTypes.contains(SportsQuestionType.GAME_PREVIEW)
                     || questionTypes.contains(SportsQuestionType.PLAYER_ANALYSIS);
             if (isRosterRelevant) {
                 for (String team : sportsQueryIntent.teams()) {
-                    queries.add("%s current active roster %s".formatted(team, currentMonth));
+                    queries.add("%s current active roster %s".formatted(team, searchDate));
                 }
             }
         }
@@ -107,12 +107,18 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
                     ? sportsQueryIntent.players().subList(0, 3)
                     : sportsQueryIntent.players();
             for (String player : playersToSearch) {
-                queries.add("%s NBA current team news %s".formatted(player, currentMonth));
+                queries.add("%s NBA current team news %s".formatted(player, searchDate));
             }
         }
 
         if (queries.isEmpty()) {
-            queries.add("NBA news %s".formatted(currentMonth));
+            boolean isGamePreview = questionTypes.contains(SportsQuestionType.GAME_PREVIEW)
+                    || questionTypes.contains(SportsQuestionType.PLAYER_ANALYSIS);
+            if (isGamePreview) {
+                queries.add("NBA playoff game preview starting lineup %s".formatted(searchDate));
+            } else {
+                queries.add("NBA news %s".formatted(searchDate));
+            }
         }
 
         return queries;

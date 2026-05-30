@@ -2,6 +2,7 @@ package com.solesonic.agent.sports;
 
 import com.solesonic.agent.sports.model.EspnTeamProfile;
 import com.solesonic.agent.sports.model.SportsQueryIntent;
+import com.solesonic.mcp.model.espn.EspnScheduleSummary;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class SportsState extends AgentState {
     public static final String ESPN_STATS_DATA = "espnStatsData";
     public static final String ESPN_ROSTER_DATA = "espnRosterData";
     public static final String ESPN_SCHEDULE_DATA = "espnScheduleData";
+    public static final String ESPN_SCHEDULE_SUMMARY_OBJECT = "espnScheduleSummaryObject";
     public static final String ROSTER_VALIDATION_SUMMARY = "rosterValidationSummary";
     public static final String DEEP_PLAYER_ANALYSIS_SUMMARY = "deepPlayerAnalysisSummary";
     public static final String FINAL_ANALYSIS = "finalAnalysis";
@@ -82,6 +84,10 @@ public class SportsState extends AgentState {
 
     public Optional<String> espnScheduleData() {
         return value(ESPN_SCHEDULE_DATA);
+    }
+
+    public Optional<EspnScheduleSummary> espnScheduleSummaryObject() {
+        return value(ESPN_SCHEDULE_SUMMARY_OBJECT);
     }
 
     public Optional<String> rosterValidationSummary() {

@@ -9,6 +9,7 @@ public class PromptConstants {
 
     public static final ZoneId EASTERN = ZoneId.of("America/New_York");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     public static final String USER_MESSAGE = "userMessage";
     public static final String TODAY_DATE = "todayDate";
     public static final String QUESTION_TYPE = "questionType";
@@ -59,6 +60,10 @@ public class PromptConstants {
 
     public static String todayDate() {
         return formatDateTime(ZonedDateTime.now(EASTERN));
+    }
+
+    public static String todayDateOnly() {
+        return ZonedDateTime.now(EASTERN).format(DATE_ONLY_FORMATTER);
     }
 
     public static String formatDateTime(ZonedDateTime dateTime) {
