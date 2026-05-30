@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import static com.solesonic.mcp.service.atlassian.ConfluenceConstants.STORAGE_FORMAT;
 
 @Component
+@SuppressWarnings("unused")
 public class CreateConfluenceTools {
     private static final Logger log = LoggerFactory.getLogger(CreateConfluenceTools.class);
 
@@ -22,30 +23,6 @@ public class CreateConfluenceTools {
 
     private static final String CREATE_CONFLUENCE_PAGE_DESCRIPTION = """
             Creates a new Confluence page in the default workspace space and returns its identifiers.
-            Use this when you need to capture requirements, design docs, meeting notes, or summaries that should
-            persist outside the current chat. The page will be created in the default space and set to status "current".
-
-            Inputs:
-            - title (required): A concise, human‑readable page title. Prefer specific, searchable titles
-              (for example: "API: Password Reset Flow – Design v1"). Avoid emojis and ambiguous phrasing.
-            - content (required): The page body content. Rich content is supported; provide Confluence "storage" format
-              if available. Plain text is accepted and will be stored as‑is. Consider including:
-              - Background/Context and Objectives
-              - Key Decisions and Action Items
-              - Acceptance Criteria or Checklists
-              - Links to related Jira issues or boards. You can obtain these links using Jira tools:
-                • create_jira_issue (to create and link new issues)
-                • list_jira_boards / get_jira_board / get_jira_board_issues (to reference boards and issues)
-
-            Returns:
-            - pageId: The Confluence page ID.
-            - pageUri: A direct URL to the created page.
-
-            Notes and best practices:
-            - Idempotency is NOT enforced server‑side. Avoid repeated calls for the same logical document unless updating
-              content intentionally via a follow‑up mechanism.
-            - The page is created in the default Confluence space configured by the server.
-            - Content is stored using the Confluence "storage" representation.
             """;
 
     private final ConfluencePageService confluencePageService;

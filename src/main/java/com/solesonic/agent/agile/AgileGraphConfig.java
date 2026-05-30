@@ -38,8 +38,10 @@ public class AgileGraphConfig {
                 AsyncNodeActionWithConfig.of(listBoardsNode)
         );
 
+        ParallelNode.AsyncParallelNodeAction<AgileState> agileStateAsyncParallelNodeAction = new ParallelNode.AsyncParallelNodeAction<>(PARSE_AND_FETCH, parallelActions, Map.of());
+
         return new StateGraph<>(AgileState::new)
-                .addNode(PARSE_AND_FETCH, new ParallelNode.AsyncParallelNodeAction<>(PARSE_AND_FETCH, parallelActions, Map.of()))
+                .addNode(PARSE_AND_FETCH, agileStateAsyncParallelNodeAction)
                 .addNode(ASSESS_SCOPE, assessOperationScopeNode)
                 .addEdge(START, PARSE_AND_FETCH)
                 .addConditionalEdges(
