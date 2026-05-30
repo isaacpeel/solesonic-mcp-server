@@ -1,3 +1,5 @@
 package com.solesonic.mcp.model.espn;
 
-public record EspnStandingStat(String name, String displayValue) {}
+import java.io.Serializable;
+
+public record EspnStandingStat(String name, String displayValue) implements Serializable {}

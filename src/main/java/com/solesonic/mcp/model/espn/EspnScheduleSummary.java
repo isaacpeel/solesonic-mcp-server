@@ -2,6 +2,7 @@ package com.solesonic.mcp.model.espn;
 
 import com.solesonic.mcp.prompt.PromptConstants;
 
+import java.io.Serializable;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
-public record EspnScheduleSummary(List<EspnEvent> games) {
+public record EspnScheduleSummary(List<EspnEvent> games) implements Serializable {
 
     public boolean hasGames() {
         return games != null && !games.isEmpty();

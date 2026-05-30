@@ -1,3 +1,5 @@
 package com.solesonic.mcp.model.espn;
 
-public record EspnStatus(EspnStatusType type) {}
+import java.io.Serializable;
+
+public record EspnStatus(EspnStatusType type) implements Serializable {}
