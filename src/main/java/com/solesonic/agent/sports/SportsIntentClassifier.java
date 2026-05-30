@@ -1,0 +1,120 @@
+package com.solesonic.agent.sports;
+
+import com.solesonic.agent.sports.model.SportsQuestionType;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Keyword-based classifier that maps a user's NBA question to one or more SportsQuestionType values
+ * without calling an LLM. Covers the large majority of real user questions in under 1ms.
+ * <p>
+ * Falls back to GENERAL_NEWS when no keywords match so that downstream routing always has
+ * a valid intent type.
+ */
+@Component
+public class SportsIntentClassifier {
+
+    private static final Set<String> SCHEDULE_KEYWORDS = Set.of(
+            "when", "what time", "game time", "schedule", "channel", "tv", "broadcast",
+            "tip-off", "tipoff", "start time", "next game", "air", "playing tonight",
+            "on tonight", "on tv", "streaming", "watch", "tip off"
+    );
+
+    private static final Set<String> STANDINGS_KEYWORDS = Set.of(
+            "standings", "ranking", "ranked", "win-loss", "win loss", "record",
+            "playoff picture", "conference", "seed", "seeded", "elimination number",
+            "eliminated", "clinched", "first place", "last place", "in the playoffs",
+            "make the playoffs", "playoff race"
+    );
+
+    private static final Set<String> GAME_PREVIEW_KEYWORDS = Set.of(
+            "preview", "matchup", "match up", "predict", "prediction", "starting lineup",
+            "starting five", "starters", "who wins", "who will win", "analysis",
+            "breakdown", "advantage", "series", "playoff series", "double-double",
+            "triple-double", "game plan", "head to head", "head-to-head", "favorite",
+            "odds", "spread", "over under", "over/under", "box score", "keys to"
+    );
+
+    private static final Set<String> PLAYER_ANALYSIS_KEYWORDS = Set.of(
+            "ppg", "rpg", "apg", "per game", "averaging", "how is", "how has",
+            "playing well", "playing poorly", "in a slump", "on fire", "hot streak",
+            "career high", "career-high", "his numbers", "her numbers", "their numbers",
+            "minutes", "playing time", "rotation", "bench"
+    );
+
+    private static final Set<String> STATISTICS_KEYWORDS = Set.of(
+            "stats", "statistics", "numbers", "shooting percentage", "fg%", "3p%", "ft%",
+            "field goal", "three point", "free throw", "rebounds", "assists", "blocks",
+            "steals", "turnovers", "plus minus", "plus/minus", "+/-", "leaders",
+            "league leaders", "efficiency", "rating", "per", "usage", "true shooting",
+            "ts%", "net rating", "offensive rating", "defensive rating"
+    );
+
+    private static final Set<String> TRADE_NEWS_KEYWORDS = Set.of(
+            "trade", "traded", "rumor", "rumours", "rumors", "waived", "signed",
+            "signing", "transaction", "free agent", "buyout", "acquired", "roster move",
+            "cut", "released", "extension", "contract", "salary", "cap space"
+    );
+
+    private static final Set<String> GENERAL_NEWS_KEYWORDS = Set.of(
+            "news", "injury", "injured", "hurt", "update", "latest", "report",
+            "status", "health", "questionable", "doubtful", "out", "day-to-day",
+            "return", "timeline", "suspension", "suspended", "ejected", "fined",
+            "interview", "press conference", "statement", "tweet"
+    );
+
+    public List<SportsQuestionType> classify(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return List.of(SportsQuestionType.GENERAL_NEWS);
+        }
+
+        String lowercaseMessage = userMessage.toLowerCase();
+        List<SportsQuestionType> matches = new ArrayList<>();
+
+        if (matchesAny(lowercaseMessage, SCHEDULE_KEYWORDS)) {
+            matches.add(SportsQuestionType.SCHEDULE_LOOKUP);
+        }
+
+        if (matchesAny(lowercaseMessage, STANDINGS_KEYWORDS)) {
+            matches.add(SportsQuestionType.STANDINGS);
+        }
+
+        if (matchesAny(lowercaseMessage, GAME_PREVIEW_KEYWORDS)) {
+            matches.add(SportsQuestionType.GAME_PREVIEW);
+        }
+
+        if (matchesAny(lowercaseMessage, PLAYER_ANALYSIS_KEYWORDS)) {
+            matches.add(SportsQuestionType.PLAYER_ANALYSIS);
+        }
+
+        if (matchesAny(lowercaseMessage, STATISTICS_KEYWORDS)) {
+            matches.add(SportsQuestionType.STATISTICS);
+        }
+
+        if (matchesAny(lowercaseMessage, TRADE_NEWS_KEYWORDS)) {
+            matches.add(SportsQuestionType.TRADE_NEWS);
+        }
+
+        if (matchesAny(lowercaseMessage, GENERAL_NEWS_KEYWORDS)) {
+            matches.add(SportsQuestionType.GENERAL_NEWS);
+        }
+
+        if (matches.isEmpty()) {
+            matches.add(SportsQuestionType.GENERAL_NEWS);
+        }
+
+        return List.copyOf(matches);
+    }
+
+    private boolean matchesAny(String lowercaseMessage, Set<String> keywords) {
+        for (String keyword : keywords) {
+            if (lowercaseMessage.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

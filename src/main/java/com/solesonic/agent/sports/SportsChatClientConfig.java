@@ -36,6 +36,7 @@ public class SportsChatClientConfig {
                 .mainGPU(1)
                 .numCtx(16384)
                 .numBatch(1024)
+                .disableThinking()
                 .build();
 
         ModelManagementOptions modelManagementOptions = ModelManagementOptions.builder()
@@ -65,6 +66,7 @@ public class SportsChatClientConfig {
                 .mainGPU(0)
                 .numCtx(4096)
                 .numBatch(1024)
+                .disableThinking()
                 .build();
 
         ModelManagementOptions modelManagementOptions = ModelManagementOptions.builder()

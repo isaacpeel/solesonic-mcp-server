@@ -41,8 +41,8 @@ public class SportsAgentExecutor implements AgentExecutor {
             SportsResearchGraphConfig.SEARCH_SCHEDULE,              "Fetching schedule from ESPN...",
             SportsResearchGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE,  "Identifying teams from the schedule...",
             SportsResearchGraphConfig.PARALLEL_SEARCH,              "Searching for current data...",
-            SportsResearchGraphConfig.SEARCH_NEWS_AND_STATS,        "Searching for news and statistics...",
-            SportsResearchGraphConfig.SYNTHESIZE_ANALYSIS,          "Composing response..."
+            SportsResearchGraphConfig.SEARCH_NEWS_AND_STATS,        "Searching for news and statistics..."
+            // SYNTHESIZE_ANALYSIS omitted — the node streams tokens directly via progressCallback
     );
 
     private final CompiledGraph<SportsState> sportsResearchGraph;
