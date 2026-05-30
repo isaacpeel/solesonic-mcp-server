@@ -30,6 +30,7 @@ public class SportsAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(SportsAgentExecutor.class);
 
     public static final String PROGRESS_CALLBACK_KEY = "progressCallback";
+    public static final String TASK_UPDATER_KEY = "taskUpdater";
 
     private static final String FALLBACK_ANALYSIS = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
 
@@ -42,7 +43,7 @@ public class SportsAgentExecutor implements AgentExecutor {
             SportsResearchGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE,  "Identifying teams from the schedule...",
             SportsResearchGraphConfig.PARALLEL_SEARCH,              "Searching for current data...",
             SportsResearchGraphConfig.SEARCH_NEWS_AND_STATS,        "Searching for news and statistics..."
-            // SYNTHESIZE_ANALYSIS omitted — the node streams tokens directly via progressCallback
+            // SYNTHESIZE_ANALYSIS omitted — the node streams tokens as artifact chunks directly
     );
 
     private final CompiledGraph<SportsState> sportsResearchGraph;
@@ -90,6 +91,7 @@ public class SportsAgentExecutor implements AgentExecutor {
 
         RunnableConfig runnableConfig = RunnableConfig.builder()
                 .addMetadata(PROGRESS_CALLBACK_KEY, progressCallback)
+                .addMetadata(TASK_UPDATER_KEY, taskUpdater)
                 .build();
 
         AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
@@ -121,10 +123,14 @@ public class SportsAgentExecutor implements AgentExecutor {
                     .join();
 
             SportsState finalState = finalStateRef.get();
-            String analysis = finalState != null ? finalState.finalAnalysis().orElse(FALLBACK_ANALYSIS) : FALLBACK_ANALYSIS;
 
-            taskUpdater.addArtifact(List.of(new TextPart(analysis)), null, null, null);
-            taskUpdater.complete();
+            if (finalState != null && finalState.finalAnalysis().isPresent()) {
+                // Synthesis node streamed the artifact directly as chunks — just complete
+                taskUpdater.complete();
+            } else {
+                taskUpdater.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
+                taskUpdater.complete();
+            }
         } catch (Exception exception) {
             log.error("NBA research agent failed: userMessage={}", userMessage, exception);
             taskUpdater.fail();
