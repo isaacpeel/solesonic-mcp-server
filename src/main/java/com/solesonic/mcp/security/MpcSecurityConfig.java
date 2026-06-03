@@ -24,6 +24,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
@@ -169,9 +171,27 @@ public class MpcSecurityConfig {
         return http.build();
     }
 
+    private String resolveRemoteHost(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp;
+        }
+
+        return request.getRemoteAddr();
+    }
+
     private AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, _) -> {
-            log.warn("{} - Unauthorized access attempt: remote addr: {} {} - {}", SC_UNAUTHORIZED, request.getRemoteAddr(), request.getMethod(), request.getRequestURI());
+            String resolveRemoteHost = resolveRemoteHost(request);
+            String method = request.getMethod();
+            String requestURI = request.getRequestURI();
+
+            log.warn("{} - Unauthorized access attempt: remote host: {} {} - {}", SC_UNAUTHORIZED, resolveRemoteHost, method, requestURI);
 
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(SC_UNAUTHORIZED);
@@ -181,7 +201,11 @@ public class MpcSecurityConfig {
 
     private AccessDeniedHandler accessDeniedHandler() {
         return (request, response, _) -> {
-            log.warn("{} - Access Denied: {} trying to access {}", SC_FORBIDDEN, request.getRemoteAddr(), request.getRequestURI());
+            String resolveRemoteHost = resolveRemoteHost(request);
+            String method = request.getMethod();
+            String requestURI = request.getRequestURI();
+
+            log.warn("{} - Access Denied: {} {} - {}", SC_FORBIDDEN, resolveRemoteHost, method, requestURI);
             response.sendError(SC_FORBIDDEN, "Access Denied");
         };
     }
