@@ -44,7 +44,7 @@ public class SportsChatClientConfig {
                 .build();
 
         OllamaChatModel ollamaChatModel = OllamaChatModel.builder()
-                .defaultOptions(ollamaChatOptions)
+                .options(ollamaChatOptions)
                 .ollamaApi(ollamaApi)
                 .modelManagementOptions(modelManagementOptions)
                 .build();
@@ -74,7 +74,7 @@ public class SportsChatClientConfig {
                 .build();
 
         OllamaChatModel ollamaChatModel = OllamaChatModel.builder()
-                .defaultOptions(ollamaChatOptions)
+                .options(ollamaChatOptions)
                 .ollamaApi(ollamaApi)
                 .modelManagementOptions(modelManagementOptions)
                 .build();

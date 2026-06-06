@@ -1,6 +1,7 @@
 package com.solesonic.mcp.tool.atlassian;
 
 import io.modelcontextprotocol.server.McpSyncServerExchange;
+import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import io.modelcontextprotocol.spec.McpSchema.ClientCapabilities;
 import io.modelcontextprotocol.spec.McpSchema.ElicitRequest;
@@ -15,9 +16,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class JiraIssueDeleteElicitationTest {
 
@@ -28,8 +27,12 @@ public class JiraIssueDeleteElicitationTest {
     @BeforeEach
     public void setUp() {
         exchange = mock(McpSyncServerExchange.class);
+
+        CallToolRequest callToolRequest = CallToolRequest.builder("delete_jira_issue")
+                .build();
+
         context = DefaultMcpSyncRequestContext.builder()
-                .request(new CallToolRequest("delete_jira_issue", Map.of()))
+                .request(callToolRequest)
                 .exchange(exchange)
                 .build();
 
@@ -45,9 +48,10 @@ public class JiraIssueDeleteElicitationTest {
         when(expectedResult.action()).thenReturn(ElicitResult.Action.ACCEPT);
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
-        ElicitRequest confirmationRequest = ElicitRequest.builder()
-                .message("Are you sure you want to delete Jira issue: PROJ-123?")
-                .requestedSchema(Map.of("type", "object", "properties", Map.of()))
+        String message = "Are you sure you want to delete Jira issue: PROJ-123?";
+        Map<String, Object> schema = Map.of("type", "object", "properties", Map.of());
+
+        ElicitRequest confirmationRequest = McpSchema.ElicitFormRequest.builder(message, schema)
                 .meta(Map.of(JiraIssueTools.CHAT_ID, "test-chat-id"))
                 .build();
 
@@ -55,9 +59,9 @@ public class JiraIssueDeleteElicitationTest {
 
         assertThat(result.action()).isEqualTo(ElicitResult.Action.ACCEPT);
 
-        ArgumentCaptor<ElicitRequest> captor = ArgumentCaptor.forClass(ElicitRequest.class);
+        ArgumentCaptor<McpSchema.ElicitFormRequest> captor = ArgumentCaptor.forClass(McpSchema.ElicitFormRequest.class);
         verify(exchange).createElicitation(captor.capture());
-        ElicitRequest capturedRequest = captor.getValue();
+        McpSchema.ElicitFormRequest capturedRequest = captor.getValue();
         assertThat(capturedRequest.message()).isEqualTo("Are you sure you want to delete Jira issue: PROJ-123?");
         assertThat(capturedRequest.requestedSchema()).containsEntry("type", "object");
         assertThat(capturedRequest.requestedSchema()).containsKey("properties");
@@ -70,9 +74,10 @@ public class JiraIssueDeleteElicitationTest {
         when(expectedResult.action()).thenReturn(ElicitResult.Action.DECLINE);
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
-        ElicitRequest confirmationRequest = ElicitRequest.builder()
-                .message("Are you sure you want to delete Jira issue: PROJ-123?")
-                .requestedSchema(Map.of("type", "object", "properties", Map.of()))
+        String message = "Are you sure you want to delete Jira issue: PROJ-123?";
+        Map<String, Object> schema = Map.of("type", "object", "properties", Map.of());
+
+        ElicitRequest confirmationRequest = McpSchema.ElicitFormRequest.builder(message, schema)
                 .meta(Map.of(JiraIssueTools.CHAT_ID, "test-chat-id"))
                 .build();
 
@@ -87,9 +92,10 @@ public class JiraIssueDeleteElicitationTest {
         when(expectedResult.action()).thenReturn(ElicitResult.Action.CANCEL);
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
-        ElicitRequest confirmationRequest = ElicitRequest.builder()
-                .message("Are you sure you want to delete Jira issue: PROJ-123?")
-                .requestedSchema(Map.of("type", "object", "properties", Map.of()))
+        String message = "Are you sure you want to delete Jira issue: PROJ-123?";
+        Map<String, Object> schema = Map.of("type", "object", "properties", Map.of());
+
+        ElicitRequest confirmationRequest = McpSchema.ElicitFormRequest.builder(message, schema)
                 .meta(Map.of(JiraIssueTools.CHAT_ID, "test-chat-id"))
                 .build();
 

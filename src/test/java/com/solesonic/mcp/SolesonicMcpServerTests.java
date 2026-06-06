@@ -7,6 +7,8 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class SolesonicMcpServerTests {
+//    @MockitoBean
+//    protected RedisChatMemoryRepository redisChatMemoryRepository;
 
     @Test
     void contextLoads() {

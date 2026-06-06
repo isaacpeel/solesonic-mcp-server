@@ -42,7 +42,7 @@ public class SportsChatClientFactory {
                 .build();
 
         OllamaChatModel ollamaChatModel = OllamaChatModel.builder()
-                .defaultOptions(options)
+                .options(options)
                 .ollamaApi(ollamaApi)
                 .modelManagementOptions(modelManagementOptions)
                 .build();

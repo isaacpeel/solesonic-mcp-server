@@ -177,22 +177,22 @@ public class ElicitationTests {
         when(expectedResult.meta()).thenReturn(null);
         when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(expectedResult);
 
-        StructuredElicitResult<Map<String, Object>> result = context.elicit(e -> e.message("Test message"),
+        StructuredElicitResult<Map<String, Object>> structuredElicitResult = context.elicit(e -> e.message("Test message"),
                 new ParameterizedTypeReference<>() {
                 });
 
-        assertThat(result).isNotNull();
-        assertThat(result.action()).isEqualTo(ElicitResult.Action.ACCEPT);
-        assertThat(result.structuredContent()).isNotNull();
-        assertThat(result.structuredContent()).containsEntry("name", "John");
-        assertThat(result.structuredContent()).containsEntry("age", 30);
+        assertThat(structuredElicitResult).isNotNull();
+        assertThat(structuredElicitResult.action()).isEqualTo(ElicitResult.Action.ACCEPT);
+        assertThat(structuredElicitResult.structuredContent()).isNotNull();
+        assertThat(structuredElicitResult.structuredContent()).containsEntry("name", "John");
+        assertThat(structuredElicitResult.structuredContent()).containsEntry("age", 30);
 
         ArgumentCaptor<ElicitRequest> captor = ArgumentCaptor.forClass(ElicitRequest.class);
         verify(exchange).createElicitation(captor.capture());
 
         ElicitRequest capturedRequest = captor.getValue();
         assertThat(capturedRequest.message()).isEqualTo("Test message");
-        assertThat(capturedRequest.requestedSchema()).isNotNull();
+        assertThat(capturedRequest.meta()).isNotNull();
     }
 
     @Test

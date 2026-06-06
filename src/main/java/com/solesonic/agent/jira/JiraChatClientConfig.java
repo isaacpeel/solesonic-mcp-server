@@ -34,7 +34,7 @@ public class JiraChatClientConfig {
                 .build();
 
         OllamaChatModel ollamaChatModel = OllamaChatModel.builder()
-                .defaultOptions(ollamaChatOptions)
+                .options(ollamaChatOptions)
                 .ollamaApi(ollamaApi)
                 .modelManagementOptions(modelManagementOptions)
                 .build();
