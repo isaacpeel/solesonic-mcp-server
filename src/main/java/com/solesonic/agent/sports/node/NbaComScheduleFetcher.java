@@ -1,7 +1,7 @@
 package com.solesonic.agent.sports.node;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.model.tavily.TavilyExtractResponse;
+import com.solesonic.service.tavily.TavilySearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

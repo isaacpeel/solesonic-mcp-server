@@ -2,8 +2,8 @@ package com.solesonic.mcp.security.atlassian;
 
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
-import com.solesonic.mcp.model.atlassian.auth.TokenResponse;
-import com.solesonic.mcp.service.atlassian.AtlassianTokenBrokerService;
+import com.solesonic.model.atlassian.auth.TokenResponse;
+import com.solesonic.service.atlassian.AtlassianTokenBrokerService;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;

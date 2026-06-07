@@ -1,9 +1,9 @@
 package com.solesonic.mcp.tool.tavily;
 
-import com.solesonic.mcp.model.tavily.TavilyExtractResponse;
-import com.solesonic.mcp.model.tavily.TavilySearchRequest;
-import com.solesonic.mcp.model.tavily.TavilySearchResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.model.tavily.TavilyExtractResponse;
+import com.solesonic.model.tavily.TavilySearchRequest;
+import com.solesonic.model.tavily.TavilySearchResponse;
+import com.solesonic.service.tavily.TavilySearchService;
 import com.solesonic.a2a.progress.ProgressReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,8 +1,10 @@
 package com.solesonic.mcp.service.atlassian;
 
-import com.solesonic.mcp.model.atlassian.agile.Board;
-import com.solesonic.mcp.model.atlassian.agile.Boards;
+import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.model.atlassian.agile.Boards;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools.ListBoardsRequest;
+import com.solesonic.service.atlassian.JiraAgileService;
+import com.solesonic.service.atlassian.JiraIssueService;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

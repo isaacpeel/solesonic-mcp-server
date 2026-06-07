@@ -1,6 +1,6 @@
 package com.solesonic.agent.sports.node;
 
-import com.solesonic.mcp.service.espn.EspnService;
+import com.solesonic.service.espn.EspnService;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.model.EspnTeamProfile;
 import com.solesonic.agent.sports.model.SportsQueryIntent;

@@ -1,6 +1,6 @@
 package com.solesonic.mcp.prompt;
 
-import com.solesonic.mcp.service.WeatherService;
+import com.solesonic.service.WeatherService;
 import com.solesonic.mcp.tool.general.DateTools;
 import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;

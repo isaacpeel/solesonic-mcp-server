@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool.weather;
 
-import com.solesonic.mcp.service.WeatherService;
+import com.solesonic.service.WeatherService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;

@@ -2,7 +2,7 @@ package com.solesonic.agent.sports;
 
 import com.solesonic.agent.sports.model.EspnTeamProfile;
 import com.solesonic.agent.sports.model.SportsQueryIntent;
-import com.solesonic.mcp.model.espn.EspnScheduleSummary;
+import com.solesonic.model.espn.EspnScheduleSummary;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;

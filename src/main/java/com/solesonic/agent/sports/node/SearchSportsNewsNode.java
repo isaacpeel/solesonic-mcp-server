@@ -1,8 +1,8 @@
 package com.solesonic.agent.sports.node;
 
-import com.solesonic.mcp.model.tavily.TavilySearchRequest;
-import com.solesonic.mcp.model.tavily.TavilySearchResponse;
-import com.solesonic.mcp.service.tavily.TavilySearchService;
+import com.solesonic.model.tavily.TavilySearchRequest;
+import com.solesonic.model.tavily.TavilySearchResponse;
+import com.solesonic.service.tavily.TavilySearchService;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.model.SportsQueryIntent;
 import com.solesonic.agent.sports.model.SportsQuestionType;

@@ -1,8 +1,10 @@
 package com.solesonic.mcp.service.atlassian;
 
 import com.solesonic.agent.agile.AgileQueryResult;
-import com.solesonic.mcp.model.atlassian.agile.Board;
-import com.solesonic.mcp.model.atlassian.agile.BoardIssues;
+import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.model.atlassian.agile.BoardIssues;
+import com.solesonic.service.atlassian.JiraAgileService;
+import com.solesonic.service.atlassian.JiraIssueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

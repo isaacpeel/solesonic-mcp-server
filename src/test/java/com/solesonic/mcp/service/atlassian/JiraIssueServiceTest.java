@@ -1,7 +1,8 @@
 package com.solesonic.mcp.service.atlassian;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
-import com.solesonic.mcp.model.atlassian.jira.JiraIssue;
+import com.solesonic.model.atlassian.jira.JiraIssue;
+import com.solesonic.service.atlassian.JiraIssueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

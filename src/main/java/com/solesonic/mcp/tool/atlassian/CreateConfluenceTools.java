@@ -1,16 +1,16 @@
 package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.mcp.model.atlassian.confluence.Body;
-import com.solesonic.mcp.model.atlassian.confluence.Page;
-import com.solesonic.mcp.model.atlassian.confluence.Storage;
-import com.solesonic.mcp.service.atlassian.ConfluencePageService;
+import com.solesonic.model.atlassian.confluence.Body;
+import com.solesonic.model.atlassian.confluence.Page;
+import com.solesonic.model.atlassian.confluence.Storage;
+import com.solesonic.service.atlassian.ConfluencePageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
-import static com.solesonic.mcp.service.atlassian.ConfluenceConstants.STORAGE_FORMAT;
+import static com.solesonic.service.atlassian.ConfluenceConstants.STORAGE_FORMAT;
 
 @Component
 @SuppressWarnings("unused")

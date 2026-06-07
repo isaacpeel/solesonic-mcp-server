@@ -1,7 +1,7 @@
 package com.solesonic.agent.sports.node;
 
 import com.solesonic.agent.sports.SportsState;
-import com.solesonic.mcp.service.espn.EspnService;
+import com.solesonic.service.espn.EspnService;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -3,7 +3,7 @@ package com.solesonic.agent.jira.node;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeLookupResult;
-import com.solesonic.mcp.service.atlassian.AssigneeResolutionService;
+import com.solesonic.service.atlassian.AssigneeResolutionService;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

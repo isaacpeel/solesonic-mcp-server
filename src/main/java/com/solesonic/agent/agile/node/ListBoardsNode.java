@@ -1,6 +1,6 @@
 package com.solesonic.agent.agile.node;
 
-import com.solesonic.mcp.service.atlassian.JiraAgileService;
+import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.agent.agile.AgileState;
 import org.bsc.langgraph4j.action.AsyncNodeAction;

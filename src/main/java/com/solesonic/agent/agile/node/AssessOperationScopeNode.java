@@ -1,7 +1,7 @@
 package com.solesonic.agent.agile.node;
 
-import com.solesonic.mcp.model.atlassian.agile.Board;
-import com.solesonic.mcp.service.atlassian.JiraAgileService;
+import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.agent.agile.AgileQueryResult;
 import com.solesonic.agent.agile.AgileState;

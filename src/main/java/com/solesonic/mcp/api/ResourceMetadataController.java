@@ -1,6 +1,6 @@
 package com.solesonic.mcp.api;
 
-import com.solesonic.mcp.model.atlassian.auth.ProtectedResourceMetadata;
+import com.solesonic.model.atlassian.auth.ProtectedResourceMetadata;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

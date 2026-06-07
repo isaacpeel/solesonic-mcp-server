@@ -3,7 +3,7 @@ package com.solesonic.agent.sports.node;
 import com.solesonic.a2a.executor.SportsAgentExecutor;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.model.SportsQueryIntent;
-import com.solesonic.mcp.model.espn.EspnScheduleSummary;
+import com.solesonic.model.espn.EspnScheduleSummary;
 import com.solesonic.mcp.prompt.PromptConstants;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;

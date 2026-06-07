@@ -1,8 +1,9 @@
 package com.solesonic.mcp.service.tavily;
 
-import com.solesonic.mcp.model.tavily.TavilySearchRequest;
-import com.solesonic.mcp.model.tavily.TavilySearchResponse;
-import com.solesonic.mcp.model.tavily.TavilySearchResult;
+import com.solesonic.model.tavily.TavilySearchRequest;
+import com.solesonic.model.tavily.TavilySearchResponse;
+import com.solesonic.model.tavily.TavilySearchResult;
+import com.solesonic.service.tavily.TavilySearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
