@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.agent.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
+import static com.solesonic.agent.config.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 

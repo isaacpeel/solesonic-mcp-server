@@ -18,10 +18,10 @@ import static org.bsc.langgraph4j.GraphDefinition.START;
 public class JiraGraphConfig {
 
     public static final String GENERATE_DETAILED_DESCRIPTION = "generateDetailedDescription";
-    public static final String GENERATE_STORY_SUMMARY        = "generateStorySummary";
-    public static final String GENERATE_ACCEPTANCE_CRITERIA  = "generateAcceptanceCriteria";
-    public static final String RESOLVE_ASSIGNEE              = "resolveAssignee";
-    public static final String ASSEMBLE_PAYLOAD              = "assemblePayload";
+    public static final String GENERATE_STORY_SUMMARY = "generateStorySummary";
+    public static final String GENERATE_ACCEPTANCE_CRITERIA = "generateAcceptanceCriteria";
+    public static final String RESOLVE_ASSIGNEE = "resolveAssignee";
+    public static final String ASSEMBLE_PAYLOAD = "assemblePayload";
 
     @Bean
     public CompiledGraph<JiraState> createJiraGraph(

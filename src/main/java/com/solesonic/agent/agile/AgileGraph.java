@@ -19,12 +19,12 @@ import static org.bsc.langgraph4j.GraphDefinition.START;
 import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 
 @Configuration
-public class AgileGraphConfig {
+public class AgileGraph {
 
-    public static final String PARSE_AND_FETCH      = "parseAndFetch";
-    public static final String ASSESS_SCOPE         = "assessOperationScope";
-    public static final String ROUTE_TRANSITION     = "transition";
-    public static final String ROUTE_QUERY          = "query";
+    public static final String PARSE_AND_FETCH = "parseAndFetch";
+    public static final String ASSESS_SCOPE = "assessOperationScope";
+    public static final String ROUTE_TRANSITION = "transition";
+    public static final String ROUTE_QUERY = "query";
 
     @Bean
     public CompiledGraph<AgileState> agileResearchGraph(
@@ -46,7 +46,7 @@ public class AgileGraphConfig {
                 .addEdge(START, PARSE_AND_FETCH)
                 .addConditionalEdges(
                         PARSE_AND_FETCH,
-                        edge_async(AgileGraphConfig::routeByQueryType),
+                        edge_async(AgileGraph::routeByQueryType),
                         Map.of(
                                 ROUTE_TRANSITION, ASSESS_SCOPE,
                                 ROUTE_QUERY, END
@@ -58,7 +58,7 @@ public class AgileGraphConfig {
 
     private static String routeByQueryType(AgileState state) {
         return state.agileQueryResult()
-                .filter(AgileQueryResult::isTransitionQuery)
+                .filter(AgileQueryIntent::isTransitionQuery)
                 .map(ignored -> ROUTE_TRANSITION)
                 .orElse(ROUTE_QUERY);
     }

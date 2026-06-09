@@ -1,8 +1,8 @@
 package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.a2a.progress.ProgressReporter;
-import com.solesonic.agent.agile.AgileGraphConfig;
-import com.solesonic.agent.agile.AgileQueryResult;
+import com.solesonic.agent.agile.AgileGraph;
+import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.service.atlassian.JiraAgileService;
@@ -80,12 +80,15 @@ public class JiraAgileTools {
                                      @McpToolParam(required = false, description = BOARD_ISSUES_MAX_RESULTS_DESCRIPTION)
                                      Integer maxResults,
                                      @McpToolParam(description = VALIDATE_QUERY_DESCRIPTION)
-                                     boolean validateQuery) {}
+                                     boolean validateQuery) {
+    }
 
-    public record BoardBacklogIssuesRequest(String boardId, String jql, Integer startAt, Integer maxResults, Boolean validateQuery) {}
+    public record BoardBacklogIssuesRequest(String boardId, String jql, Integer startAt, Integer maxResults,
+                                            Boolean validateQuery) {
+    }
 
     @McpTool(name = AGILE_WORKFLOW,
-             description = AGILE_WORKFLOW_DESCRIPTION)
+            description = AGILE_WORKFLOW_DESCRIPTION)
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-AGILE-LIST')")
     public String agileWorkflow(
             McpSyncRequestContext mcpSyncRequestContext,
@@ -105,15 +108,15 @@ public class JiraAgileTools {
                     finalStateRef.set(output.state());
 
                     int progressPercent = switch (output.node()) {
-                        case AgileGraphConfig.PARSE_AND_FETCH -> 50;
-                        case AgileGraphConfig.ASSESS_SCOPE    -> 80;
-                        case END                              -> 100;
-                        default                               -> 10;
+                        case AgileGraph.PARSE_AND_FETCH -> 50;
+                        case AgileGraph.ASSESS_SCOPE -> 80;
+                        case END -> 100;
+                        default -> 10;
                     };
 
                     String node = output.node();
 
-                    switch(node) {
+                    switch (node) {
                         case START -> node = "Agile agent started.";
                         case END -> node = "Agile agent finished.";
                         default -> node = "Completed: " + node;
@@ -124,19 +127,19 @@ public class JiraAgileTools {
                 .join();
 
         AgileState finalState = finalStateRef.get();
-        AgileQueryResult queryResult = finalState.agileQueryResult().orElseThrow(
+        AgileQueryIntent queryResult = finalState.agileQueryResult().orElseThrow(
                 () -> new IllegalStateException("Graph completed without an agile query result"));
 
         Board board = requireFirstBoard(finalState);
         String resolvedUserMessage = finalState.userMessage().orElse(userMessage);
 
-        return switch (queryResult.queryType().toUpperCase()) {
+        return switch (queryResult.userIntent().toUpperCase()) {
             case COUNT -> jiraAgileService.handleCountQuery(board, queryResult);
             case LIST -> jiraAgileService.handleListQuery(
-                                        mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
+                    mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
             case TRANSITION -> jiraAgileService.handleTransitionQuery(
-                                        mcpSyncRequestContext, board, queryResult, finalState);
-            default           -> "Unrecognised query type: " + queryResult.queryType();
+                    mcpSyncRequestContext, board, queryResult, finalState);
+            default -> "Unrecognised query type: " + queryResult.userIntent();
         };
     }
 

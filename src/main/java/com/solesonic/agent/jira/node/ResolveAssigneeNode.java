@@ -28,9 +28,9 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> apply(JiraState state) {
+    public CompletableFuture<Map<String, Object>> apply(JiraState jiraState) {
         try {
-            String userMessage = state.userMessage().orElseThrow(() ->
+            String userMessage = jiraState.userMessage().orElseThrow(() ->
                     new IllegalStateException("userMessage is required"));
 
             log.info("Resolving assignee for: {}", userMessage);

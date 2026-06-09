@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.agent.jira.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
+import static com.solesonic.agent.config.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
@@ -42,9 +42,9 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> apply(JiraState state) {
+    public CompletableFuture<Map<String, Object>> apply(JiraState jiraState) {
         try {
-            String userMessage = state.userMessage().orElseThrow(() ->
+            String userMessage = jiraState.userMessage().orElseThrow(() ->
                     new IllegalStateException("userMessage is required"));
 
             log.info("Generating detailed description for: {}", userMessage);
@@ -53,7 +53,7 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
 
             String detailedDescription = chatClient.prompt()
                     .user(renderedPrompt)
-                    .advisors(advisorSpec -> state.conversationId().ifPresent(conversationId -> {
+                    .advisors(advisorSpec -> jiraState.conversationId().ifPresent(conversationId -> {
                         advisorSpec.advisors(messageChatMemoryAdvisor);
                         advisorSpec.param(CONVERSATION_ID, conversationId);
                     }))

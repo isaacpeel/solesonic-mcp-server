@@ -1,6 +1,6 @@
 package com.solesonic.agent.agile.node;
 
-import com.solesonic.agent.agile.AgileQueryResult;
+import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.agent.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
+import static com.solesonic.agent.config.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -36,9 +36,10 @@ public class ParseAgileIntentNode implements AsyncNodeAction<AgileState> {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> apply(AgileState state) {
+    public CompletableFuture<Map<String, Object>> apply(AgileState agileState) {
         try {
-            String userMessage = state.userMessage().orElseThrow();
+            String userMessage = agileState.userMessage()
+                    .orElseThrow();
 
             PromptTemplate jiraAgilePromptTemplate = PromptTemplate.builder()
                     .resource(jiraAgilePrompt)
@@ -48,20 +49,20 @@ public class ParseAgileIntentNode implements AsyncNodeAction<AgileState> {
 
             Prompt agilePrompt = jiraAgilePromptTemplate.create(agileParams);
 
-            AgileQueryResult agileQueryResult = chatClient.prompt(agilePrompt)
+            AgileQueryIntent agileQueryIntent = chatClient.prompt(agilePrompt)
                     .user(userMessage)
                     .call()
-                    .responseEntity(AgileQueryResult.class)
+                    .responseEntity(AgileQueryIntent.class)
                     .getEntity();
 
-            assert agileQueryResult != null;
-            log.info("Parsed agile intent: queryType={}, jqlFilter={}, targetStatus={}", agileQueryResult.queryType(), agileQueryResult.jqlFilter(), agileQueryResult.targetStatus());
+            assert agileQueryIntent != null;
 
-            return completedFuture(Map.of(AgileState.AGILE_QUERY_RESULT, agileQueryResult));
+            log.debug("Intent: {}", agileQueryIntent.userIntent());
+
+            return completedFuture(Map.of(AgileState.AGILE_QUERY_INTENT, agileQueryIntent));
         } catch (Exception exception) {
             log.error("Failed to parse agile intent", exception);
             return failedFuture(exception);
         }
     }
-
 }

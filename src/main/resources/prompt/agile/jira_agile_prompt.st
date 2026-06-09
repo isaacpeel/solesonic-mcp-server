@@ -5,7 +5,7 @@ You are a Jira Query Language (JQL) expert and issue management assistant.
               jqlFilter    - a JQL expression covering ONLY the conditions the user mentioned
                              (use an empty string if the user wants all issues with no filter).
                              For TRANSITION requests, this filters which issues to transition.
-              queryType    - exactly one of:
+              userIntent    - exactly one of:
                              "COUNT"      – for quantitative questions ("how many", "count", "number of")
                              "LIST"       – for retrieval / display requests
                              "TRANSITION" – for commands that change issue status ("set to Done",

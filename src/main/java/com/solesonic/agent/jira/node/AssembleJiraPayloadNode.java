@@ -20,26 +20,26 @@ public class AssembleJiraPayloadNode implements AsyncNodeAction<JiraState> {
     private static final Logger log = LoggerFactory.getLogger(AssembleJiraPayloadNode.class);
 
     @Override
-    public CompletableFuture<Map<String, Object>> apply(JiraState state) {
+    public CompletableFuture<Map<String, Object>> apply(JiraState jiraState) {
         try {
-            boolean assigneeNotResolved = state.assigneeNotResolved().orElse(false);
+            boolean assigneeNotResolved = jiraState.assigneeNotResolved().orElse(false);
 
             if (assigneeNotResolved) {
                 log.debug("Payload assembly skipped — assignee was not resolved");
                 return completedFuture(Map.of());
             }
 
-            String summary = state.storySummary().orElseThrow(() -> new IllegalStateException("storySummary is required"));
+            String summary = jiraState.storySummary().orElseThrow(() -> new IllegalStateException("storySummary is required"));
 
-            String description = state.detailedDescription().orElseThrow(() -> new IllegalStateException("detailedDescription is required"));
+            String description = jiraState.detailedDescription().orElseThrow(() -> new IllegalStateException("detailedDescription is required"));
 
-            List<String> acceptanceCriteria = state.acceptanceCriteria().orElse(List.of());
+            List<String> acceptanceCriteria = jiraState.acceptanceCriteria().orElse(List.of());
 
             JiraIssueCreatePayload payload = new JiraIssueCreatePayload(
                     summary,
                     description,
                     acceptanceCriteria,
-                    state.assigneeLookupResult().orElse(null)
+                    jiraState.assigneeLookupResult().orElse(null)
             );
 
             log.info("Assembled Jira payload: summary={}", summary);

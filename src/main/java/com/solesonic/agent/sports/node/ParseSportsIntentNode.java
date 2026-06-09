@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static com.solesonic.agent.sports.SportsChatClientConfig.SPORTS_INTENT_CLIENT;
+import static com.solesonic.agent.config.SportsChatClientConfig.SPORTS_INTENT_CLIENT;
 import static com.solesonic.mcp.prompt.PromptConstants.TODAY_DATE;
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptConstants.todayDate;

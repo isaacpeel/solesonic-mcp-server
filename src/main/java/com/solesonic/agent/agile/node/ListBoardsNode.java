@@ -1,8 +1,7 @@
 package com.solesonic.agent.agile.node;
 
-import com.solesonic.service.atlassian.JiraAgileService;
-import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.agent.agile.AgileState;
+import com.solesonic.service.atlassian.JiraAgileService;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +25,9 @@ public class ListBoardsNode implements AsyncNodeAction<AgileState> {
     }
 
     @Override
-    public CompletableFuture<Map<String, Object>> apply(AgileState state) {
+    public CompletableFuture<Map<String, Object>> apply(AgileState agileState) {
         try {
-            JiraAgileTools.ListBoardsRequest listBoardsRequest = new JiraAgileTools.ListBoardsRequest(
-                    null, null, null, null, null
-            );
-
-            var boards = jiraAgileService.listBoards(listBoardsRequest);
+            var boards = jiraAgileService.listBoards();
             int boardCount = boards.values().size();
             log.info("Found {} accessible boards", boardCount);
 

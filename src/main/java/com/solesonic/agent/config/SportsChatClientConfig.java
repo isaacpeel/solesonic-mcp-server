@@ -1,4 +1,4 @@
-package com.solesonic.agent.sports;
+package com.solesonic.agent.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;

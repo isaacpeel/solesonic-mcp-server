@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.solesonic.agent.sports.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
+import static com.solesonic.agent.config.SportsChatClientConfig.SPORTS_CHAT_CLIENT;
 import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 
 @Component

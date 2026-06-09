@@ -55,7 +55,7 @@ public class JiraIssueService {
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
                 .block();
 
-        log.info("Jira issue successfully retrieved: {}", issueId);
+        log.debug("Jira issue successfully retrieved: {}", issueId);
 
         return jiraIssue;
     }

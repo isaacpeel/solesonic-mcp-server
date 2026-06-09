@@ -46,7 +46,7 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
 
                 TokenResponse atlassianAccessToken = atlassianTokenBrokerService.atlassianAccessToken(UUID.fromString(userId));
 
-                log.info("Token received");
+                log.debug("Token received");
 
                 String accessToken = atlassianAccessToken.accessToken();
 

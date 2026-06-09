@@ -1,4 +1,4 @@
-package com.solesonic.model.atlassian.jira.function;
+package com.solesonic.model.atlassian.jira;
 
 @SuppressWarnings("unused")
 public record JiraRequest (String summary, String description) {

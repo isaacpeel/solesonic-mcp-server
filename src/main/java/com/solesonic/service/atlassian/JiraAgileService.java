@@ -1,22 +1,15 @@
 package com.solesonic.service.atlassian;
 
-import com.solesonic.agent.agile.AgileQueryResult;
+import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
+import com.solesonic.mcp.tool.McpConfirmations;
+import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.model.atlassian.agile.BoardIssue;
 import com.solesonic.model.atlassian.agile.BoardIssues;
 import com.solesonic.model.atlassian.agile.Boards;
-import com.solesonic.model.atlassian.jira.Content;
-import com.solesonic.model.atlassian.jira.Description;
-import com.solesonic.model.atlassian.jira.Fields;
-import com.solesonic.model.atlassian.jira.JiraIssue;
-import com.solesonic.model.atlassian.jira.TextContent;
-import com.solesonic.model.atlassian.jira.Transition;
-import com.solesonic.model.atlassian.jira.Transitions;
-import com.solesonic.mcp.tool.McpConfirmations;
-import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
+import com.solesonic.model.atlassian.jira.*;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -26,17 +19,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.solesonic.agent.agile.AgileChatClientConfig.AGILE_CHAT_CLIENT;
+import static com.solesonic.agent.config.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.service.atlassian.AtlassianConstants.*;
 
@@ -121,6 +109,22 @@ public class JiraAgileService {
         return boards;
     }
 
+    public Boards listBoards() {
+        String[] baseUri = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH};
+
+        Boards boards = webClient.get()
+                .uri(uriBuilder -> {
+                    uriBuilder.pathSegment(baseUri);
+
+                    return uriBuilder.build();
+                })
+                .exchangeToMono(response -> response.bodyToMono(Boards.class))
+                .block();
+
+        log.info("All Jira boards retrieved successfully");
+        return boards;
+    }
+
     public Board getBoard(String boardId) {
         log.debug("Getting Jira board: {}", boardId);
 
@@ -150,7 +154,7 @@ public class JiraAgileService {
 
     public BoardIssues getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
         String boardId = boardIssuesRequest.boardId();
-        log.info("Getting Jira board issues for board ID: {}", boardId);
+        log.debug("Getting Jira board issues for board ID: {}", boardId);
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, ISSUE_PATH};
 
@@ -162,16 +166,9 @@ public class JiraAgileService {
                     Integer maxResults = boardIssuesRequest.maxResults();
                     Integer startAt = boardIssuesRequest.startAt();
 
-                    if (StringUtils.isNotEmpty(jql)) {
-                        uriBuilder.queryParam(JQL, jql);
-                    }
-
-                    uriBuilder.queryParam(MAX_RESULTS, Objects.requireNonNullElse(maxResults, 15));
-
-                    if (startAt != null) {
-                        uriBuilder.queryParam(START_AT, startAt);
-                    }
-
+                    uriBuilder.queryParamIfPresent(JQL, Optional.ofNullable(jql));
+                    uriBuilder.queryParam(MAX_RESULTS, Optional.ofNullable(maxResults).orElse(15));
+                    uriBuilder.queryParamIfPresent(START_AT, Optional.ofNullable(startAt));
                     uriBuilder.queryParam(VALIDATE_QUERY, boardIssuesRequest.validateQuery());
 
                     return uriBuilder.build();
@@ -181,7 +178,7 @@ public class JiraAgileService {
 
         assert boardIssues != null;
         List<BoardIssue> issues = boardIssues.issues();
-        log.info("Found {} issues", issues.size());
+        log.debug("Found {} issues", issues.size());
 
         return boardIssues;
     }
@@ -199,7 +196,7 @@ public class JiraAgileService {
         return message.toString();
     }
 
-    public String handleCountQuery(Board board, AgileQueryResult queryResult) {
+    public String handleCountQuery(Board board, AgileQueryIntent queryResult) {
         JiraAgileTools.BoardIssuesRequest request = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
                 emptyToNull(queryResult.jqlFilter()),
@@ -217,7 +214,7 @@ public class JiraAgileService {
     public String handleListQuery(
             McpSyncRequestContext mcpSyncRequestContext,
             Board board,
-            AgileQueryResult queryResult,
+            AgileQueryIntent queryResult,
             String userMessage
     ) {
         return collectAndFormatPages(
@@ -229,7 +226,7 @@ public class JiraAgileService {
     private String collectAndFormatPages(
             McpSyncRequestContext mcpSyncRequestContext,
             Board board,
-            AgileQueryResult queryResult,
+            AgileQueryIntent queryResult,
             String userMessage,
             int startAt,
             List<BoardIssue> accumulatedIssues,
@@ -250,7 +247,7 @@ public class JiraAgileService {
             );
         }
 
-        String elicitMessage = "Loaded issues %d–%d of %d. Would you like to load the next page?"
+        String elicitMessage = "Loaded issues %d–%d of %d. Would you like to load all the remaining issues?"
                 .formatted(startAt + 1, pagedResult.nextStartAt(), pagedResult.total());
 
         try {
@@ -274,7 +271,7 @@ public class JiraAgileService {
         }
     }
 
-    private PagedQueryResult fetchPage(Board board, AgileQueryResult queryResult, int startAt) {
+    private PagedQueryResult fetchPage(Board board, AgileQueryIntent queryResult, int startAt) {
         JiraAgileTools.BoardIssuesRequest request = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
                 emptyToNull(queryResult.jqlFilter()),
@@ -402,7 +399,7 @@ public class JiraAgileService {
     public String handleTransitionQuery(
             McpSyncRequestContext mcpSyncRequestContext,
             Board board,
-            AgileQueryResult queryResult,
+            AgileQueryIntent queryResult,
             AgileState state
     ) {
         String targetStatus = queryResult.targetStatus();
@@ -440,7 +437,7 @@ public class JiraAgileService {
     private String executeBatchedTransition(
             McpSyncRequestContext mcpSyncRequestContext,
             Board board,
-            AgileQueryResult queryResult,
+            AgileQueryIntent queryResult,
             AgileState state
     ) {
         String targetStatus = queryResult.targetStatus();

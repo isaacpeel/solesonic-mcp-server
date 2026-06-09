@@ -1,5 +1,6 @@
 package com.solesonic.agent.agile;
 
+import com.solesonic.model.atlassian.agile.Board;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
@@ -8,13 +9,13 @@ import java.util.Optional;
 
 public class AgileState extends AgentState {
 
-    public static final String USER_MESSAGE         = "userMessage";
-    public static final String CONVERSATION_ID      = "conversationId";
-    public static final String AGILE_QUERY_RESULT   = "agileQueryResult";
-    public static final String BOARDS               = "boards";
+    public static final String USER_MESSAGE = "userMessage";
+    public static final String CONVERSATION_ID = "conversationId";
+    public static final String AGILE_QUERY_INTENT = "agileQueryIntent";
+    public static final String BOARDS = "boards";
     public static final String ESTIMATED_ITEM_COUNT = "estimatedItemCount";
-    public static final String REQUIRES_BATCHING    = "requiresBatching";
-    public static final String BATCH_SIZE           = "batchSize";
+    public static final String REQUIRES_BATCHING = "requiresBatching";
+    public static final String BATCH_SIZE = "batchSize";
 
     public AgileState(Map<String, Object> initData) {
         super(initData);
@@ -28,11 +29,11 @@ public class AgileState extends AgentState {
         return value(CONVERSATION_ID);
     }
 
-    public Optional<AgileQueryResult> agileQueryResult() {
-        return value(AGILE_QUERY_RESULT);
+    public Optional<AgileQueryIntent> agileQueryResult() {
+        return value(AGILE_QUERY_INTENT);
     }
 
-    public Optional<List<?>> boards() {
+    public Optional<List<Board>> boards() {
         return value(BOARDS);
     }
 
