@@ -25,8 +25,7 @@ public class AssembleJiraPayloadNode implements AsyncNodeAction<JiraState> {
             boolean assigneeNotResolved = jiraState.assigneeNotResolved().orElse(false);
 
             if (assigneeNotResolved) {
-                log.debug("Payload assembly skipped — assignee was not resolved");
-                return completedFuture(Map.of());
+                log.info("Assembling payload without assignee — assignee was not resolved");
             }
 
             String summary = jiraState.storySummary().orElseThrow(() -> new IllegalStateException("storySummary is required"));
