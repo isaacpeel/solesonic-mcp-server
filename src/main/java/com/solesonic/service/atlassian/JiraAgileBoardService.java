@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.service.atlassian.AtlassianConstants.*;
 
+@SuppressWarnings("unused")
 @Service
 public class JiraAgileBoardService {
     public static final String JQL = "jql";
