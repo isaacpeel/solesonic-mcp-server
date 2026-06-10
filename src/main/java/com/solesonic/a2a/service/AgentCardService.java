@@ -15,6 +15,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 @Service
@@ -40,19 +42,19 @@ public class AgentCardService {
 
     @PostConstruct
     public void loadAgentCards() {
-        try {
-            Map<String, AgentCard> agentCards = new LinkedHashMap<>();
+        Map<String, AgentCard> agentCards = new LinkedHashMap<>();
 
-            for (Resource resource : agentConfigs) {
-                AgentCardDefinition definition = jsonMapper.readValue(resource.getInputStream(), AgentCardDefinition.class);
-                AgentCard card = buildAgentCard(definition);
-                agentCards.put(definition.id(), card);
+        for (Resource resource : agentConfigs) {
+            try(InputStream inputStream = resource.getInputStream()) {
+                AgentCardDefinition cardDefinition = jsonMapper.readValue(inputStream, AgentCardDefinition.class);
+                AgentCard agentCard = buildAgentCard(cardDefinition);
+                agentCards.put(cardDefinition.id(), agentCard);
+            } catch (IOException runtimeException) {
+                throw new RuntimeException(runtimeException);
             }
-
-            this.agentCardsById = Collections.unmodifiableMap(agentCards);
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to load agent cards from classpath:agents/", exception);
         }
+
+        this.agentCardsById = Collections.unmodifiableMap(agentCards);
     }
 
     public List<AgentCard> allAgentCards() {
@@ -86,13 +88,13 @@ public class AgentCardService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent Not Found"));
     }
 
-    private AgentCard buildAgentCard(AgentCardDefinition definition) {
+    private AgentCard buildAgentCard(AgentCardDefinition agentCardDefinition) {
         AgentCapabilities capabilities = new AgentCapabilities.Builder()
-                .streaming(definition.capabilities().streaming())
-                .pushNotifications(definition.capabilities().pushNotifications())
+                .streaming(agentCardDefinition.capabilities().streaming())
+                .pushNotifications(agentCardDefinition.capabilities().pushNotifications())
                 .build();
 
-        List<AgentSkill> skills = definition.skills().stream()
+        List<AgentSkill> skills = agentCardDefinition.skills().stream()
                 .map(skill -> new AgentSkill.Builder()
                         .id(skill.id())
                         .name(skill.name())
@@ -101,7 +103,7 @@ public class AgentCardService {
                         .build())
                 .toList();
 
-        String agentId = definition.id();
+        String agentId = agentCardDefinition.id();
 
         String cardUri = UriComponentsBuilder.fromUriString(a2aBaseUri)
                 .pathSegment(A2A)
@@ -112,15 +114,15 @@ public class AgentCardService {
         log.info("Card URI: {}", cardUri);
 
         return new AgentCard.Builder()
-                .name(definition.name())
-                .description(definition.description())
+                .name(agentCardDefinition.name())
+                .description(agentCardDefinition.description())
                 .url(cardUri)
-                .version(definition.version())
+                .version(agentCardDefinition.version())
                 .capabilities(capabilities)
-                .defaultInputModes(definition.defaultInputModes())
-                .defaultOutputModes(definition.defaultOutputModes())
+                .defaultInputModes(agentCardDefinition.defaultInputModes())
+                .defaultOutputModes(agentCardDefinition.defaultOutputModes())
                 .skills(skills)
-                .protocolVersion(definition.protocolVersion())
+                .protocolVersion(agentCardDefinition.protocolVersion())
                 .build();
     }
 }
