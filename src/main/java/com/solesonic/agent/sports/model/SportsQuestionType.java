@@ -7,5 +7,9 @@ public enum SportsQuestionType {
     STANDINGS,
     GENERAL_NEWS,
     STATISTICS,
-    TRADE_NEWS
+    TRADE_NEWS,
+    INJURY_REPORT,
+    HISTORICAL,
+    DRAFT,
+    COACHING
 }

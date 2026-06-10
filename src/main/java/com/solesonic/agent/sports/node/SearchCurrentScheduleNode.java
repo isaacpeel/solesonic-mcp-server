@@ -1,6 +1,5 @@
 package com.solesonic.agent.sports.node;
 
-import com.solesonic.a2a.executor.SportsAgentExecutor;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.model.SportsQueryIntent;
 import com.solesonic.model.espn.EspnScheduleSummary;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
@@ -41,44 +39,48 @@ public class SearchCurrentScheduleNode implements AsyncNodeActionWithConfig<Spor
 
     @Override
     public CompletableFuture<Map<String, Object>> apply(SportsState state, RunnableConfig config) {
-
         SportsQueryIntent sportsQueryIntent = state.sportsQueryIntent().orElse(null);
         String currentDate = state.currentDateTime().orElseGet(PromptConstants::todayDate);
         String teamQuery = buildTeamQueryString(sportsQueryIntent);
 
-        @SuppressWarnings("unchecked")
-        Consumer<String> progressCallback = config
-                .metadata(SportsAgentExecutor.PROGRESS_CALLBACK_KEY)
-                .map(object -> (Consumer<String>) object)
-                .orElse(_ -> {
-                });
+        SynthesisOutputEmitter emitter = config
+                .metadata(SynthesisOutputEmitter.CONFIG_KEY)
+                .map(SynthesisOutputEmitter.class::cast)
+                .orElseGet(SynthesisOutputEmitter::noOp);
 
         // Tier 1: ESPN JSON API — structured, no scraping
-        progressCallback.accept("Fetching schedule from ESPN...");
+        emitter.emitProgress("Fetching schedule from ESPN...");
         EspnScheduleSummary espnScheduleSummary = fetchEspnScheduleStep.fetch(state);
 
         if (espnScheduleSummary.hasUpcomingOrLiveGames()) {
             log.info("Schedule found on ESPN — skipping NBA.com and Tavily");
             return completedFuture(Map.of(
                     SportsState.SCHEDULE_SEARCH_SUMMARY, espnScheduleSummary.toFormattedString(),
-                    SportsState.ESPN_SCHEDULE_SUMMARY_OBJECT, espnScheduleSummary
+                    SportsState.ESPN_SCHEDULE_SUMMARY_OBJECT, espnScheduleSummary,
+                    SportsState.SCHEDULE_ALREADY_FETCHED, true
             ));
         }
 
         // Tier 2: Direct NBA.com extract
-        progressCallback.accept("Checking NBA.com for schedule...");
+        emitter.emitProgress("Checking NBA.com for schedule...");
         String nbaResult = fetchNbaComScheduleStep.fetch();
 
         if (isSufficient(nbaResult)) {
             log.info("Schedule found on NBA.com — skipping Tavily");
-            return completedFuture(Map.of(SportsState.SCHEDULE_SEARCH_SUMMARY, nbaResult));
+            return completedFuture(Map.of(
+                    SportsState.SCHEDULE_SEARCH_SUMMARY, nbaResult,
+                    SportsState.SCHEDULE_ALREADY_FETCHED, true
+            ));
         }
 
         // Tier 3: Broad Tavily search — last resort, no domain restrictions
         log.info("ESPN and NBA.com insufficient — falling back to Tavily");
-        progressCallback.accept("Searching for schedule information...");
+        emitter.emitProgress("Searching for schedule information...");
         String tavilyResult = searchTavilyScheduleStep.fetch(teamQuery, currentDate);
-        return completedFuture(Map.of(SportsState.SCHEDULE_SEARCH_SUMMARY, tavilyResult));
+        return completedFuture(Map.of(
+                SportsState.SCHEDULE_SEARCH_SUMMARY, tavilyResult,
+                SportsState.SCHEDULE_ALREADY_FETCHED, true
+        ));
     }
 
     private boolean isSufficient(String content) {

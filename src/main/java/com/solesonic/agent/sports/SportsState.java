@@ -26,8 +26,8 @@ public class SportsState extends AgentState {
     public static final String ESPN_ROSTER_DATA = "espnRosterData";
     public static final String ESPN_SCHEDULE_DATA = "espnScheduleData";
     public static final String ESPN_SCHEDULE_SUMMARY_OBJECT = "espnScheduleSummaryObject";
-    public static final String ROSTER_VALIDATION_SUMMARY = "rosterValidationSummary";
-    public static final String DEEP_PLAYER_ANALYSIS_SUMMARY = "deepPlayerAnalysisSummary";
+    public static final String SCHEDULE_ALREADY_FETCHED = "scheduleAlreadyFetched";
+    public static final String SUB_GRAPH_RESULTS = "subGraphResults";
     public static final String FINAL_ANALYSIS = "finalAnalysis";
 
     public SportsState(Map<String, Object> initData) {
@@ -90,12 +90,12 @@ public class SportsState extends AgentState {
         return value(ESPN_SCHEDULE_SUMMARY_OBJECT);
     }
 
-    public Optional<String> rosterValidationSummary() {
-        return value(ROSTER_VALIDATION_SUMMARY);
+    public boolean scheduleAlreadyFetched() {
+        return this.<Boolean>value(SCHEDULE_ALREADY_FETCHED).orElse(false);
     }
 
-    public Optional<String> deepPlayerAnalysisSummary() {
-        return value(DEEP_PLAYER_ANALYSIS_SUMMARY);
+    public Optional<Map<String, String>> subGraphResults() {
+        return value(SUB_GRAPH_RESULTS);
     }
 
     public Optional<String> finalAnalysis() {

@@ -14,8 +14,6 @@ import com.solesonic.agent.sports.node.SynthesizeSportsAnalysisNode;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
-import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;
-import org.bsc.langgraph4j.internal.node.ParallelNode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -35,16 +33,18 @@ public class NbaAgentGraphConfig {
     public static final String FETCH_ESPN_STANDINGS = "fetchEspnStandings";
     public static final String EXTRACT_TEAMS_FROM_SCHEDULE = "extractTeamsFromSchedule";
     public static final String SEARCH_SCHEDULE = "searchSchedule";
-    public static final String SEARCH_NEWS_AND_STATS = "searchNewsAndStats";
-    public static final String PARALLEL_SEARCH = "parallelSearch";
+    public static final String SEARCH_NEWS = "searchNews";
+    public static final String SEARCH_STATS = "searchStats";
     public static final String SYNTHESIZE_ANALYSIS = "synthesizeAnalysis";
 
     private static final String SCHEDULE = "schedule";
     private static final String STANDINGS = "standings";
-    private static final String FULL = "full";
+    private static final String NEWS_ONLY = "newsOnly";
+    private static final String STATS_ONLY = "statsOnly";
     private static final String GAME_PREVIEW_NO_TEAMS = "gamePreviewNoTeams";
-    private static final String AFTER_ROSTER_FULL = "afterRosterFull";
-    private static final String AFTER_ROSTER_NO_TEAMS = "afterRosterNoTeams";
+    private static final String FULL = "full";
+    private static final String EXTRACT_TEAMS = "extractTeams";
+    private static final String SYNTHESIZE = "synthesize";
 
     @Bean
     public CompiledGraph<SportsState> sportsResearchGraph(
@@ -59,17 +59,6 @@ public class NbaAgentGraphConfig {
             SynthesizeSportsAnalysisNode synthesizeSportsAnalysisNode
     ) throws GraphStateException {
 
-        List<AsyncNodeActionWithConfig<SportsState>> allSearchActions = List.of(
-                searchCurrentScheduleNode,
-                AsyncNodeActionWithConfig.of(searchSportsNewsNode),
-                AsyncNodeActionWithConfig.of(searchStatisticsNode)
-        );
-
-        List<AsyncNodeActionWithConfig<SportsState>> newsAndStatsActions = List.of(
-                AsyncNodeActionWithConfig.of(searchSportsNewsNode),
-                AsyncNodeActionWithConfig.of(searchStatisticsNode)
-        );
-
         return new StateGraph<>(SportsState::new)
                 .addNode(PARSE_SPORTS_INTENT, parseSportsIntentNode)
                 .addNode(RESOLVE_ESPN_TEAM_URLS, resolveEspnTeamUrlsNode)
@@ -77,45 +66,53 @@ public class NbaAgentGraphConfig {
                 .addNode(FETCH_ESPN_STANDINGS, fetchEspnStandingsNode)
                 .addNode(EXTRACT_TEAMS_FROM_SCHEDULE, extractTeamsFromScheduleNode)
                 .addNode(SEARCH_SCHEDULE, searchCurrentScheduleNode)
-                .addNode(PARALLEL_SEARCH, new ParallelNode.AsyncParallelNodeAction<>(PARALLEL_SEARCH, allSearchActions, Map.of()))
-                .addNode(SEARCH_NEWS_AND_STATS, new ParallelNode.AsyncParallelNodeAction<>(SEARCH_NEWS_AND_STATS, newsAndStatsActions, Map.of()))
+                .addNode(SEARCH_NEWS, searchSportsNewsNode)
+                .addNode(SEARCH_STATS, searchStatisticsNode)
                 .addNode(SYNTHESIZE_ANALYSIS, synthesizeSportsAnalysisNode)
 
                 .addEdge(START, PARSE_SPORTS_INTENT)
 
+                // Route from intent: direct routes skip roster pipeline; roster routes go through schedule or resolve
                 .addConditionalEdges(
                         PARSE_SPORTS_INTENT,
                         edge_async(NbaAgentGraphConfig::routeByIntent),
                         Map.of(
-                                SCHEDULE,               PARALLEL_SEARCH,
-                                STANDINGS,              FETCH_ESPN_STANDINGS,
-                                GAME_PREVIEW_NO_TEAMS,  SEARCH_SCHEDULE,
-                                FULL,                   RESOLVE_ESPN_TEAM_URLS
+                                SCHEDULE, SEARCH_SCHEDULE,
+                                STANDINGS, FETCH_ESPN_STANDINGS,
+                                NEWS_ONLY, SEARCH_NEWS,
+                                STATS_ONLY, SEARCH_STATS,
+                                GAME_PREVIEW_NO_TEAMS, SEARCH_SCHEDULE,
+                                FULL, RESOLVE_ESPN_TEAM_URLS
                         ))
 
                 // STANDINGS path
                 .addEdge(FETCH_ESPN_STANDINGS, SYNTHESIZE_ANALYSIS)
 
-                // GAME_PREVIEW_NO_TEAMS path: fetch schedule → extract teams → roster directly
-                // NOTE: bypasses resolveEspnTeamUrls because that node overwrites RESOLVED_TEAMS with an
-                // empty list when intent.teams() is empty, which would discard what extractTeamsFromSchedule set
-                .addEdge(SEARCH_SCHEDULE, EXTRACT_TEAMS_FROM_SCHEDULE)
-                .addEdge(EXTRACT_TEAMS_FROM_SCHEDULE, FETCH_ESPN_ROSTER)
+                // Direct news/stats paths (no roster)
+                .addEdge(SEARCH_NEWS, SYNTHESIZE_ANALYSIS)
+                .addEdge(SEARCH_STATS, SYNTHESIZE_ANALYSIS)
 
-                // FULL path: resolve URLs → roster
-                .addEdge(RESOLVE_ESPN_TEAM_URLS, FETCH_ESPN_ROSTER)
-
-                // Route after roster fetch: if schedule already in state → news+stats only; otherwise → full parallel search
+                // SEARCH_SCHEDULE routes conditionally:
+                //   - schedule-only intent → directly to synthesis
+                //   - game-preview-no-teams → extract teams then fetch roster
                 .addConditionalEdges(
-                        FETCH_ESPN_ROSTER,
-                        edge_async(NbaAgentGraphConfig::routeAfterRosterFetch),
+                        SEARCH_SCHEDULE,
+                        edge_async(NbaAgentGraphConfig::routeAfterScheduleSearch),
                         Map.of(
-                                AFTER_ROSTER_NO_TEAMS, SEARCH_NEWS_AND_STATS,
-                                AFTER_ROSTER_FULL,     PARALLEL_SEARCH
+                                EXTRACT_TEAMS, EXTRACT_TEAMS_FROM_SCHEDULE,
+                                SYNTHESIZE, SYNTHESIZE_ANALYSIS
                         ))
 
-                .addEdge(PARALLEL_SEARCH, SYNTHESIZE_ANALYSIS)
-                .addEdge(SEARCH_NEWS_AND_STATS, SYNTHESIZE_ANALYSIS)
+                // GAME_PREVIEW_NO_TEAMS path: extract teams from schedule → roster
+                .addEdge(EXTRACT_TEAMS_FROM_SCHEDULE, FETCH_ESPN_ROSTER)
+
+                // FULL path: resolve team URLs → roster
+                .addEdge(RESOLVE_ESPN_TEAM_URLS, FETCH_ESPN_ROSTER)
+
+                // After roster fetch: fan out to news and stats independently (natural graph parallelism)
+                .addEdge(FETCH_ESPN_ROSTER, SEARCH_NEWS)
+                .addEdge(FETCH_ESPN_ROSTER, SEARCH_STATS)
+
                 .addEdge(SYNTHESIZE_ANALYSIS, END)
                 .compile();
     }
@@ -137,6 +134,23 @@ public class NbaAgentGraphConfig {
             return STANDINGS;
         }
 
+        boolean isNewsOnly = questionTypes.stream().allMatch(type ->
+                type == SportsQuestionType.GENERAL_NEWS
+                        || type == SportsQuestionType.TRADE_NEWS
+                        || type == SportsQuestionType.INJURY_REPORT
+                        || type == SportsQuestionType.DRAFT
+                        || type == SportsQuestionType.COACHING);
+        if (isNewsOnly) {
+            return NEWS_ONLY;
+        }
+
+        boolean isStatsOnly = questionTypes.stream().allMatch(type ->
+                type == SportsQuestionType.STATISTICS
+                        || type == SportsQuestionType.HISTORICAL);
+        if (isStatsOnly) {
+            return STATS_ONLY;
+        }
+
         boolean requiresRoster = questionTypes.contains(SportsQuestionType.GAME_PREVIEW)
                 || questionTypes.contains(SportsQuestionType.PLAYER_ANALYSIS);
 
@@ -147,8 +161,11 @@ public class NbaAgentGraphConfig {
         return FULL;
     }
 
-    private static String routeAfterRosterFetch(SportsState state) {
-        // GAME_PREVIEW_NO_TEAMS path stored schedule before entering this node; FULL path has not
-        return state.scheduleSearchSummary().isPresent() ? AFTER_ROSTER_NO_TEAMS : AFTER_ROSTER_FULL;
+    private static String routeAfterScheduleSearch(SportsState state) {
+        SportsQueryIntent intent = state.sportsQueryIntent().orElse(null);
+        boolean needsTeamExtraction = intent != null && (
+                intent.questionTypes().contains(SportsQuestionType.GAME_PREVIEW)
+                        || intent.questionTypes().contains(SportsQuestionType.PLAYER_ANALYSIS));
+        return needsTeamExtraction ? EXTRACT_TEAMS : SYNTHESIZE;
     }
 }

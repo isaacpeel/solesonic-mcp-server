@@ -1,6 +1,6 @@
 package com.solesonic.a2a.executor;
 
-import com.solesonic.agent.sports.NbaAgentGraphConfig;
+import com.solesonic.agent.sports.NbaOrchestratorGraphConfig;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.node.SynthesisOutputEmitter;
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -24,34 +26,31 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
 
-public class SportsAgentExecutor implements AgentExecutor {
-    private static final Logger log = LoggerFactory.getLogger(SportsAgentExecutor.class);
+@Component("nba")
+public class NbaOrchestratorExecutor implements AgentExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(NbaOrchestratorExecutor.class);
 
     public static final String TASK_UPDATER_KEY = "taskUpdater";
 
-    private static final String FALLBACK_ANALYSIS = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
+    private static final String FALLBACK_ANALYSIS =
+            "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
 
     private static final Map<String, String> NODE_PROGRESS_MESSAGES = Map.of(
-            NbaAgentGraphConfig.PARSE_SPORTS_INTENT,          "Understanding your question...",
-            NbaAgentGraphConfig.RESOLVE_ESPN_TEAM_URLS,       "Looking up team information...",
-            NbaAgentGraphConfig.FETCH_ESPN_ROSTER,            "Fetching team rosters...",
-            NbaAgentGraphConfig.FETCH_ESPN_STANDINGS,         "Fetching current standings...",
-            NbaAgentGraphConfig.SEARCH_SCHEDULE,              "Fetching schedule from ESPN...",
-            NbaAgentGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE,  "Identifying teams from the schedule...",
-            NbaAgentGraphConfig.SEARCH_NEWS,                  "Searching for current news...",
-            NbaAgentGraphConfig.SEARCH_STATS,                 "Searching for statistics..."
-            // SYNTHESIZE_ANALYSIS omitted — the node streams tokens as artifact chunks directly
+            NbaOrchestratorGraphConfig.PARSE_SPORTS_INTENT, "Understanding your question...",
+            NbaOrchestratorGraphConfig.FAN_OUT,             "Running specialized analyses...",
+            NbaOrchestratorGraphConfig.META_SYNTHESIZE,     "Combining analyses..."
     );
 
-    private final CompiledGraph<SportsState> sportsResearchGraph;
+    private final CompiledGraph<SportsState> nbaOrchestratorGraph;
     private final ChatMemory chatMemory;
     private final TaskStore taskStore;
 
-    public SportsAgentExecutor(
-            CompiledGraph<SportsState> sportsResearchGraph,
+    public NbaOrchestratorExecutor(
+            @Qualifier("nbaOrchestratorGraph") CompiledGraph<SportsState> nbaOrchestratorGraph,
             ChatMemory chatMemory,
             TaskStore taskStore) {
-        this.sportsResearchGraph = sportsResearchGraph;
+        this.nbaOrchestratorGraph = nbaOrchestratorGraph;
         this.chatMemory = chatMemory;
         this.taskStore = taskStore;
     }
@@ -68,7 +67,7 @@ public class SportsAgentExecutor implements AgentExecutor {
 
         String userMessage = extractText(requestContext);
         String conversationId = requestContext.getContextId();
-        log.info("NBA research agent invoked: userMessage={}, conversationId={}", userMessage, conversationId);
+        log.info("NBA orchestrator invoked: userMessage={}, conversationId={}", userMessage, conversationId);
 
         seedMemoryFromReferencedTasks(requestContext, conversationId);
 
@@ -87,19 +86,19 @@ public class SportsAgentExecutor implements AgentExecutor {
         AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
 
         try {
-            sportsResearchGraph.stream(input, runnableConfig)
+            nbaOrchestratorGraph.stream(input, runnableConfig)
                     .forEachAsync(output -> {
                         finalStateRef.set(output.state());
 
                         String nodeName = output.node();
 
-                        log.debug("Processing output: {}", nodeName);
+                        log.debug("Orchestrator node output: {}", nodeName);
 
                         if (END.equals(nodeName) || START.equals(nodeName)) {
                             return;
                         }
 
-                        String progressMessage = NODE_PROGRESS_MESSAGES.getOrDefault(nodeName, null);
+                        String progressMessage = NODE_PROGRESS_MESSAGES.get(nodeName);
 
                         if (progressMessage == null) {
                             return;
@@ -112,14 +111,20 @@ public class SportsAgentExecutor implements AgentExecutor {
             SportsState finalState = finalStateRef.get();
 
             if (finalState != null && finalState.finalAnalysis().isPresent()) {
-                // Synthesis node streamed the artifact directly as chunks — just complete
+                String finalAnalysis = finalState.finalAnalysis().get();
+                if (conversationId != null && !conversationId.isBlank()) {
+                    chatMemory.add(conversationId, List.of(
+                            new UserMessage(userMessage),
+                            new AssistantMessage(finalAnalysis)
+                    ));
+                }
                 taskUpdater.complete();
             } else {
                 taskUpdater.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
                 taskUpdater.complete();
             }
         } catch (Exception exception) {
-            log.error("NBA research agent failed: userMessage={}", userMessage, exception);
+            log.error("NBA orchestrator failed: userMessage={}", userMessage, exception);
             taskUpdater.fail();
         }
     }

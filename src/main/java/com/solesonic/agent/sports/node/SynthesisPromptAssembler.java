@@ -20,8 +20,12 @@ import java.util.Set;
 import static com.solesonic.mcp.prompt.PromptConstants.TODAY_DATE;
 import static com.solesonic.mcp.prompt.PromptConstants.USER_MESSAGE;
 import static com.solesonic.mcp.prompt.PromptConstants.todayDate;
+import static com.solesonic.agent.sports.model.SportsQuestionType.COACHING;
+import static com.solesonic.agent.sports.model.SportsQuestionType.DRAFT;
 import static com.solesonic.agent.sports.model.SportsQuestionType.GAME_PREVIEW;
 import static com.solesonic.agent.sports.model.SportsQuestionType.GENERAL_NEWS;
+import static com.solesonic.agent.sports.model.SportsQuestionType.HISTORICAL;
+import static com.solesonic.agent.sports.model.SportsQuestionType.INJURY_REPORT;
 import static com.solesonic.agent.sports.model.SportsQuestionType.PLAYER_ANALYSIS;
 import static com.solesonic.agent.sports.model.SportsQuestionType.SCHEDULE_LOOKUP;
 import static com.solesonic.agent.sports.model.SportsQuestionType.STANDINGS;
@@ -47,6 +51,10 @@ public class SynthesisPromptAssembler {
         INTENT_SECTIONS.put(GENERAL_NEWS, EnumSet.of(NEWS));
         INTENT_SECTIONS.put(STATISTICS, EnumSet.of(STATS, TERMINOLOGY));
         INTENT_SECTIONS.put(TRADE_NEWS, EnumSet.of(NEWS));
+        INTENT_SECTIONS.put(INJURY_REPORT, EnumSet.of(NEWS));
+        INTENT_SECTIONS.put(HISTORICAL, EnumSet.of(STATS, TERMINOLOGY));
+        INTENT_SECTIONS.put(DRAFT, EnumSet.of(NEWS));
+        INTENT_SECTIONS.put(COACHING, EnumSet.of(NEWS));
     }
 
     @Value("classpath:prompt/sports/synthesize-header.st")
@@ -127,6 +135,10 @@ public class SynthesisPromptAssembler {
             case GENERAL_NEWS -> generalNewsInstructionsResource;
             case STATISTICS -> statisticsInstructionsResource;
             case TRADE_NEWS -> tradeNewsInstructionsResource;
+            case INJURY_REPORT -> generalNewsInstructionsResource;
+            case HISTORICAL -> statisticsInstructionsResource;
+            case DRAFT -> generalNewsInstructionsResource;
+            case COACHING -> generalNewsInstructionsResource;
         };
     }
 

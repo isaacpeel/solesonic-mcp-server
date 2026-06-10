@@ -40,7 +40,7 @@ public class AgentCardController {
 
     @GetMapping(path = "/{agent}/card", produces = MediaType.APPLICATION_JSON_VALUE)
     public AgentCard getAgentCardV1(@PathVariable String agent) {
-        log.info("Serving agent card via /sports/card: {}", agent);
+        log.info("Serving agent card via /{}}/card", agent);
         return getAgentCard(agent);
     }
 }

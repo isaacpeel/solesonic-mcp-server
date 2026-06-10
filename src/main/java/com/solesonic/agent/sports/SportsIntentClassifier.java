@@ -32,7 +32,9 @@ public class SportsIntentClassifier {
 
     private static final Set<String> GAME_PREVIEW_KEYWORDS = Set.of(
             "preview", "matchup", "match up", "predict", "prediction", "starting lineup",
-            "starting five", "starters", "who wins", "who will win", "analysis",
+            "starting five", "starters", "who starts", "who will start", "going to start",
+            "start tonight", "start the game", "start for", "starting for",
+            "who wins", "who will win", "analysis",
             "breakdown", "advantage", "series", "playoff series", "double-double",
             "triple-double", "game plan", "head to head", "head-to-head", "favorite",
             "odds", "spread", "over under", "over/under", "box score", "keys to"
@@ -60,10 +62,33 @@ public class SportsIntentClassifier {
     );
 
     private static final Set<String> GENERAL_NEWS_KEYWORDS = Set.of(
-            "news", "injury", "injured", "hurt", "update", "latest", "report",
-            "status", "health", "questionable", "doubtful", "out", "day-to-day",
-            "return", "timeline", "suspension", "suspended", "ejected", "fined",
-            "interview", "press conference", "statement", "tweet"
+            "news", "update", "latest", "report", "interview", "press conference",
+            "statement", "tweet", "suspension", "suspended", "ejected", "fined"
+    );
+
+    private static final Set<String> INJURY_REPORT_KEYWORDS = Set.of(
+            "injury", "injured", "hurt", "status", "health", "questionable", "doubtful",
+            "out", "day-to-day", "return", "timeline", "availability", "sidelined",
+            "missed", "listed", "pain", "knee", "ankle", "shoulder", "back", "hamstring",
+            "concussion", "sprain", "strain", "swelling", "load management"
+    );
+
+    private static final Set<String> HISTORICAL_KEYWORDS = Set.of(
+            "all time", "all-time", "career", "history", "historical", "record",
+            "greatest", "best ever", "most", "season high", "season-high",
+            "franchise record", "championship", "title", "finals", "mvp",
+            "hall of fame", "legacy", "era", "decade", "compare"
+    );
+
+    private static final Set<String> DRAFT_KEYWORDS = Set.of(
+            "draft", "drafted", "prospect", "lottery", "pick", "combine",
+            "mock draft", "scouting", "recruit", "class", "g league"
+    );
+
+    private static final Set<String> COACHING_KEYWORDS = Set.of(
+            "coach", "coaching", "head coach", "assistant coach", "fired", "hired",
+            "strategy", "system", "rotation", "lineup decision", "play style",
+            "offensive system", "defensive scheme", "timeout", "adjustment"
     );
 
     public List<SportsQuestionType> classify(String userMessage) {
@@ -96,6 +121,22 @@ public class SportsIntentClassifier {
 
         if (matchesAny(lowercaseMessage, TRADE_NEWS_KEYWORDS)) {
             matches.add(SportsQuestionType.TRADE_NEWS);
+        }
+
+        if (matchesAny(lowercaseMessage, INJURY_REPORT_KEYWORDS)) {
+            matches.add(SportsQuestionType.INJURY_REPORT);
+        }
+
+        if (matchesAny(lowercaseMessage, HISTORICAL_KEYWORDS)) {
+            matches.add(SportsQuestionType.HISTORICAL);
+        }
+
+        if (matchesAny(lowercaseMessage, DRAFT_KEYWORDS)) {
+            matches.add(SportsQuestionType.DRAFT);
+        }
+
+        if (matchesAny(lowercaseMessage, COACHING_KEYWORDS)) {
+            matches.add(SportsQuestionType.COACHING);
         }
 
         if (matchesAny(lowercaseMessage, GENERAL_NEWS_KEYWORDS)) {

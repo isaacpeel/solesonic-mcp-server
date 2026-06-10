@@ -54,8 +54,8 @@ public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
             String userMessage = state.userMessage().orElseThrow();
             String currentDateTime = todayDate();
 
-            List<SportsQuestionType> questionTypes = sportsIntentClassifier.classify(userMessage);
-            log.info("Keyword-classified intent: {}", questionTypes);
+            List<SportsQuestionType> keywordQuestionTypes = sportsIntentClassifier.classify(userMessage);
+            log.info("Keyword-classified intent: {}", keywordQuestionTypes);
 
             Prompt entityPrompt = new PromptTemplate(entityPromptResource).create(Map.of(
                     USER_MESSAGE, userMessage,
@@ -70,8 +70,19 @@ public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
             List<String> teams = extraction != null && extraction.teams() != null ? extraction.teams() : List.of();
             List<String> players = extraction != null && extraction.players() != null ? extraction.players() : List.of();
             String timeContext = extraction != null && extraction.timeContext() != null ? extraction.timeContext() : "upcoming";
+            List<SportsQuestionType> llmQuestionTypes = extraction != null
+                    && extraction.questionTypes() != null
+                    && !extraction.questionTypes().isEmpty()
+                    ? extraction.questionTypes()
+                    : List.of();
 
-            SportsQueryIntent sportsQueryIntent = new SportsQueryIntent(questionTypes, teams, players, timeContext);
+            List<SportsQuestionType> resolvedQuestionTypes = llmQuestionTypes.isEmpty() ? keywordQuestionTypes : llmQuestionTypes;
+
+            if (!llmQuestionTypes.isEmpty() && !llmQuestionTypes.equals(keywordQuestionTypes)) {
+                log.info("LLM overrode keyword intent: {} -> {}", keywordQuestionTypes, llmQuestionTypes);
+            }
+
+            SportsQueryIntent sportsQueryIntent = new SportsQueryIntent(resolvedQuestionTypes, teams, players, timeContext);
 
             log.info("Parsed NBA intent: questionTypes={}, teams={}, players={}",
                     sportsQueryIntent.questionTypes(), sportsQueryIntent.teams(), sportsQueryIntent.players());

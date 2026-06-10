@@ -49,11 +49,7 @@ public class SportsChatClientConfig {
                 .modelManagementOptions(modelManagementOptions)
                 .build();
 
-        MessageChatMemoryAdvisor messageChatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
-                .build();
-
         return ChatClient.builder(ollamaChatModel)
-                .defaultAdvisors(messageChatMemoryAdvisor)
                 .build();
     }
 

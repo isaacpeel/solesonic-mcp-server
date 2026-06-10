@@ -34,7 +34,10 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
             SportsQuestionType.GAME_PREVIEW,
             SportsQuestionType.PLAYER_ANALYSIS,
             SportsQuestionType.GENERAL_NEWS,
-            SportsQuestionType.TRADE_NEWS);
+            SportsQuestionType.TRADE_NEWS,
+            SportsQuestionType.INJURY_REPORT,
+            SportsQuestionType.DRAFT,
+            SportsQuestionType.COACHING);
 
     private final TavilySearchService tavilySearchService;
 
