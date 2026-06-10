@@ -27,7 +27,7 @@ import static org.bsc.langgraph4j.GraphDefinition.START;
 import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 
 @Configuration
-public class SportsResearchGraphConfig {
+public class NbaAgentGraphConfig {
 
     public static final String PARSE_SPORTS_INTENT = "parseSportsIntent";
     public static final String RESOLVE_ESPN_TEAM_URLS = "resolveEspnTeamUrls";
@@ -85,7 +85,7 @@ public class SportsResearchGraphConfig {
 
                 .addConditionalEdges(
                         PARSE_SPORTS_INTENT,
-                        edge_async(SportsResearchGraphConfig::routeByIntent),
+                        edge_async(NbaAgentGraphConfig::routeByIntent),
                         Map.of(
                                 SCHEDULE,               PARALLEL_SEARCH,
                                 STANDINGS,              FETCH_ESPN_STANDINGS,
@@ -108,7 +108,7 @@ public class SportsResearchGraphConfig {
                 // Route after roster fetch: if schedule already in state → news+stats only; otherwise → full parallel search
                 .addConditionalEdges(
                         FETCH_ESPN_ROSTER,
-                        edge_async(SportsResearchGraphConfig::routeAfterRosterFetch),
+                        edge_async(NbaAgentGraphConfig::routeAfterRosterFetch),
                         Map.of(
                                 AFTER_ROSTER_NO_TEAMS, SEARCH_NEWS_AND_STATS,
                                 AFTER_ROSTER_FULL,     PARALLEL_SEARCH
