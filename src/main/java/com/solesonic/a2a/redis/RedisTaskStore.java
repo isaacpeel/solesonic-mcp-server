@@ -56,7 +56,8 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
     }
 
     @Override
-    public ListTasksResult list(ListTasksParams listTasksParams) {
+    @NonNull
+    public ListTasksResult list(@NonNull ListTasksParams listTasksParams) {
         Set<String> keys = stringRedisTemplate.keys(KEY_PREFIX + "*");
         if (keys == null || keys.isEmpty()) {
             return new ListTasksResult(List.of());
@@ -119,18 +120,18 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
             return false;
         }
 
-        if (params.statusTimestampAfter() != null &&
-                !task.status().timestamp().toInstant().isAfter(params.statusTimestampAfter())) {
-            return false;
-        }
-
-        return true;
+        return params.statusTimestampAfter() == null ||
+                task.status().timestamp().toInstant().isAfter(params.statusTimestampAfter());
     }
 
     private Task applyViewOptions(Task task, int historyLength, boolean includeArtifacts) {
-        List<Message> trimmedHistory = historyLength == 0
-                ? List.of()
-                : task.history().subList(Math.max(0, task.history().size() - historyLength), task.history().size());
+        List<Message> trimmedHistory;
+        if (historyLength == 0) {
+            trimmedHistory = List.of();
+        } else {
+            assert task.history() != null;
+            trimmedHistory = task.history().subList(Math.max(0, task.history().size() - historyLength), task.history().size());
+        }
         List<Artifact> artifacts = includeArtifacts ? task.artifacts() : List.of();
         return Task.builder(task)
                 .history(trimmedHistory)

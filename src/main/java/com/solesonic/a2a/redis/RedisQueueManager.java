@@ -5,6 +5,7 @@ import org.a2aproject.sdk.server.events.EventQueueFactory;
 import org.a2aproject.sdk.server.events.InMemoryQueueManager;
 import org.a2aproject.sdk.server.events.MainEventBus;
 import org.a2aproject.sdk.server.tasks.TaskStateProvider;
+import org.jspecify.annotations.NonNull;
 
 public class RedisQueueManager extends InMemoryQueueManager {
 
@@ -35,7 +36,7 @@ public class RedisQueueManager extends InMemoryQueueManager {
         }
 
         @Override
-        public EventQueue.EventQueueBuilder builder(String taskId) {
+        public EventQueue.@NonNull EventQueueBuilder builder(@NonNull String taskId) {
             return queueManager.createBaseEventQueueBuilder(taskId)
                     .hook(hookFactory.create(taskId));
         }

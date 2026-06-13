@@ -5,6 +5,7 @@ import org.a2aproject.sdk.server.tasks.PushNotificationConfigStore;
 import org.a2aproject.sdk.spec.ListTaskPushNotificationConfigsParams;
 import org.a2aproject.sdk.spec.ListTaskPushNotificationConfigsResult;
 import org.a2aproject.sdk.spec.TaskPushNotificationConfig;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.List;
@@ -23,10 +24,12 @@ public class RedisPushNotificationConfigStore implements PushNotificationConfigS
     }
 
     @Override
+    @NonNull
     public TaskPushNotificationConfig setInfo(TaskPushNotificationConfig notificationConfig) {
         String taskId = notificationConfig.taskId();
         TaskPushNotificationConfig.Builder builder = TaskPushNotificationConfig.builder(notificationConfig);
-        if (notificationConfig.id() == null || notificationConfig.id().isEmpty()) {
+        if (notificationConfig.id().isEmpty()) {
+            assert taskId != null;
             builder.id(taskId);
         }
         notificationConfig = builder.build();
@@ -37,6 +40,7 @@ public class RedisPushNotificationConfigStore implements PushNotificationConfigS
     }
 
     @Override
+    @NonNull
     public ListTaskPushNotificationConfigsResult getInfo(ListTaskPushNotificationConfigsParams params) {
         Map<String, String> entries = stringRedisTemplate.<String, String>opsForHash().entries(KEY_PREFIX + params.id());
         if (entries.isEmpty()) {
@@ -49,10 +53,7 @@ public class RedisPushNotificationConfigStore implements PushNotificationConfigS
     }
 
     @Override
-    public void deleteInfo(String taskId, String configId) {
-        if (configId == null) {
-            configId = taskId;
-        }
+    public void deleteInfo(@NonNull String taskId, @NonNull String configId) {
         stringRedisTemplate.<String, String>opsForHash().delete(KEY_PREFIX + taskId, configId);
     }
 }
