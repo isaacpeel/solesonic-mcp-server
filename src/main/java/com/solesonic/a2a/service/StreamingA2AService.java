@@ -2,6 +2,7 @@ package com.solesonic.a2a.service;
 
 import com.solesonic.a2a.config.AgentRequestHandlerRegistry;
 import com.solesonic.a2a.config.ServerCallContextFactory;
+import org.a2aproject.sdk.jsonrpc.common.json.JsonUtil;
 import org.a2aproject.sdk.jsonrpc.common.wrappers.SendStreamingMessageRequest;
 import org.a2aproject.sdk.jsonrpc.common.wrappers.SendStreamingMessageResponse;
 import org.a2aproject.sdk.jsonrpc.common.wrappers.SubscribeToTaskRequest;
@@ -17,7 +18,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.adapter.JdkFlowAdapter;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -32,14 +32,11 @@ public class StreamingA2AService {
     public static final String TASKS_RESUBSCRIBE = "SubscribeToTask";
 
     private final AgentRequestHandlerRegistry agentRequestHandlerRegistry;
-    private final JsonMapper jsonMapper;
     private final ServerCallContextFactory serverCallContextFactory;
 
     public StreamingA2AService(AgentRequestHandlerRegistry agentRequestHandlerRegistry,
-                               JsonMapper jsonMapper,
                                ServerCallContextFactory serverCallContextFactory) {
         this.agentRequestHandlerRegistry = agentRequestHandlerRegistry;
-        this.jsonMapper = jsonMapper;
         this.serverCallContextFactory = serverCallContextFactory;
     }
 
@@ -89,7 +86,7 @@ public class StreamingA2AService {
                             try {
                                 SendStreamingMessageResponse sendStreamingMessageResponse = new SendStreamingMessageResponse(id, streamingEventKind);
 
-                                String streamingResponse = jsonMapper.writeValueAsString(sendStreamingMessageResponse);
+                                String streamingResponse = JsonUtil.toJson(sendStreamingMessageResponse);
 
                                 sseEmitter.send(SseEmitter.event()
                                         .data(streamingResponse, MediaType.APPLICATION_JSON));
@@ -111,7 +108,7 @@ public class StreamingA2AService {
         try {
             SendStreamingMessageResponse sendStreamingMessageResponse = new SendStreamingMessageResponse(id, a2aError);
 
-            String messageResponse = jsonMapper.writeValueAsString(sendStreamingMessageResponse);
+            String messageResponse = JsonUtil.toJson(sendStreamingMessageResponse);
 
             sseEmitter.send(SseEmitter.event()
                     .data(messageResponse, MediaType.APPLICATION_JSON));
