@@ -1,12 +1,12 @@
 package com.solesonic.a2a.config;
 
-import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.server.events.QueueManager;
-import io.a2a.server.requesthandlers.DefaultRequestHandler;
-import io.a2a.server.requesthandlers.RequestHandler;
-import io.a2a.server.tasks.PushNotificationConfigStore;
-import io.a2a.server.tasks.PushNotificationSender;
-import io.a2a.server.tasks.TaskStore;
+import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
+import org.a2aproject.sdk.server.events.MainEventBusProcessor;
+import org.a2aproject.sdk.server.events.QueueManager;
+import org.a2aproject.sdk.server.requesthandlers.DefaultRequestHandler;
+import org.a2aproject.sdk.server.requesthandlers.RequestHandler;
+import org.a2aproject.sdk.server.tasks.PushNotificationConfigStore;
+import org.a2aproject.sdk.server.tasks.TaskStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -27,7 +27,7 @@ public class AgentRequestHandlerRegistry {
             TaskStore taskStore,
             QueueManager queueManager,
             PushNotificationConfigStore pushNotificationConfigStore,
-            PushNotificationSender pushNotificationSender,
+            MainEventBusProcessor mainEventBusProcessor,
             @Qualifier(A2A_EXECUTOR) Executor a2aExecutor) {
 
         this.handlersByAgentId = agentExecutors.entrySet().stream()
@@ -38,7 +38,8 @@ public class AgentRequestHandlerRegistry {
                                 taskStore,
                                 queueManager,
                                 pushNotificationConfigStore,
-                                pushNotificationSender,
+                                mainEventBusProcessor,
+                                a2aExecutor,
                                 a2aExecutor)));
     }
 

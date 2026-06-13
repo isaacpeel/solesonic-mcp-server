@@ -1,10 +1,12 @@
 package com.solesonic.a2a.service;
 
 import com.solesonic.a2a.model.AgentCardDefinition;
-import io.a2a.spec.AgentCapabilities;
-import io.a2a.spec.AgentCard;
-import io.a2a.spec.AgentSkill;
 import jakarta.annotation.PostConstruct;
+import org.a2aproject.sdk.spec.AgentCapabilities;
+import org.a2aproject.sdk.spec.AgentCard;
+import org.a2aproject.sdk.spec.AgentInterface;
+import org.a2aproject.sdk.spec.AgentSkill;
+import org.a2aproject.sdk.spec.TransportProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,11 +65,14 @@ public class AgentCardService {
 
     public List<String> allAgentCardUris() {
         return allAgentCards().stream()
-                .map(agentCard -> UriComponentsBuilder.fromUriString(agentCard.url())
-                        .pathSegment(WELL_KNOWN)
-                        .pathSegment(AGENT_JSON)
-                        .build()
-                        .toUriString())
+                .map(agentCard -> {
+                    assert agentCard.url() != null;
+                    return UriComponentsBuilder.fromUriString(agentCard.url())
+                            .pathSegment(WELL_KNOWN)
+                            .pathSegment(AGENT_JSON)
+                            .build()
+                            .toUriString();
+                })
                 .toList();
     }
 
@@ -89,13 +94,13 @@ public class AgentCardService {
     }
 
     private AgentCard buildAgentCard(AgentCardDefinition agentCardDefinition) {
-        AgentCapabilities capabilities = new AgentCapabilities.Builder()
+        AgentCapabilities capabilities = AgentCapabilities.builder()
                 .streaming(agentCardDefinition.capabilities().streaming())
                 .pushNotifications(agentCardDefinition.capabilities().pushNotifications())
                 .build();
 
         List<AgentSkill> skills = agentCardDefinition.skills().stream()
-                .map(skill -> new AgentSkill.Builder()
+                .map(skill -> AgentSkill.builder()
                         .id(skill.id())
                         .name(skill.name())
                         .description(skill.description())
@@ -113,7 +118,7 @@ public class AgentCardService {
 
         log.info("Card URI: {}", cardUri);
 
-        return new AgentCard.Builder()
+        return AgentCard.builder()
                 .name(agentCardDefinition.name())
                 .description(agentCardDefinition.description())
                 .url(cardUri)
@@ -122,7 +127,7 @@ public class AgentCardService {
                 .defaultInputModes(agentCardDefinition.defaultInputModes())
                 .defaultOutputModes(agentCardDefinition.defaultOutputModes())
                 .skills(skills)
-                .protocolVersion(agentCardDefinition.protocolVersion())
+                .supportedInterfaces(List.of(new AgentInterface(TransportProtocol.JSONRPC.asString(), cardUri)))
                 .build();
     }
 }

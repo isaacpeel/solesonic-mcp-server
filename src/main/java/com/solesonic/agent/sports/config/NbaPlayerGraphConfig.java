@@ -34,10 +34,8 @@ public class NbaPlayerGraphConfig {
                 .addNode(NbaAgentGraphConfig.SEARCH_STATS, searchStatisticsNode)
                 .addNode(NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS, synthesizeSportsAnalysisNode)
                 .addEdge(START, FETCH_ROSTER)
-                // Fan-out: roster fetch feeds both news and stats concurrently
                 .addEdge(FETCH_ROSTER, NbaAgentGraphConfig.SEARCH_NEWS)
-                .addEdge(FETCH_ROSTER, NbaAgentGraphConfig.SEARCH_STATS)
-                .addEdge(NbaAgentGraphConfig.SEARCH_NEWS, NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS)
+                .addEdge(NbaAgentGraphConfig.SEARCH_NEWS, NbaAgentGraphConfig.SEARCH_STATS)
                 .addEdge(NbaAgentGraphConfig.SEARCH_STATS, NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS)
                 .addEdge(NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS, END)
                 .compile();

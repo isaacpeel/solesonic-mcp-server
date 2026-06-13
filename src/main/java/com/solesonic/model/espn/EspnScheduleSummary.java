@@ -109,7 +109,7 @@ public record EspnScheduleSummary(List<EspnEvent> games) implements Serializable
                 .map(competitor -> competitor.team() != null ? competitor.team().abbreviation() : "")
                 .orElse("");
 
-        return awayAbbreviation + " @ " + homeAbbreviation;
+        return awayAbbreviation + " (away) @ " + homeAbbreviation + " (home)";
     }
 
     private String formatDate(String isoDate) {

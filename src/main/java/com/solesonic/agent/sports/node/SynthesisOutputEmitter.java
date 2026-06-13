@@ -1,10 +1,10 @@
 package com.solesonic.agent.sports.node;
 
-import io.a2a.server.tasks.TaskUpdater;
-import io.a2a.spec.Message;
-import io.a2a.spec.Part;
-import io.a2a.spec.TaskState;
-import io.a2a.spec.TextPart;
+import org.a2aproject.sdk.server.tasks.AgentEmitter;
+import org.a2aproject.sdk.spec.Message;
+import org.a2aproject.sdk.spec.Part;
+import org.a2aproject.sdk.spec.TaskState;
+import org.a2aproject.sdk.spec.TextPart;
 
 import java.util.List;
 
@@ -32,18 +32,18 @@ public interface SynthesisOutputEmitter {
         };
     }
 
-    static SynthesisOutputEmitter fromTaskUpdater(TaskUpdater taskUpdater) {
+    static SynthesisOutputEmitter fromTaskUpdater(AgentEmitter agentEmitter) {
         return new SynthesisOutputEmitter() {
             @Override
             public void emitChunk(String text, String artifactId, Boolean append, boolean lastChunk) {
-                taskUpdater.addArtifact(List.of(new TextPart(text)), artifactId, null, null, append, lastChunk);
+                agentEmitter.addArtifact(List.of(new TextPart(text)), artifactId, null, null, append, lastChunk);
             }
 
             @Override
             public void emitProgress(String message) {
                 List<Part<?>> messageParts = List.of(new TextPart(message));
-                Message statusMessage = taskUpdater.newAgentMessage(messageParts, null);
-                taskUpdater.updateStatus(TaskState.WORKING, statusMessage);
+                Message statusMessage = agentEmitter.newAgentMessage(messageParts, null);
+                agentEmitter.updateStatus(TaskState.TASK_STATE_WORKING, statusMessage);
             }
         };
     }

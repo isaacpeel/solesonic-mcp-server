@@ -1,12 +1,21 @@
 package com.solesonic.a2a.redis;
 
-import io.a2a.server.tasks.TaskStateProvider;
-import io.a2a.server.tasks.TaskStore;
-import io.a2a.spec.Task;
+import com.google.gson.Gson;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTasksResult;
+import org.a2aproject.sdk.server.tasks.TaskStateProvider;
+import org.a2aproject.sdk.server.tasks.TaskStore;
+import org.a2aproject.sdk.spec.Artifact;
+import org.a2aproject.sdk.spec.ListTasksParams;
+import org.a2aproject.sdk.spec.Message;
+import org.a2aproject.sdk.spec.Task;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 
 public class RedisTaskStore implements TaskStore, TaskStateProvider {
 
@@ -14,58 +23,129 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
     private static final Duration FINALIZED_TASK_TTL = Duration.ofHours(24);
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final JsonMapper jsonMapper;
+    private final Gson gson;
 
-    public RedisTaskStore(StringRedisTemplate stringRedisTemplate, JsonMapper jsonMapper) {
+    public RedisTaskStore(StringRedisTemplate stringRedisTemplate, Gson gson) {
         this.stringRedisTemplate = stringRedisTemplate;
-        this.jsonMapper = jsonMapper;
+        this.gson = gson;
     }
 
     @Override
-    public void save(Task task) {
-        String key = KEY_PREFIX + task.getId();
-        String json = jsonMapper.writeValueAsString(task);
+    public void save(Task task, boolean isReplicated) {
+        String key = KEY_PREFIX + task.id();
+        String json = gson.toJson(task);
         stringRedisTemplate.opsForValue().set(key, json);
-        if (isFinalized(task)) {
+
+        if (isTaskFinalized(task.id())) {
             stringRedisTemplate.expire(key, FINALIZED_TASK_TTL);
         }
     }
 
     @Override
-    public Task get(String taskId) {
+    public Task get(@NonNull String taskId) {
         String json = stringRedisTemplate.opsForValue().get(KEY_PREFIX + taskId);
         if (json == null) {
             return null;
         }
-        return jsonMapper.readValue(json, Task.class);
+        return gson.fromJson(json, Task.class);
     }
 
     @Override
-    public void delete(String taskId) {
+    public void delete(@NonNull String taskId) {
         stringRedisTemplate.delete(KEY_PREFIX + taskId);
     }
 
     @Override
-    public boolean isTaskActive(String taskId) {
-        Task task = get(taskId);
-        if (task == null) {
-            return false;
+    public ListTasksResult list(ListTasksParams listTasksParams) {
+        Set<String> keys = stringRedisTemplate.keys(KEY_PREFIX + "*");
+        if (keys == null || keys.isEmpty()) {
+            return new ListTasksResult(List.of());
         }
-        return !isFinalized(task);
+
+        List<Task> matchingTasks = new ArrayList<>();
+        for (String key : keys) {
+            String json = stringRedisTemplate.opsForValue().get(key);
+            if (json == null) {
+                continue;
+            }
+            Task task = gson.fromJson(json, Task.class);
+            if (matchesFilters(task, listTasksParams)) {
+                matchingTasks.add(task);
+            }
+        }
+
+        matchingTasks.sort(Comparator.comparing(Task::id));
+
+        int totalSize = matchingTasks.size();
+        int effectivePageSize = listTasksParams.getEffectivePageSize();
+        int offset = decodePageToken(listTasksParams.pageToken());
+
+        int fromIndex = Math.min(offset, totalSize);
+        int toIndex = Math.min(fromIndex + effectivePageSize, totalSize);
+        List<Task> page = matchingTasks.subList(fromIndex, toIndex);
+
+        int historyLength = listTasksParams.getEffectiveHistoryLength();
+        boolean includeArtifacts = listTasksParams.shouldIncludeArtifacts();
+        List<Task> resultTasks = page.stream()
+                .map(task -> applyViewOptions(task, historyLength, includeArtifacts))
+                .toList();
+
+        String nextPageToken = toIndex < totalSize ? String.valueOf(toIndex) : null;
+
+        return new ListTasksResult(resultTasks, totalSize, resultTasks.size(), nextPageToken);
     }
 
     @Override
-    public boolean isTaskFinalized(String taskId) {
+    public boolean isTaskActive(@NonNull String taskId) {
+        return !isTaskFinalized(taskId);
+    }
+
+    @Override
+    public boolean isTaskFinalized(@NonNull String taskId) {
         Task task = get(taskId);
         if (task == null) {
             return false;
         }
-        return isFinalized(task);
+
+        return task.status().state().isFinal();
     }
 
-    private static boolean isFinalized(Task task) {
-        return task.getStatus() != null
-                && task.getStatus().state() != null
-                && task.getStatus().state().isFinal();
+    private boolean matchesFilters(Task task, ListTasksParams params) {
+        if (params.contextId() != null && !params.contextId().equals(task.contextId())) {
+            return false;
+        }
+
+        if (params.status() != null && params.status() != task.status().state()) {
+            return false;
+        }
+
+        if (params.statusTimestampAfter() != null &&
+                !task.status().timestamp().toInstant().isAfter(params.statusTimestampAfter())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private Task applyViewOptions(Task task, int historyLength, boolean includeArtifacts) {
+        List<Message> trimmedHistory = historyLength == 0
+                ? List.of()
+                : task.history().subList(Math.max(0, task.history().size() - historyLength), task.history().size());
+        List<Artifact> artifacts = includeArtifacts ? task.artifacts() : List.of();
+        return Task.builder(task)
+                .history(trimmedHistory)
+                .artifacts(artifacts)
+                .build();
+    }
+
+    private int decodePageToken(String pageToken) {
+        if (pageToken == null || pageToken.isBlank()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(pageToken);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

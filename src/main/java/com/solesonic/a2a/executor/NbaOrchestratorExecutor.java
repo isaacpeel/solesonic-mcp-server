@@ -3,14 +3,18 @@ package com.solesonic.a2a.executor;
 import com.solesonic.agent.sports.NbaOrchestratorGraphConfig;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.node.SynthesisOutputEmitter;
-import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.server.agentexecution.RequestContext;
-import io.a2a.server.events.EventQueue;
-import io.a2a.server.tasks.TaskStore;
-import io.a2a.server.tasks.TaskUpdater;
-import io.a2a.spec.*;
+import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
+import org.a2aproject.sdk.server.agentexecution.RequestContext;
+import org.a2aproject.sdk.server.tasks.AgentEmitter;
+import org.a2aproject.sdk.server.tasks.TaskStore;
+import org.a2aproject.sdk.spec.A2AError;
+import org.a2aproject.sdk.spec.Message;
+import org.a2aproject.sdk.spec.Task;
+import org.a2aproject.sdk.spec.TextPart;
+import org.apache.commons.lang3.StringUtils;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -23,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.solesonic.a2a.executor.SportsAgentExecutor.extractTextFromMessage;
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
 
@@ -56,22 +61,22 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
     }
 
     @Override
-    public void execute(RequestContext requestContext, EventQueue eventQueue) throws JSONRPCError {
-        TaskUpdater taskUpdater = new TaskUpdater(requestContext, eventQueue);
-
-        if (requestContext.getTask() == null) {
-            taskUpdater.submit();
+    public void execute(@NonNull RequestContext requestContext, @NonNull AgentEmitter agentEmitter) throws A2AError {
+        if (agentEmitter.getTaskId() == null) {
+            agentEmitter.submit();
         }
 
-        taskUpdater.startWork();
+        agentEmitter.startWork();
 
-        String userMessage = extractText(requestContext);
+        assert requestContext.getMessage() != null;
+
+        String userMessage = extractTextFromMessage(requestContext.getMessage());
         String conversationId = requestContext.getContextId();
         log.info("NBA orchestrator invoked: userMessage={}, conversationId={}", userMessage, conversationId);
 
         seedMemoryFromReferencedTasks(requestContext, conversationId);
 
-        SynthesisOutputEmitter emitter = SynthesisOutputEmitter.fromTaskUpdater(taskUpdater);
+        SynthesisOutputEmitter emitter = SynthesisOutputEmitter.fromTaskUpdater(agentEmitter);
 
         Map<String, Object> input = Map.of(
                 SportsState.USER_MESSAGE, userMessage,
@@ -80,7 +85,7 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
 
         RunnableConfig runnableConfig = RunnableConfig.builder()
                 .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, emitter)
-                .addMetadata(TASK_UPDATER_KEY, taskUpdater)
+                .addMetadata(TASK_UPDATER_KEY, agentEmitter)
                 .build();
 
         AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
@@ -112,31 +117,34 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
 
             if (finalState != null && finalState.finalAnalysis().isPresent()) {
                 String finalAnalysis = finalState.finalAnalysis().get();
-                if (conversationId != null && !conversationId.isBlank()) {
+
+                if (StringUtils.isNoneBlank(conversationId)) {
                     chatMemory.add(conversationId, List.of(
                             new UserMessage(userMessage),
                             new AssistantMessage(finalAnalysis)
                     ));
                 }
-                taskUpdater.complete();
+
+                agentEmitter.complete();
             } else {
-                taskUpdater.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
-                taskUpdater.complete();
+                agentEmitter.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
+                agentEmitter.complete();
             }
         } catch (Exception exception) {
             log.error("NBA orchestrator failed: userMessage={}", userMessage, exception);
-            taskUpdater.fail();
+            agentEmitter.fail();
         }
     }
 
     @Override
-    public void cancel(RequestContext context, EventQueue queue) throws JSONRPCError {
-        TaskUpdater updater = new TaskUpdater(context, queue);
-        updater.cancel();
+    public void cancel(@NonNull RequestContext context, AgentEmitter agentEmitter) throws A2AError {
+        agentEmitter.cancel();
     }
 
     private void seedMemoryFromReferencedTasks(RequestContext requestContext, String conversationId) {
-        List<String> referenceTaskIds = requestContext.getMessage().getReferenceTaskIds();
+        assert requestContext.getMessage() != null;
+
+        List<String> referenceTaskIds = requestContext.getMessage().referenceTaskIds();
         if (referenceTaskIds == null || referenceTaskIds.isEmpty()) {
             return;
         }
@@ -151,12 +159,12 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
                 continue;
             }
 
-            String priorUserQuestion = referencedTask.getHistory() == null ? null :
-                    referencedTask.getHistory().stream()
-                            .filter(historyMessage -> historyMessage.getRole() == Message.Role.USER)
-                            .flatMap(historyMessage -> historyMessage.getParts().stream())
+            String priorUserQuestion = referencedTask.history() == null ? null :
+                    referencedTask.history().stream()
+                            .filter(historyMessage -> historyMessage.role() == Message.Role.ROLE_USER)
+                            .flatMap(historyMessage -> historyMessage.parts().stream())
                             .filter(part -> part instanceof TextPart)
-                            .map(part -> ((TextPart) part).getText())
+                            .map(part -> ((TextPart) part).text())
                             .findFirst()
                             .orElse(null);
 
@@ -164,25 +172,17 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
                 continue;
             }
 
-            referencedTask.getArtifacts().stream()
+            assert referencedTask.artifacts() != null;
+
+            referencedTask.artifacts().stream()
                     .flatMap(artifact -> artifact.parts().stream())
                     .filter(part -> part instanceof TextPart)
-                    .map(part -> ((TextPart) part).getText())
+                    .map(part -> ((TextPart) part).text())
                     .findFirst()
                     .ifPresent(artifactText -> chatMemory.add(conversationId, List.of(
                             new UserMessage(priorUserQuestion),
                             new AssistantMessage(artifactText)
                     )));
         }
-    }
-
-    private static String extractText(RequestContext requestContext) {
-        return requestContext.getMessage()
-                .getParts()
-                .stream()
-                .filter(part -> part instanceof TextPart)
-                .map(part -> ((TextPart) part).getText())
-                .findFirst()
-                .orElse("");
     }
 }

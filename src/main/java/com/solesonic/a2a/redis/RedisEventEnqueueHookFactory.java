@@ -1,11 +1,12 @@
 package com.solesonic.a2a.redis;
 
-import io.a2a.server.events.EventEnqueueHook;
+import com.google.gson.Gson;
+import org.a2aproject.sdk.server.events.EventEnqueueHook;
+import org.a2aproject.sdk.server.events.EventQueueItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
 
@@ -15,23 +16,23 @@ public class RedisEventEnqueueHookFactory {
     private static final String STREAM_KEY_PREFIX = "a2a:stream:";
 
     private final StringRedisTemplate stringRedisTemplate;
-    private final JsonMapper jsonMapper;
+    private final Gson gson;
 
-    public RedisEventEnqueueHookFactory(StringRedisTemplate stringRedisTemplate, JsonMapper jsonMapper) {
+    public RedisEventEnqueueHookFactory(StringRedisTemplate stringRedisTemplate, Gson gson) {
         this.stringRedisTemplate = stringRedisTemplate;
-        this.jsonMapper = jsonMapper;
+        this.gson = gson;
     }
 
     public EventEnqueueHook create(String taskId) {
         String streamKey = STREAM_KEY_PREFIX + taskId;
-        return item -> {
+        return (EventQueueItem item) -> {
             if (item.isReplicated()) {
                 return;
             }
             try {
                 var event = item.getEvent();
                 String kind = event.getClass().getSimpleName();
-                String payload = jsonMapper.writeValueAsString(event);
+                String payload = gson.toJson(event);
                 Map<String, String> fields = Map.of("kind", kind, "payload", payload);
                 stringRedisTemplate.<String, String>opsForStream()
                         .add(MapRecord.create(streamKey, fields));

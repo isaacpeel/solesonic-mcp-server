@@ -1,7 +1,14 @@
 package com.solesonic.a2a.api;
 
 import com.solesonic.a2a.service.PushNotificationService;
-import io.a2a.spec.*;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.CreateTaskPushNotificationConfigRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.CreateTaskPushNotificationConfigResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.DeleteTaskPushNotificationConfigRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.DeleteTaskPushNotificationConfigResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.GetTaskPushNotificationConfigRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.GetTaskPushNotificationConfigResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTaskPushNotificationConfigsRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTaskPushNotificationConfigsResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,8 +26,8 @@ public class PushNotificationController {
     }
 
     @PostMapping(path = "/set", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SetTaskPushNotificationConfigResponse> setPushConfig(@PathVariable String agentName,
-                                                                               @RequestBody SetTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<CreateTaskPushNotificationConfigResponse> setPushConfig(@PathVariable String agentName,
+                                                                                  @RequestBody CreateTaskPushNotificationConfigRequest request) {
         return pushNotificationService.setPushConfig(agentName, request);
     }
 
@@ -31,8 +38,8 @@ public class PushNotificationController {
     }
 
     @PostMapping(path = "/list", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ListTaskPushNotificationConfigResponse> listPushConfigs(@PathVariable String agentName,
-                                                                                  @RequestBody ListTaskPushNotificationConfigRequest request) {
+    public ResponseEntity<ListTaskPushNotificationConfigsResponse> listPushConfigs(@PathVariable String agentName,
+                                                                                   @RequestBody ListTaskPushNotificationConfigsRequest request) {
         return pushNotificationService.listPushConfigs(agentName, request);
     }
 

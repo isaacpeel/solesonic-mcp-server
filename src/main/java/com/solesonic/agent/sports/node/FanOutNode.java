@@ -134,7 +134,7 @@ public class FanOutNode implements AsyncNodeActionWithConfig<SportsState> {
                         Map.Entry<String, String> result = future.join();
                         subGraphResults.put(result.getKey(), result.getValue());
                     }
-                    return Map.<String, Object>of(SportsState.SUB_GRAPH_RESULTS, subGraphResults);
+                    return Map.of(SportsState.SUB_GRAPH_RESULTS, subGraphResults);
                 });
     }
 }

@@ -2,7 +2,11 @@ package com.solesonic.a2a.api;
 
 import com.solesonic.a2a.service.StreamingA2AService;
 import com.solesonic.a2a.service.TaskService;
-import io.a2a.spec.*;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.CancelTaskRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.CancelTaskResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.GetTaskRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.GetTaskResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.SubscribeToTaskRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -41,7 +45,7 @@ public class TaskController {
 
     @PostMapping(path = "resubscribe", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter resubscribeTask(@PathVariable String agentName,
-                                      @RequestBody TaskResubscriptionRequest request) {
+                                      @RequestBody SubscribeToTaskRequest request) {
         return streamingA2AService.resubscribe(agentName, request);
     }
 }

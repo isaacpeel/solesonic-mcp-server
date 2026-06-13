@@ -2,9 +2,14 @@ package com.solesonic.a2a.api;
 
 import com.solesonic.a2a.service.StreamingA2AService;
 import com.solesonic.a2a.service.TaskService;
-import io.a2a.spec.SendMessageRequest;
-import io.a2a.spec.SendMessageResponse;
-import io.a2a.spec.SendStreamingMessageRequest;
+import org.a2aproject.sdk.grpc.utils.JSONRPCUtils;
+import org.a2aproject.sdk.jsonrpc.common.json.IdJsonMappingException;
+import org.a2aproject.sdk.jsonrpc.common.json.JsonProcessingException;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.SendMessageRequest;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.SendMessageResponse;
+import org.a2aproject.sdk.jsonrpc.common.wrappers.SendStreamingMessageRequest;
+import org.a2aproject.sdk.spec.InvalidParamsError;
+import org.a2aproject.sdk.spec.InvalidRequestError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -30,18 +35,36 @@ public class MessageController {
 
     @PostMapping(path = "/{agentName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SendMessageResponse> sendMessage(@PathVariable String agentName,
-                                                           @RequestBody SendMessageRequest request) {
+                                                           @RequestBody String body) {
         log.info("Sending json agent message: {}", agentName);
+
+        SendMessageRequest request;
+        try {
+            request = (SendMessageRequest) JSONRPCUtils.parseRequestBody(body, null);
+        } catch (IdJsonMappingException e) {
+            return ResponseEntity.ok(new SendMessageResponse(e.getId(), new InvalidParamsError(e.getMessage())));
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.ok(new SendMessageResponse(null, new InvalidRequestError(e.getMessage())));
+        }
 
         return taskService.send(agentName, request);
     }
 
     @PostMapping(path = "/{agentName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMessage(@PathVariable String agentName,
-                                    @RequestBody SendStreamingMessageRequest request) {
+                                    @RequestBody String body) {
         log.info("Sending stream agent message: {}", agentName);
-        log.info("Sending streaming request with id: {}", request.getId());
 
+        SendStreamingMessageRequest request;
+        try {
+            request = (SendStreamingMessageRequest) JSONRPCUtils.parseRequestBody(body, null);
+        } catch (IdJsonMappingException e) {
+            return streamingA2AService.sseError(e.getId(), new InvalidParamsError(e.getMessage()));
+        } catch (JsonProcessingException e) {
+            return streamingA2AService.sseError(null, new InvalidRequestError(e.getMessage()));
+        }
+
+        log.info("Sending streaming request with id: {}", request.getId());
         return streamingA2AService.stream(agentName, request);
     }
 

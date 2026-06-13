@@ -3,14 +3,14 @@ package com.solesonic.a2a.executor;
 import com.solesonic.agent.sports.NbaAgentGraphConfig;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.node.SynthesisOutputEmitter;
-import io.a2a.server.agentexecution.AgentExecutor;
-import io.a2a.server.agentexecution.RequestContext;
-import io.a2a.server.events.EventQueue;
-import io.a2a.server.tasks.TaskStore;
-import io.a2a.server.tasks.TaskUpdater;
-import io.a2a.spec.*;
+import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
+import org.a2aproject.sdk.server.agentexecution.RequestContext;
+import org.a2aproject.sdk.server.tasks.AgentEmitter;
+import org.a2aproject.sdk.server.tasks.TaskStore;
+import org.a2aproject.sdk.spec.*;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -19,11 +19,13 @@ import org.springframework.ai.chat.messages.UserMessage;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
 
+@SuppressWarnings("unused")
 public class SportsAgentExecutor implements AgentExecutor {
     private static final Logger log = LoggerFactory.getLogger(SportsAgentExecutor.class);
 
@@ -32,14 +34,14 @@ public class SportsAgentExecutor implements AgentExecutor {
     private static final String FALLBACK_ANALYSIS = "Unable to find information for your NBA question. Please try rephrasing or check NBA.com directly.";
 
     private static final Map<String, String> NODE_PROGRESS_MESSAGES = Map.of(
-            NbaAgentGraphConfig.PARSE_SPORTS_INTENT,          "Understanding your question...",
-            NbaAgentGraphConfig.RESOLVE_ESPN_TEAM_URLS,       "Looking up team information...",
-            NbaAgentGraphConfig.FETCH_ESPN_ROSTER,            "Fetching team rosters...",
-            NbaAgentGraphConfig.FETCH_ESPN_STANDINGS,         "Fetching current standings...",
-            NbaAgentGraphConfig.SEARCH_SCHEDULE,              "Fetching schedule from ESPN...",
-            NbaAgentGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE,  "Identifying teams from the schedule...",
-            NbaAgentGraphConfig.SEARCH_NEWS,                  "Searching for current news...",
-            NbaAgentGraphConfig.SEARCH_STATS,                 "Searching for statistics..."
+            NbaAgentGraphConfig.PARSE_SPORTS_INTENT, "Understanding your question...",
+            NbaAgentGraphConfig.RESOLVE_ESPN_TEAM_URLS, "Looking up team information...",
+            NbaAgentGraphConfig.FETCH_ESPN_ROSTER, "Fetching team rosters...",
+            NbaAgentGraphConfig.FETCH_ESPN_STANDINGS, "Fetching current standings...",
+            NbaAgentGraphConfig.SEARCH_SCHEDULE, "Fetching schedule from ESPN...",
+            NbaAgentGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE, "Identifying teams from the schedule...",
+            NbaAgentGraphConfig.SEARCH_NEWS, "Searching for current news...",
+            NbaAgentGraphConfig.SEARCH_STATS, "Searching for statistics..."
             // SYNTHESIZE_ANALYSIS omitted — the node streams tokens as artifact chunks directly
     );
 
@@ -57,22 +59,16 @@ public class SportsAgentExecutor implements AgentExecutor {
     }
 
     @Override
-    public void execute(RequestContext requestContext, EventQueue eventQueue) throws JSONRPCError {
-        TaskUpdater taskUpdater = new TaskUpdater(requestContext, eventQueue);
+    public void execute(@NonNull RequestContext requestContext, @NonNull AgentEmitter agentEmitter) throws A2AError {
+        agentEmitter.startWork();
 
-        if (requestContext.getTask() == null) {
-            taskUpdater.submit();
-        }
+        assert requestContext.getMessage() != null;
 
-        taskUpdater.startWork();
-
-        String userMessage = extractText(requestContext);
+        String userMessage = extractTextFromMessage(requestContext.getMessage());
         String conversationId = requestContext.getContextId();
         log.info("NBA research agent invoked: userMessage={}, conversationId={}", userMessage, conversationId);
 
         seedMemoryFromReferencedTasks(requestContext, conversationId);
-
-        SynthesisOutputEmitter emitter = SynthesisOutputEmitter.fromTaskUpdater(taskUpdater);
 
         Map<String, Object> input = Map.of(
                 SportsState.USER_MESSAGE, userMessage,
@@ -80,8 +76,8 @@ public class SportsAgentExecutor implements AgentExecutor {
         );
 
         RunnableConfig runnableConfig = RunnableConfig.builder()
-                .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, emitter)
-                .addMetadata(TASK_UPDATER_KEY, taskUpdater)
+                .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, agentEmitter)
+                .addMetadata(TASK_UPDATER_KEY, agentEmitter)
                 .build();
 
         AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
@@ -105,7 +101,7 @@ public class SportsAgentExecutor implements AgentExecutor {
                             return;
                         }
 
-                        emitter.emitProgress(progressMessage);
+                        agentEmitter.sendMessage(progressMessage);
                     })
                     .join();
 
@@ -113,25 +109,24 @@ public class SportsAgentExecutor implements AgentExecutor {
 
             if (finalState != null && finalState.finalAnalysis().isPresent()) {
                 // Synthesis node streamed the artifact directly as chunks — just complete
-                taskUpdater.complete();
+                agentEmitter.complete();
             } else {
-                taskUpdater.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
-                taskUpdater.complete();
+                agentEmitter.addArtifact(List.of(new TextPart(FALLBACK_ANALYSIS)), null, null, null);
+                agentEmitter.complete();
             }
         } catch (Exception exception) {
             log.error("NBA research agent failed: userMessage={}", userMessage, exception);
-            taskUpdater.fail();
+            agentEmitter.fail();
         }
     }
 
     @Override
-    public void cancel(RequestContext context, EventQueue queue) throws JSONRPCError {
-        TaskUpdater updater = new TaskUpdater(context, queue);
-        updater.cancel();
+    public void cancel(@NonNull RequestContext context, @NonNull AgentEmitter agentEmitter) throws A2AError {
+        agentEmitter.cancel();
     }
 
     private void seedMemoryFromReferencedTasks(RequestContext requestContext, String conversationId) {
-        List<String> referenceTaskIds = requestContext.getMessage().getReferenceTaskIds();
+        List<String> referenceTaskIds = Objects.requireNonNull(requestContext.getMessage()).referenceTaskIds();
         if (referenceTaskIds == null || referenceTaskIds.isEmpty()) {
             return;
         }
@@ -146,12 +141,12 @@ public class SportsAgentExecutor implements AgentExecutor {
                 continue;
             }
 
-            String priorUserQuestion = referencedTask.getHistory() == null ? null :
-                    referencedTask.getHistory().stream()
-                            .filter(historyMessage -> historyMessage.getRole() == Message.Role.USER)
-                            .flatMap(historyMessage -> historyMessage.getParts().stream())
+            String priorUserQuestion = referencedTask.history() == null ? null :
+                    referencedTask.history().stream()
+                            .filter(historyMessage -> historyMessage.role() == Message.Role.ROLE_USER)
+                            .flatMap(historyMessage -> historyMessage.parts().stream())
                             .filter(part -> part instanceof TextPart)
-                            .map(part -> ((TextPart) part).getText())
+                            .map(part -> ((TextPart) part).text())
                             .findFirst()
                             .orElse(null);
 
@@ -159,10 +154,11 @@ public class SportsAgentExecutor implements AgentExecutor {
                 continue;
             }
 
-            referencedTask.getArtifacts().stream()
+            assert referencedTask.artifacts() != null;
+            referencedTask.artifacts().stream()
                     .flatMap(artifact -> artifact.parts().stream())
                     .filter(part -> part instanceof TextPart)
-                    .map(part -> ((TextPart) part).getText())
+                    .map(part -> ((TextPart) part).text())
                     .findFirst()
                     .ifPresent(artifactText -> chatMemory.add(conversationId, List.of(
                             new UserMessage(priorUserQuestion),
@@ -171,13 +167,13 @@ public class SportsAgentExecutor implements AgentExecutor {
         }
     }
 
-    private static String extractText(RequestContext requestContext) {
-        return requestContext.getMessage()
-                .getParts()
-                .stream()
-                .filter(part -> part instanceof TextPart)
-                .map(part -> ((TextPart) part).getText())
-                .findFirst()
-                .orElse("");
+    public static String extractTextFromMessage(Message message) {
+        StringBuilder textBuilder = new StringBuilder();
+        for (Part<?> part : message.parts()) {
+            if (part instanceof TextPart textPart) {
+                textBuilder.append(textPart.text());
+            }
+        }
+        return textBuilder.toString();
     }
 }

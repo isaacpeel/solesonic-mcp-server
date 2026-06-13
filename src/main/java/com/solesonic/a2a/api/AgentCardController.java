@@ -1,7 +1,7 @@
 package com.solesonic.a2a.api;
 
 import com.solesonic.a2a.service.AgentCardService;
-import io.a2a.spec.AgentCard;
+import org.a2aproject.sdk.spec.AgentCard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

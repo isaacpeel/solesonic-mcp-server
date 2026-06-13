@@ -42,10 +42,8 @@ public class NbaGamePreviewGraphConfig {
                 .addEdge(START, NbaAgentGraphConfig.SEARCH_SCHEDULE)
                 .addEdge(NbaAgentGraphConfig.SEARCH_SCHEDULE, NbaAgentGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE)
                 .addEdge(NbaAgentGraphConfig.EXTRACT_TEAMS_FROM_SCHEDULE, FETCH_ROSTER)
-                // Fan-out: roster fetch feeds both news and stats concurrently
                 .addEdge(FETCH_ROSTER, NbaAgentGraphConfig.SEARCH_NEWS)
-                .addEdge(FETCH_ROSTER, NbaAgentGraphConfig.SEARCH_STATS)
-                .addEdge(NbaAgentGraphConfig.SEARCH_NEWS, NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS)
+                .addEdge(NbaAgentGraphConfig.SEARCH_NEWS, NbaAgentGraphConfig.SEARCH_STATS)
                 .addEdge(NbaAgentGraphConfig.SEARCH_STATS, NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS)
                 .addEdge(NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS, END)
                 .compile();
