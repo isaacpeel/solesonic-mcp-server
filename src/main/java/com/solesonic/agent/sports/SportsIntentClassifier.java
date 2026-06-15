@@ -152,8 +152,22 @@ public class SportsIntentClassifier {
 
     private boolean matchesAny(String lowercaseMessage, Set<String> keywords) {
         for (String keyword : keywords) {
-            if (lowercaseMessage.contains(keyword)) {
-                return true;
+            if (keyword.contains(" ") || keyword.contains("-")) {
+                if (lowercaseMessage.contains(keyword)) {
+                    return true;
+                }
+            } else {
+                int index = lowercaseMessage.indexOf(keyword);
+                while (index >= 0) {
+                    boolean prefixBoundary = index == 0
+                            || !Character.isLetterOrDigit(lowercaseMessage.charAt(index - 1));
+                    boolean suffixBoundary = index + keyword.length() == lowercaseMessage.length()
+                            || !Character.isLetterOrDigit(lowercaseMessage.charAt(index + keyword.length()));
+                    if (prefixBoundary && suffixBoundary) {
+                        return true;
+                    }
+                    index = lowercaseMessage.indexOf(keyword, index + 1);
+                }
             }
         }
         return false;

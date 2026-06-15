@@ -1,5 +1,6 @@
 package com.solesonic.a2a.executor;
 
+import com.solesonic.a2a.config.A2ARedisConfiguration;
 import com.solesonic.agent.sports.NbaOrchestratorGraphConfig;
 import com.solesonic.agent.sports.SportsState;
 import com.solesonic.agent.sports.node.SynthesisOutputEmitter;
@@ -9,6 +10,7 @@ import org.a2aproject.sdk.server.tasks.AgentEmitter;
 import org.a2aproject.sdk.server.tasks.TaskStore;
 import org.a2aproject.sdk.spec.A2AError;
 import org.a2aproject.sdk.spec.Message;
+import org.a2aproject.sdk.spec.Part;
 import org.a2aproject.sdk.spec.Task;
 import org.a2aproject.sdk.spec.TextPart;
 import org.apache.commons.lang3.StringUtils;
@@ -27,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.solesonic.a2a.executor.SportsAgentExecutor.extractTextFromMessage;
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
 
@@ -53,7 +54,7 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
 
     public NbaOrchestratorExecutor(
             @Qualifier("nbaOrchestratorGraph") CompiledGraph<SportsState> nbaOrchestratorGraph,
-            ChatMemory chatMemory,
+            @Qualifier(A2ARedisConfiguration.SPORTS_CHAT_MEMORY) ChatMemory chatMemory,
             TaskStore taskStore) {
         this.nbaOrchestratorGraph = nbaOrchestratorGraph;
         this.chatMemory = chatMemory;
@@ -139,6 +140,16 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
     @Override
     public void cancel(@NonNull RequestContext context, AgentEmitter agentEmitter) throws A2AError {
         agentEmitter.cancel();
+    }
+
+    public static String extractTextFromMessage(Message message) {
+        StringBuilder textBuilder = new StringBuilder();
+        for (Part<?> part : message.parts()) {
+            if (part instanceof TextPart textPart) {
+                textBuilder.append(textPart.text());
+            }
+        }
+        return textBuilder.toString();
     }
 
     private void seedMemoryFromReferencedTasks(RequestContext requestContext, String conversationId) {

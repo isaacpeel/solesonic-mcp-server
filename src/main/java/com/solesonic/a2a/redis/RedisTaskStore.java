@@ -9,13 +9,14 @@ import org.a2aproject.sdk.spec.ListTasksParams;
 import org.a2aproject.sdk.spec.Message;
 import org.a2aproject.sdk.spec.Task;
 import org.jspecify.annotations.NonNull;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 
 public class RedisTaskStore implements TaskStore, TaskStateProvider {
 
@@ -58,20 +59,19 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
     @Override
     @NonNull
     public ListTasksResult list(@NonNull ListTasksParams listTasksParams) {
-        Set<String> keys = stringRedisTemplate.keys(KEY_PREFIX + "*");
-        if (keys == null || keys.isEmpty()) {
-            return new ListTasksResult(List.of());
-        }
-
         List<Task> matchingTasks = new ArrayList<>();
-        for (String key : keys) {
-            String json = stringRedisTemplate.opsForValue().get(key);
-            if (json == null) {
-                continue;
-            }
-            Task task = gson.fromJson(json, Task.class);
-            if (matchesFilters(task, listTasksParams)) {
-                matchingTasks.add(task);
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(KEY_PREFIX + "*").build();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                String json = stringRedisTemplate.opsForValue().get(key);
+                if (json == null) {
+                    continue;
+                }
+                Task task = gson.fromJson(json, Task.class);
+                if (matchesFilters(task, listTasksParams)) {
+                    matchingTasks.add(task);
+                }
             }
         }
 
@@ -98,7 +98,11 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
 
     @Override
     public boolean isTaskActive(@NonNull String taskId) {
-        return !isTaskFinalized(taskId);
+        Task task = get(taskId);
+        if (task == null) {
+            return false;
+        }
+        return !task.status().state().isFinal();
     }
 
     @Override

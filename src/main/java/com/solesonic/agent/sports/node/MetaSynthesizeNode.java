@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -101,7 +101,7 @@ public class MetaSynthesizeNode implements AsyncNodeActionWithConfig<SportsState
 
     private String readResource(Resource resource) {
         try {
-            return resource.getContentAsString(Charset.defaultCharset());
+            return resource.getContentAsString(StandardCharsets.UTF_8);
         } catch (IOException ioException) {
             throw new RuntimeException("Failed to read prompt resource: " + resource.getDescription(), ioException);
         }

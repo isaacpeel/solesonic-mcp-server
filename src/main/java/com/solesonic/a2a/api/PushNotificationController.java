@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/a2a/{agentName}/tasks/push-notification-configs")
-@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTE')")
+@PreAuthorize("hasAuthority('ROLE_AGENT-EXECUTION')")
 public class PushNotificationController {
 
     private final PushNotificationService pushNotificationService;

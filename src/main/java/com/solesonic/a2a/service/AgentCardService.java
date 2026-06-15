@@ -11,9 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -76,21 +74,8 @@ public class AgentCardService {
                 .toList();
     }
 
-    @SuppressWarnings("unused")
-    public List<String> allAgentCardIds() {
-        return List.copyOf(agentCardsById.keySet());
-    }
-
     public Optional<AgentCard> agentCardById(String agentId) {
         return Optional.ofNullable(agentCardsById.get(agentId));
-    }
-
-    @SuppressWarnings("unused")
-    public AgentCard agentCardByName(String name) {
-        return allAgentCards().stream()
-                .filter(agentCard -> agentCard.name().equals(name))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent Not Found"));
     }
 
     private AgentCard buildAgentCard(AgentCardDefinition agentCardDefinition) {

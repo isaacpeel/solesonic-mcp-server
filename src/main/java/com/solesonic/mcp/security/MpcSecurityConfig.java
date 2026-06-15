@@ -36,7 +36,6 @@ import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.springframework.http.HttpMethod.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@SuppressWarnings("unused")
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -44,8 +43,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 public class MpcSecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(MpcSecurityConfig.class);
 
-    @SuppressWarnings("unused")
-    public static final String SCOPE_MCP_INVOKE = "SCOPE_MCP_INVOKE";
     public static final String SCOPE_ = "SCOPE_";
     public static final String SCOPE = "scope";
     public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
@@ -79,10 +76,6 @@ public class MpcSecurityConfig {
 
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
-
-    @Value("${solesonic.mcp.resource}")
-    @SuppressWarnings("unused")
-    private String clientRegistrationResource;
 
     public MpcSecurityConfig(AuthoritiesService authoritiesService) {
         this.authoritiesService = authoritiesService;
@@ -141,14 +134,13 @@ public class MpcSecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint())
                 )
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authz -> {
-                    authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                            .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                            .requestMatchers(HttpMethod.OPTIONS, MCP_PREFIX).permitAll()
-                            .requestMatchers(AGENT_CARD_POSTFIX).permitAll()
-                            .requestMatchers(AGENT_PREFIX).authenticated()
-                            .anyRequest().authenticated();
-                })
+                .authorizeHttpRequests(authz ->
+                        authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                        .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, MCP_PREFIX).permitAll()
+                        .requestMatchers(AGENT_CARD_POSTFIX).permitAll()
+                        .requestMatchers(AGENT_PREFIX).authenticated()
+                        .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt
                                 .decoder(jwtDecoder())

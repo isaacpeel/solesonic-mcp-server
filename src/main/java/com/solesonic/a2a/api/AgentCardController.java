@@ -33,14 +33,14 @@ public class AgentCardController {
 
     @GetMapping(path = "/{agentId}/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public AgentCard getAgentCard(@PathVariable String agentId) {
-        log.info("Serving agent card: {}", agentId);
+        log.info("Serving agent card by agent ID: {}", agentId);
         return agentCardService.agentCardById(agentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent not found: " + agentId));
     }
 
     @GetMapping(path = "/{agent}/card", produces = MediaType.APPLICATION_JSON_VALUE)
     public AgentCard getAgentCardV1(@PathVariable String agent) {
-        log.info("Serving agent card via /{}}/card", agent);
+        log.info("Serving agent card by agent: {}", agent);
         return getAgentCard(agent);
     }
 }
