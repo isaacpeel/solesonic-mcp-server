@@ -1,6 +1,7 @@
 package com.solesonic.mcp.service.atlassian;
 
-import com.solesonic.mcp.model.atlassian.jira.User;
+import com.solesonic.model.atlassian.jira.User;
+import com.solesonic.service.atlassian.JiraUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

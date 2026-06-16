@@ -1,7 +1,6 @@
 package com.solesonic.mcp.prompt;
 
-import com.solesonic.mcp.command.DefaultCommandProvider;
-import com.solesonic.mcp.service.WeatherService;
+import com.solesonic.service.WeatherService;
 import com.solesonic.mcp.tool.general.DateTools;
 import com.solesonic.mcp.tool.tavily.WebSearchTools;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -18,7 +17,6 @@ import java.util.Map;
 import static com.solesonic.mcp.prompt.PromptUtil.buildPromptResult;
 import static com.solesonic.mcp.tool.SolesonicTool.availableTools;
 
-@SuppressWarnings("unused")
 @Service
 public class PromptProvider {
     private static final Logger log = LoggerFactory.getLogger(PromptProvider.class);
@@ -26,21 +24,21 @@ public class PromptProvider {
     private static final String AGENT_NAME = "agentName";
     private static final String USER_MESSAGE = "userMessage";
     private static final String AVAILABLE_TOOLS = "available_tools";
-    public static final String COMMAND = "command";
 
     private static final String DESCRIPTION = "General-purpose assistant for coding, writing, brainstorming, and everyday questions.";
+    public static final String BASIC_PROMPT = "basic-prompt";
+    public static final String GENERAL_ASSISTANT = "General Assistant";
 
     @Value("classpath:prompt/basic-prompt.st")
     private Resource basicPrompt;
 
     @McpPrompt(
-            name = "basic-prompt",
-            title = "General Assistant",
-            description = DESCRIPTION,
-            metaProvider = DefaultCommandProvider.class)
+            name = BASIC_PROMPT,
+            title = GENERAL_ASSISTANT,
+            description = DESCRIPTION)
     public McpSchema.GetPromptResult basicPrompt(
             @McpArg(name = USER_MESSAGE, description = "A message from the user to embed into this prompt.") String userMessage,
-            @McpArg(name = "agentName", description = "The name of the agent the user is interacting with.") String agentName
+            @McpArg(name = AGENT_NAME, description = "The name of the agent the user is interacting with.") String agentName
     ) {
         log.info("Getting basic prompt.");
 
@@ -52,6 +50,6 @@ public class PromptProvider {
                 AVAILABLE_TOOLS, availableToolsList
         );
 
-        return buildPromptResult("basic-prompt", this.basicPrompt, promptContext);
+        return buildPromptResult(BASIC_PROMPT, this.basicPrompt, promptContext);
     }
 }

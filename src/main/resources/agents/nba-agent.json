@@ -1,0 +1,21 @@
+{
+  "id": "nba",
+  "name": "nba",
+  "description": "Researches current NBA schedules, standings, players, trades, injuries, historical stats, draft prospects, and coaching news from live sources",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "nba-agent",
+      "name": "NBA Agent",
+      "description": "Research current NBA schedules, standings, player stats, trades, injuries, historical records, draft prospects, and coaching news. Routes single-topic questions directly to specialized sub-graphs; multi-topic questions are analyzed concurrently and combined into one unified response.",
+      "tags": ["sports", "nba"]
+    }
+  ]
+}

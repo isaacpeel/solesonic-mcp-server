@@ -1,0 +1,1 @@
+package com.solesonic.model.atlassian.confluence;
