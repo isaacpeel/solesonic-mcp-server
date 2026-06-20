@@ -1,5 +1,6 @@
 package com.solesonic.agent.agile.node;
 
+import com.solesonic.agent.agile.AgileJqlBuilder;
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
@@ -48,11 +49,11 @@ public class AssessOperationScopeNode implements AsyncNodeAction<AgileState> {
         }
 
         Board board = boards.getFirst();
-        String jqlFilter = agileQueryIntent.jqlFilter() == null ? "" : agileQueryIntent.jqlFilter().strip();
+        String resolvedJql = AgileJqlBuilder.build(agileQueryIntent);
 
         JiraAgileTools.BoardIssuesRequest boardIssuesRequest = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
-                jqlFilter.isEmpty() ? null : jqlFilter,
+                resolvedJql.isEmpty() ? null : resolvedJql,
                 null,
                 0,
                 false
