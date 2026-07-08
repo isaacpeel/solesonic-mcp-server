@@ -1,9 +1,9 @@
 package com.solesonic.a2a.executor;
 
 import com.solesonic.a2a.config.A2ARedisConfiguration;
-import com.solesonic.agent.sports.NbaOrchestratorGraphConfig;
-import com.solesonic.agent.sports.SportsState;
-import com.solesonic.agent.sports.node.SynthesisOutputEmitter;
+import com.solesonic.agent.nba.NbaOrchestratorGraphConfig;
+import com.solesonic.agent.nba.SportsState;
+import com.solesonic.agent.nba.node.SynthesisOutputEmitter;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
 import org.a2aproject.sdk.server.agentexecution.RequestContext;
 import org.a2aproject.sdk.server.tasks.AgentEmitter;
