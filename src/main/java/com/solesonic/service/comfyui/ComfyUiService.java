@@ -81,8 +81,7 @@ public class ComfyUiService {
 
         progressReporter.emit(PROGRESS_SUBMITTING, "Sending prompt to ComfyUI");
 
-        ObjectNode workflow = comfyWorkflowTemplate.build(
-                request.prompt(), request.width(), request.height(), request.steps(), request.seed());
+        ObjectNode workflow = comfyWorkflowTemplate.build(request);
 
         String promptId = submit(workflow);
 

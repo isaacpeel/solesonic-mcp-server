@@ -1,6 +1,7 @@
 package com.solesonic.service.comfyui;
 
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ImageGenerationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,18 +70,18 @@ public class ComfyWorkflowTemplate {
     /**
      * Returns a patched copy of the workflow. The cached template is never mutated.
      */
-    public ObjectNode build(String prompt, int width, int height, int steps, long seed) {
+    public ObjectNode build(ImageGenerationRequest request) {
         ObjectNode workflow = template.deepCopy();
 
-        inputsOf(workflow, positivePromptNodeId).put(INPUT_TEXT, prompt);
+        inputsOf(workflow, positivePromptNodeId).put(INPUT_TEXT, request.prompt());
 
         ObjectNode samplerInputs = inputsOf(workflow, samplerNodeId);
-        samplerInputs.put(seedInputKey, seed);
-        samplerInputs.put(INPUT_STEPS, steps);
+        samplerInputs.put(seedInputKey, request.seed());
+        samplerInputs.put(INPUT_STEPS, request.steps());
 
         ObjectNode latentInputs = inputsOf(workflow, latentNodeId);
-        latentInputs.put(INPUT_WIDTH, width);
-        latentInputs.put(INPUT_HEIGHT, height);
+        latentInputs.put(INPUT_WIDTH, request.width());
+        latentInputs.put(INPUT_HEIGHT, request.height());
 
         return workflow;
     }

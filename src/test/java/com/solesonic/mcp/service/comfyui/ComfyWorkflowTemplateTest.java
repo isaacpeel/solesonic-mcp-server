@@ -1,6 +1,7 @@
 package com.solesonic.mcp.service.comfyui;
 
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ImageGenerationRequest;
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class ComfyWorkflowTemplateTest {
     void build_writesPromptToPositiveNode_andLeavesNegativeNodeEmpty() {
         ComfyWorkflowTemplate comfyWorkflowTemplate = new ComfyWorkflowTemplate(new ClassPathResource(FIXTURE), jsonMapper);
 
-        ObjectNode workflow = comfyWorkflowTemplate.build("a lighthouse in a storm", 1024, 1024, 4, 42L);
+        ObjectNode workflow = comfyWorkflowTemplate.build(new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 4, 42L));
 
         assertThat(text(workflow, POSITIVE_PROMPT_NODE_ID)).isEqualTo("a lighthouse in a storm");
         assertThat(text(workflow, NEGATIVE_PROMPT_NODE_ID)).isEmpty();
@@ -53,7 +54,7 @@ class ComfyWorkflowTemplateTest {
     void build_patchesSeedStepsAndDimensionsOnTheCorrectNodes() {
         ComfyWorkflowTemplate comfyWorkflowTemplate = new ComfyWorkflowTemplate(new ClassPathResource(FIXTURE), jsonMapper);
 
-        ObjectNode workflow = comfyWorkflowTemplate.build("a lighthouse in a storm", 1344, 768, 6, 987654321L);
+        ObjectNode workflow = comfyWorkflowTemplate.build(new ImageGenerationRequest("a lighthouse in a storm", 1344, 768, 6, 987654321L));
 
         ObjectNode samplerInputs = inputs(workflow, SAMPLER_NODE_ID);
         assertThat(samplerInputs.get("seed").asLong()).isEqualTo(987654321L);
@@ -68,8 +69,8 @@ class ComfyWorkflowTemplateTest {
     void build_doesNotMutateTheCachedTemplateAcrossCalls() {
         ComfyWorkflowTemplate comfyWorkflowTemplate = new ComfyWorkflowTemplate(new ClassPathResource(FIXTURE), jsonMapper);
 
-        ObjectNode first = comfyWorkflowTemplate.build("first prompt", 1024, 1024, 4, 1L);
-        ObjectNode second = comfyWorkflowTemplate.build("second prompt", 832, 1216, 8, 2L);
+        ObjectNode first = comfyWorkflowTemplate.build(new ImageGenerationRequest("first prompt", 1024, 1024, 4, 1L));
+        ObjectNode second = comfyWorkflowTemplate.build(new ImageGenerationRequest("second prompt", 832, 1216, 8, 2L));
 
         assertThat(text(first, POSITIVE_PROMPT_NODE_ID)).isEqualTo("first prompt");
         assertThat(text(second, POSITIVE_PROMPT_NODE_ID)).isEqualTo("second prompt");
@@ -109,7 +110,7 @@ class ComfyWorkflowTemplateTest {
 
         ComfyWorkflowTemplate comfyWorkflowTemplate = new ComfyWorkflowTemplate(resource, jsonMapper);
 
-        ObjectNode workflow = comfyWorkflowTemplate.build("a lighthouse in a storm", 1024, 1024, 4, 555L);
+        ObjectNode workflow = comfyWorkflowTemplate.build(new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 4, 555L));
 
         assertThat(inputs(workflow, SAMPLER_NODE_ID).get("noise_seed").asLong()).isEqualTo(555L);
         assertThat(inputs(workflow, SAMPLER_NODE_ID).has("seed")).isFalse();
