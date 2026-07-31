@@ -24,5 +24,35 @@
       "name": "solesonic.agent.security.enabled",
       "type": "java.lang.Boolean",
       "description": "Disables security for local dev."
+    },
+    {
+      "name": "comfyui.api.uri",
+      "type": "java.lang.String",
+      "description": "Base URI of the ComfyUI instance used for image generation."
+    },
+    {
+      "name": "comfyui.api.response-timeout-seconds",
+      "type": "java.lang.Integer",
+      "description": "Response timeout applied to each individual ComfyUI HTTP call."
+    },
+    {
+      "name": "comfyui.generation.timeout-seconds",
+      "type": "java.lang.Long",
+      "description": "Deadline for a whole image generation, enforced across the history poll loop."
+    },
+    {
+      "name": "comfyui.generation.poll-interval-millis",
+      "type": "java.lang.Long",
+      "description": "Delay between ComfyUI history polls while a generation is running."
+    },
+    {
+      "name": "comfyui.generation.expected-seconds",
+      "type": "java.lang.Double",
+      "description": "Expected generation duration used to ramp the progress estimate."
+    },
+    {
+      "name": "comfyui.workflow.flux-schnell",
+      "type": "org.springframework.core.io.Resource",
+      "description": "Classpath location of the API-format FLUX.1-schnell ComfyUI workflow."
     }
   ] }

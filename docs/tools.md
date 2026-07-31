@@ -60,6 +60,14 @@ Categories
     - Output: WebExtractResponse
   - Details: See Web Search docs: ./web-search.md
 
+- Image Generation Tools
+  - generate_image
+    - Description: Generates a 1024x1024 image from a text prompt using FLUX.1-schnell on a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs.
+    - Auth: ROLE_MCP-GENERATE-IMAGE
+    - Input: { "prompt": "<string>" } — the only parameter. Size (1024x1024), steps (4), and a fresh random seed are fixed server-side.
+    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the model, size, steps, seed, and elapsed time
+  - Details: See Image Generation docs: ./image-generation.md
+
 - Date and Time Tools
   - get_current_date
     - Description: Returns the current date in ISO format (YYYY-MM-DD). Defaults to UTC if no timezone is provided.
@@ -102,10 +110,12 @@ Operational guidance
   - Jira: ROLE_MCP-JIRA-CREATE, ROLE_MCP-JIRA-GET, ROLE_MCP-JIRA-DELETE
   - Agile: ROLE_MCP-JIRA-AGILE-LIST
   - Web Search: ROLE_MCP-WEB-SEARCH
+  - Image Generation: ROLE_MCP-GENERATE-IMAGE
   - Date/Time: ROLE_MCP-TIME
   - Weather (demo): ROLE_MCP-GET-WEATHER
 - Error handling: Jira-related errors surface as descriptive messages; verify role membership and Token Broker configuration if failures persist
 
 See also
 - Web Search: ./web-search.md
+- Image Generation: ./image-generation.md
 - Prompts: ./prompts.md

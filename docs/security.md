@@ -20,6 +20,7 @@ Authorization
   - Weather tool requires ROLE_MCP-GET-WEATHER
   - Jira tools require ROLE_MCP-CREATE-JIRA
   - Web Search tools require ROLE_MCP-WEB-SEARCH
+  - Image generation requires ROLE_MCP-GENERATE-IMAGE
 - There is no hard-coded required scope for /mcp in this repository; use group/role/scope-based method constraints to control access to individual tools.
 
 Prompts
@@ -52,3 +53,4 @@ Troubleshooting
 
 External API considerations
 - Web Search uses an external provider (Tavily). Consider rate limiting and retries with backoff for robustness.
+- Image generation calls a self-hosted ComfyUI instance. ComfyUI has no authentication of its own, so `ROLE_MCP-GENERATE-IMAGE` protects this server's surface only — the ComfyUI origin must be restricted independently. See Deployment: ./deployment.md
