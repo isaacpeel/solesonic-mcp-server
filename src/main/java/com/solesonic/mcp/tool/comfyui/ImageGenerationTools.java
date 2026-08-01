@@ -15,11 +15,6 @@ import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ThreadLocalRandom;
-
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.DEFAULT_HEIGHT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.DEFAULT_STEPS;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.DEFAULT_WIDTH;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_PNG;
 
 @SuppressWarnings("unused")
@@ -31,11 +26,11 @@ public class ImageGenerationTools {
     public static final String GENERATE_IMAGE = "generate_image";
 
     public static final String GENERATE_IMAGE_DESC = """
-            Generates a 1024x1024 image from a text prompt using FLUX.1-schnell and returns it inline
-            as a PNG. Describe the subject, style, lighting, and composition in the prompt — the model
-            does not accept negative prompts.
-            Generation typically takes 5-15 seconds. Every call uses a fresh random seed, which is
-            reported in the response.
+            Creates a brand new image from a natural-language description and returns it inline as a PNG.
+            Use this whenever the user asks for a picture, illustration, artwork, diagram concept, logo
+            idea, mockup, or any other visual to be made from a written description.
+            This tool only creates images. It cannot edit, resize, or annotate an existing image, and it
+            cannot search for or retrieve images that already exist.
             """;
 
     public static final String PROMPT_DESC = """
@@ -63,20 +58,23 @@ public class ImageGenerationTools {
                     .build();
         }
 
-        long seed = ThreadLocalRandom.current().nextLong(0, Long.MAX_VALUE);
+        ImageGenerationRequest imageGenerationRequest = new ImageGenerationRequest(prompt);
 
         log.info("Generating image at {}x{} with {} steps, seed {}",
-                DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_STEPS, seed);
+                imageGenerationRequest.width(),
+                imageGenerationRequest.height(),
+                imageGenerationRequest.steps(),
+                imageGenerationRequest.seed());
 
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
 
-        ImageGenerationRequest request =
-                new ImageGenerationRequest(prompt, DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_STEPS, seed);
+        GeneratedImage generatedImage = comfyUiService.generate(imageGenerationRequest, progressReporter);
 
-        GeneratedImage generatedImage = comfyUiService.generate(request, progressReporter);
+        ImageContent imageContent = ImageContent.builder(generatedImage.base64Png(), MIME_TYPE_PNG)
+                .build();
 
         return CallToolResult.builder()
-                .addContent(ImageContent.builder(generatedImage.base64Png(), MIME_TYPE_PNG).build())
+                .addContent(imageContent)
                 .addTextContent(metadata(generatedImage))
                 .build();
     }

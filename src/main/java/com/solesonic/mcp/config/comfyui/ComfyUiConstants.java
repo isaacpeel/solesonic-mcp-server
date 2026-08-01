@@ -38,12 +38,4 @@ public final class ComfyUiConstants {
     public static final String INPUT_HEIGHT = "height";
 
     public static final String STATUS_ERROR = "error";
-
-    /**
-     * Fixed generation parameters. The tool exposes only a prompt, so these are not caller-tunable:
-     * FLUX.1-schnell is distilled for 4 steps, and 1024x1024 is its native resolution.
-     */
-    public static final int DEFAULT_WIDTH = 1024;
-    public static final int DEFAULT_HEIGHT = 1024;
-    public static final int DEFAULT_STEPS = 4;
 }
