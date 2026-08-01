@@ -73,15 +73,18 @@ public class ComfyUiService {
         this.expectedSeconds = expectedSeconds;
     }
 
-    public GeneratedImage generate(ImageGenerationRequest request, ProgressReporter progressReporter) {
+    public GeneratedImage generate(ImageGenerationRequest imageGenerationRequest, ProgressReporter progressReporter) {
         log.info("Generating {}x{} image with {} steps at seed {}",
-                request.width(), request.height(), request.steps(), request.seed());
+                imageGenerationRequest.width(),
+                imageGenerationRequest.height(),
+                imageGenerationRequest.steps(),
+                imageGenerationRequest.seed());
 
         long startNanos = System.nanoTime();
 
         progressReporter.emit(PROGRESS_SUBMITTING, "Sending prompt to ComfyUI");
 
-        ObjectNode workflow = comfyWorkflowTemplate.build(request);
+        ObjectNode workflow = comfyWorkflowTemplate.build(imageGenerationRequest);
 
         String promptId = submit(workflow);
 
@@ -96,12 +99,18 @@ public class ComfyUiService {
         double elapsedSeconds = elapsedSeconds(startNanos);
 
         progressReporter.emit(PROGRESS_COMPLETE, "Generated %d×%d in %.1fs (seed %d)"
-                .formatted(request.width(), request.height(), elapsedSeconds, request.seed()));
+                .formatted(
+                        imageGenerationRequest.width(),
+                        imageGenerationRequest.height(),
+                        elapsedSeconds,
+                        imageGenerationRequest.seed()));
 
         log.info("ComfyUI generation {} completed in {}s", promptId, elapsedSeconds);
 
-        return new GeneratedImage(
-                base64Png, request.width(), request.height(), request.steps(), request.seed(), elapsedSeconds);
+        return GeneratedImage.imageGenerationRequest(imageGenerationRequest)
+                .base64Png(base64Png)
+                .elapsedSeconds(elapsedSeconds)
+                .build();
     }
 
     /**
