@@ -16,6 +16,27 @@
             </encoder>
         </appender>
 
+        <!--
+        The security log is plain text with a fixed grammar, parsed by fail2ban. Its format is an
+        API, not a log message — treat a change to the pattern below the way you would treat a
+        change to an endpoint contract. additivity=false so a security event is exactly one line
+        in exactly one file and a jail can never double-count.
+        -->
+        <appender name="SECURITY" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>/var/log/solesonic-mcp-server/security.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>/var/log/solesonic-mcp-server/security-%d{yyyy-MM-dd}.log</fileNamePattern>
+                <maxHistory>30</maxHistory>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z', UTC} %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <logger name="security.audit" level="INFO" additivity="false">
+            <appender-ref ref="SECURITY"/>
+        </logger>
+
         <root level="info">
             <appender-ref ref="FILE"/>
             <appender-ref ref="CONSOLE"/>
