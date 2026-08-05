@@ -62,7 +62,7 @@ public class AgileGraph {
     private static String routeByQueryType(AgileState state) {
         return state.agileQueryResult()
                 .filter(AgileQueryIntent::isTransitionQuery)
-                .map(ignored -> ROUTE_TRANSITION)
+                .map(_ -> ROUTE_TRANSITION)
                 .orElse(ROUTE_QUERY);
     }
 }

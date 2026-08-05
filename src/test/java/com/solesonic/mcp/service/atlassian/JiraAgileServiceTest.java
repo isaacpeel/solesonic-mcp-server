@@ -1,10 +1,13 @@
 package com.solesonic.mcp.service.atlassian;
 
+import com.solesonic.agent.agile.AgileQueryIntent;
+import com.solesonic.agent.agile.AgileState;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.model.atlassian.agile.Boards;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools.ListBoardsRequest;
 import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.service.atlassian.JiraIssueService;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,6 +46,9 @@ class JiraAgileServiceTest {
 
     @Mock
     private ChatClient chatClient;
+
+    @Mock
+    private McpSyncRequestContext mcpSyncRequestContext;
 
     private JiraAgileService service;
 
@@ -80,5 +87,18 @@ class JiraAgileServiceTest {
         assertNotNull(board);
         assertEquals(1, board.id());
         verify(requestHeadersUriSpec).uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
+    }
+
+    @Test
+    void handleTransitionQuery_withNoScope_refusesWithoutCallingApi() {
+        Board board = new Board(1, "self", "My Board", "scrum");
+        AgileQueryIntent queryResult = new AgileQueryIntent(
+                List.of(), null, null, null, "", "TRANSITION", 0, "Done");
+        AgileState state = new AgileState(Map.of());
+
+        String result = service.handleTransitionQuery(mcpSyncRequestContext, board, queryResult, state);
+
+        assertTrue(result.contains("Refusing to transition every issue on the board"));
+        verifyNoInteractions(webClient, jiraIssueService);
     }
 }

@@ -1,5 +1,7 @@
 package com.solesonic.mcp.security;
 
+import com.solesonic.model.security.SecurityEventReason;
+import com.solesonic.service.security.SecurityEventLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,8 +13,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -24,13 +28,14 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 import static com.solesonic.mcp.api.ResourceMetadataController.WELL_KNOWN_OAUTH_PROTECTED_RESOURCE;
+import static com.solesonic.model.security.SecurityEvent.AUTHENTICATION_FAILURE;
+import static com.solesonic.model.security.SecurityEvent.AUTHORIZATION_DENIED;
 import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.springframework.http.HttpMethod.*;
@@ -42,6 +47,11 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @ConditionalOnProperty(name = "solesonic.agent.security.enabled", havingValue = "true", matchIfMissing = true)
 public class MpcSecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(MpcSecurityConfig.class);
+
+    private static final String EXPIRED_MARKER = "expired";
+    private static final String SIGNATURE_MARKER = "signature";
+    private static final String ISSUER_MARKER = "the iss claim";
+    private static final String AUDIENCE_MARKER = "the aud claim";
 
     public static final String SCOPE_ = "SCOPE_";
     public static final String SCOPE = "scope";
@@ -64,6 +74,7 @@ public class MpcSecurityConfig {
     public static final String AGENT_PREFIX = "/a2a/**";
 
     private final AuthoritiesService authoritiesService;
+    private final SecurityEventLogger securityEventLogger;
 
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}")
     private String jwkSetUri;
@@ -77,8 +88,9 @@ public class MpcSecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
 
-    public MpcSecurityConfig(AuthoritiesService authoritiesService) {
+    public MpcSecurityConfig(AuthoritiesService authoritiesService, SecurityEventLogger securityEventLogger) {
         this.authoritiesService = authoritiesService;
+        this.securityEventLogger = securityEventLogger;
     }
 
     @Bean
@@ -163,27 +175,9 @@ public class MpcSecurityConfig {
         return http.build();
     }
 
-    private String resolveRemoteHost(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp;
-        }
-
-        return request.getRemoteAddr();
-    }
-
     private AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, _) -> {
-            String resolveRemoteHost = resolveRemoteHost(request);
-            String method = request.getMethod();
-            String requestURI = request.getRequestURI();
-
-            log.warn("{} - Unauthorized access attempt: remote host: {} {} - {}", SC_UNAUTHORIZED, resolveRemoteHost, method, requestURI);
+        return (request, response, authenticationException) -> {
+            securityEventLogger.log(AUTHENTICATION_FAILURE, request, SC_UNAUTHORIZED, reason(authenticationException));
 
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(SC_UNAUTHORIZED);
@@ -193,12 +187,48 @@ public class MpcSecurityConfig {
 
     private AccessDeniedHandler accessDeniedHandler() {
         return (request, response, _) -> {
-            String resolveRemoteHost = resolveRemoteHost(request);
-            String method = request.getMethod();
-            String requestURI = request.getRequestURI();
+            securityEventLogger.log(AUTHORIZATION_DENIED, request, SC_FORBIDDEN, SecurityEventReason.INSUFFICIENT_AUTHORITY);
 
-            log.warn("{} - Access Denied: {} {} - {}", SC_FORBIDDEN, resolveRemoteHost, method, requestURI);
             response.sendError(SC_FORBIDDEN, "Access Denied");
         };
+    }
+
+    /**
+     * Maps the failure to the closed reason enum in one place. The JWT validators cannot see the
+     * request, so the entry point reads it back off the exception instead — an
+     * {@link OAuth2AuthenticationException} carries an {@code OAuth2Error} whose description
+     * distinguishes the cases, which keeps the validators themselves pure.
+     */
+    private static SecurityEventReason reason(AuthenticationException authenticationException) {
+        if (!(authenticationException instanceof OAuth2AuthenticationException oauth2AuthenticationException)) {
+            // Nothing decoded a token at all: the request arrived without one.
+            return SecurityEventReason.MISSING_TOKEN;
+        }
+
+        String description = oauth2AuthenticationException.getError().getDescription();
+
+        if (description == null) {
+            return SecurityEventReason.MALFORMED_TOKEN;
+        }
+
+        String lowerCaseDescription = description.toLowerCase(Locale.ROOT);
+
+        if (lowerCaseDescription.contains(EXPIRED_MARKER)) {
+            return SecurityEventReason.EXPIRED_TOKEN;
+        }
+
+        if (lowerCaseDescription.contains(SIGNATURE_MARKER)) {
+            return SecurityEventReason.INVALID_SIGNATURE;
+        }
+
+        if (lowerCaseDescription.contains(ISSUER_MARKER)) {
+            return SecurityEventReason.WRONG_ISSUER;
+        }
+
+        if (lowerCaseDescription.contains(AUDIENCE_MARKER)) {
+            return SecurityEventReason.WRONG_AUDIENCE;
+        }
+
+        return SecurityEventReason.MALFORMED_TOKEN;
     }
 }

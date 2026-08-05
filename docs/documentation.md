@@ -12,6 +12,7 @@ Table of Contents
 - Quickstart
 - Prompts (MCP server-side prompts)
 - Web Search
+- Image Generation
 - Configuration
 - Security
 - Endpoints (MCP over HTTP)
@@ -46,6 +47,7 @@ See also
 - Quickstart: ./quickstart.md
 - Prompts: ./prompts.md
 - Web Search: ./web-search.md
+- Image Generation: ./image-generation.md
 - Security: ./security.md
 - Configuration: ./configuration.md
 - Endpoints: ./endpoints.md

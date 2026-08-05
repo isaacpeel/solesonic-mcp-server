@@ -53,11 +53,11 @@ public class JiraAgileTools {
     public static final String TRANSITION = "TRANSITION";
 
     private final JiraAgileService jiraAgileService;
-    private final CompiledGraph<AgileState> agileResearchGraph;
+    private final CompiledGraph<AgileState> agileGraph;
 
-    public JiraAgileTools(JiraAgileService jiraAgileService, CompiledGraph<AgileState> agileResearchGraph) {
+    public JiraAgileTools(JiraAgileService jiraAgileService, CompiledGraph<AgileState> agileGraph) {
         this.jiraAgileService = jiraAgileService;
-        this.agileResearchGraph = agileResearchGraph;
+        this.agileGraph = agileGraph;
     }
 
     public record ListBoardsRequest(@McpToolParam(required = false, description = START_AT_DESCRIPTION)
@@ -97,13 +97,11 @@ public class JiraAgileTools {
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         progressReporter.emit(5, "Parsing intent and loading boards…");
 
-        Map<String, Object> graphInput = Map.of(
-                AgileState.USER_MESSAGE, userMessage
-        );
+        Map<String, Object> graphInput = Map.of(AgileState.USER_MESSAGE, userMessage);
 
         AtomicReference<AgileState> finalStateRef = new AtomicReference<>();
 
-        agileResearchGraph.stream(graphInput, RunnableConfig.builder().build())
+        agileGraph.stream(graphInput, RunnableConfig.builder().build())
                 .forEachAsync(output -> {
                     finalStateRef.set(output.state());
 
@@ -126,19 +124,16 @@ public class JiraAgileTools {
                 })
                 .join();
 
-        AgileState finalState = finalStateRef.get();
-        AgileQueryIntent queryResult = finalState.agileQueryResult().orElseThrow(
-                () -> new IllegalStateException("Graph completed without an agile query result"));
+        AgileState agileState = finalStateRef.get();
+        AgileQueryIntent queryResult = agileState.agileQueryResult().orElseThrow(() -> new IllegalStateException("Graph completed without an agile query result"));
 
-        Board board = requireFirstBoard(finalState);
-        String resolvedUserMessage = finalState.userMessage().orElse(userMessage);
+        Board board = requireFirstBoard(agileState);
+        String resolvedUserMessage = agileState.userMessage().orElse(userMessage);
 
         return switch (queryResult.userIntent().toUpperCase()) {
             case COUNT -> jiraAgileService.handleCountQuery(board, queryResult);
-            case LIST -> jiraAgileService.handleListQuery(
-                    mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
-            case TRANSITION -> jiraAgileService.handleTransitionQuery(
-                    mcpSyncRequestContext, board, queryResult, finalState);
+            case LIST -> jiraAgileService.handleListQuery(mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
+            case TRANSITION -> jiraAgileService.handleTransitionQuery(mcpSyncRequestContext, board, queryResult, agileState);
             default -> "Unrecognised query type: " + queryResult.userIntent();
         };
     }

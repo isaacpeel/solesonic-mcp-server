@@ -18,7 +18,6 @@ services:
       --rename-command CONFIG ""
       --rename-command DEBUG ""
       --appendonly yes
-    restart: unless-stopped
     user: "999:999"
     read_only: true
     tmpfs:
@@ -28,7 +27,7 @@ services:
     cap_drop:
       - ALL
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - solesonic-mcp-redis:/data
     networks:
@@ -42,20 +41,19 @@ services:
 
   solesonic-mcp-server:
     env_file:
-      - ${ENV_FILE:-.env}
+      - .env
     build:
       context: ..
       dockerfile: docker/Dockerfile
       no_cache: true
     container_name: solesonic-mcp-server
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     environment:
       - SERVER_PORT=8181
       - REDIS_HOST=solesonic-mcp-redis
     volumes:
       - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
-    restart: unless-stopped
     depends_on:
       - solesonic-mcp-redis
     networks:

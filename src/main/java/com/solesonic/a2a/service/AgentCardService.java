@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -26,15 +27,13 @@ public class AgentCardService {
     public static final String A2A = "a2a";
     public static final String WELL_KNOWN = ".well-known";
     public static final String AGENT_JSON = "agent.json";
-    @Value("${solesonic.a2a.base.uri}")
-    private String a2aBaseUri;
 
     @Value("classpath:agents/*.json")
     private Resource[] agentConfigs;
 
     private final JsonMapper jsonMapper;
 
-    private Map<String, AgentCard> agentCardsById;
+    private Map<String, AgentCardDefinition> agentCardDefinitionsById;
 
     public AgentCardService(JsonMapper jsonMapper) {
         this.jsonMapper = jsonMapper;
@@ -42,23 +41,25 @@ public class AgentCardService {
 
     @PostConstruct
     public void loadAgentCards() {
-        Map<String, AgentCard> agentCards = new LinkedHashMap<>();
+        Map<String, AgentCardDefinition> definitions = new LinkedHashMap<>();
 
         for (Resource resource : agentConfigs) {
-            try(InputStream inputStream = resource.getInputStream()) {
+            try (InputStream inputStream = resource.getInputStream()) {
                 AgentCardDefinition cardDefinition = jsonMapper.readValue(inputStream, AgentCardDefinition.class);
-                AgentCard agentCard = buildAgentCard(cardDefinition);
-                agentCards.put(cardDefinition.id(), agentCard);
+                definitions.put(cardDefinition.id(), cardDefinition);
             } catch (IOException runtimeException) {
                 throw new RuntimeException(runtimeException);
             }
         }
 
-        this.agentCardsById = Collections.unmodifiableMap(agentCards);
+        this.agentCardDefinitionsById = Collections.unmodifiableMap(definitions);
     }
 
     public List<AgentCard> allAgentCards() {
-        return List.copyOf(agentCardsById.values());
+        String baseUri = currentBaseUri();
+        return agentCardDefinitionsById.values().stream()
+                .map(definition -> buildAgentCard(definition, baseUri))
+                .toList();
     }
 
     public List<String> allAgentCardUris() {
@@ -75,10 +76,17 @@ public class AgentCardService {
     }
 
     public Optional<AgentCard> agentCardById(String agentId) {
-        return Optional.ofNullable(agentCardsById.get(agentId));
+        return Optional.ofNullable(agentCardDefinitionsById.get(agentId))
+                .map(definition -> buildAgentCard(definition, currentBaseUri()));
     }
 
-    private AgentCard buildAgentCard(AgentCardDefinition agentCardDefinition) {
+    private String currentBaseUri() {
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .build()
+                .toUriString();
+    }
+
+    private AgentCard buildAgentCard(AgentCardDefinition agentCardDefinition, String baseUri) {
         AgentCapabilities capabilities = AgentCapabilities.builder()
                 .streaming(agentCardDefinition.capabilities().streaming())
                 .pushNotifications(agentCardDefinition.capabilities().pushNotifications())
@@ -95,13 +103,13 @@ public class AgentCardService {
 
         String agentId = agentCardDefinition.id();
 
-        String cardUri = UriComponentsBuilder.fromUriString(a2aBaseUri)
+        String cardUri = UriComponentsBuilder.fromUriString(baseUri)
                 .pathSegment(A2A)
                 .pathSegment(agentId)
                 .build()
                 .toUriString();
 
-        log.info("Card URI: {}", cardUri);
+        log.debug("Card URI: {}", cardUri);
 
         return AgentCard.builder()
                 .name(agentCardDefinition.name())

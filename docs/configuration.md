@@ -26,6 +26,13 @@ Key properties (environment variables in parentheses)
   - websearch.news.max-results=20
   - websearch.extract.max-urls=5
   - websearch.default.depth=basic   # basic|advanced (provider-specific)
+- Image Generation (ComfyUI)
+  - comfyui.api.uri=(${COMFYUI_API_URI})   # e.g. https://comfy.izzy-bot.com
+  - comfyui.api.response-timeout-seconds=30
+  - comfyui.generation.timeout-seconds=180
+  - comfyui.generation.poll-interval-millis=1000
+  - comfyui.generation.expected-seconds=12
+  - comfyui.workflow.flux-schnell=classpath:comfyui/flux1-schnell.json
 - Jira tools
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
@@ -50,6 +57,7 @@ Examples
   - export JWK_SET_URI=https://<your-domain>/.well-known/jwks.json
   - export TAVILY_API_KEY=<your-tavily-api-key>
   - export TAVILY_API_ENDPOINT=https://api.tavily.com/search
+  - export COMFYUI_API_URI=https://comfy.izzy-bot.com
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
@@ -62,4 +70,5 @@ Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
 - Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
+- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization. The workflow resource is also parsed and validated at startup, so a bad re-export fails fast rather than on the first tool call. See Image Generation: ./image-generation.md
 - Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.

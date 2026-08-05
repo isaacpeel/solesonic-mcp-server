@@ -73,7 +73,7 @@ class JiraAgileServiceHelperTest {
     @Test
     void handleCountQuery_noJqlFilter_saysAllIssues() {
         Board board = new Board(1, "self", "My Board", "scrum");
-        AgileQueryIntent queryResult = new AgileQueryIntent("", "COUNT", null, null);
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
         stubBoardIssues(boardIssuesWithTotal(5));
 
         String result = service.handleCountQuery(board, queryResult);
@@ -84,7 +84,7 @@ class JiraAgileServiceHelperTest {
     @Test
     void handleCountQuery_withJqlFilter_includesFilter() {
         Board board = new Board(1, "self", "My Board", "scrum");
-        AgileQueryIntent queryResult = new AgileQueryIntent("status = Done", "COUNT", null, null);
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "status = Done", "COUNT", null, null);
         stubBoardIssues(boardIssuesWithTotal(3));
 
         String result = service.handleCountQuery(board, queryResult);
@@ -95,7 +95,7 @@ class JiraAgileServiceHelperTest {
     @Test
     void handleCountQuery_singleIssue_usesSingularWord() {
         Board board = new Board(1, "self", "My Board", "scrum");
-        AgileQueryIntent queryResult = new AgileQueryIntent("", "COUNT", null, null);
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
         stubBoardIssues(boardIssuesWithTotal(1));
 
         String result = service.handleCountQuery(board, queryResult);
@@ -106,7 +106,7 @@ class JiraAgileServiceHelperTest {
     @Test
     void handleCountQuery_zeroIssues_usesPlural() {
         Board board = new Board(1, "self", "My Board", "scrum");
-        AgileQueryIntent queryResult = new AgileQueryIntent("", "COUNT", null, null);
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
         stubBoardIssues(boardIssuesWithTotal(0));
 
         String result = service.handleCountQuery(board, queryResult);

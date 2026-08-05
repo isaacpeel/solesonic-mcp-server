@@ -33,6 +33,13 @@ Production with SSL
   - curl -ik https://localhost:9443/mcp (expect 401 if no token)
   - With MCP Inspector: npx @modelcontextprotocol/inspector --server-url https://localhost:9443/mcp --header "Authorization: Bearer <JWT>"
 
+ComfyUI (image generation backend)
+- `generate_image` calls a ComfyUI instance running FLUX.1-schnell on the DGX Spark, reached over HTTPS at `COMFYUI_API_URI` (e.g. `https://comfy.izzy-bot.com`).
+- ComfyUI is a separate deployment; this server only needs outbound HTTPS to it.
+- Verification from the host running this server:
+  - curl https://<comfyui-host>/system_stats (expect JSON naming a CUDA device)
+- **Origin hardening.** Stock ComfyUI has no authentication. Anyone who can resolve and reach the hostname can execute arbitrary workflows, and — depending on `SECURITY_LEVEL` and whether ComfyUI-Manager is installed — potentially install code. The MCP tool's `@PreAuthorize` protects this server's surface and does nothing for the ComfyUI origin. Restrict that origin at the proxy with an IP allowlist or proxy-level authentication.
+
 Notes
 - Use trusted CA-signed certificates for production; self-signed certs require clients to skip verification or trust the CA.
-- Ensure network policies allow inbound 9443 and outbound connectivity to your IdP and Atlassian Token Broker.
+- Ensure network policies allow inbound 9443 and outbound connectivity to your IdP, the Atlassian Token Broker, and the ComfyUI instance.
