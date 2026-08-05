@@ -41,7 +41,7 @@ services:
 
   solesonic-mcp-server:
     env_file:
-      - ${ENV_FILE:-.env}
+      - .env
     build:
       context: ..
       dockerfile: docker/Dockerfile
