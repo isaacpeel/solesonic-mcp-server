@@ -33,8 +33,16 @@ Production with SSL
   - curl -ik https://localhost:9443/mcp (expect 401 if no token)
   - With MCP Inspector: npx @modelcontextprotocol/inspector --server-url https://localhost:9443/mcp --header "Authorization: Bearer <JWT>"
 
+PostgreSQL (workflow storage)
+- Required at startup. Flyway runs the migrations in `src/main/resources/db/migration`, and the `comfy_workflow` table is read once during initialization to register the image generation tools.
+- Configured via `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
+- **The database is not part of `docker/docker-compose.yml`** — that file provides only Redis and the server itself. Deployment currently assumes an externally managed PostgreSQL instance; provision one before first start.
+- Verification from the host running this server:
+  - `psql "$DATABASE_URL" -c 'select tool_name, enabled from comfy_workflow'`
+- The table starts empty. Until you insert a workflow row, the server starts normally but registers no image generation tools — see Image Generation: ./image-generation.md
+
 ComfyUI (image generation backend)
-- `generate_image` calls a ComfyUI instance running FLUX.1-schnell on the DGX Spark, reached over HTTPS at `COMFYUI_API_URI` (e.g. `https://comfy.izzy-bot.com`).
+- The workflow tools call a ComfyUI instance running on the DGX Spark, reached over HTTPS at `COMFYUI_API_URI` (e.g. `https://comfy.izzy-bot.com`). Which model runs is a property of each stored workflow's `ckpt_name`, not of this server's configuration.
 - ComfyUI is a separate deployment; this server only needs outbound HTTPS to it.
 - Verification from the host running this server:
   - curl https://<comfyui-host>/system_stats (expect JSON naming a CUDA device)
@@ -42,4 +50,4 @@ ComfyUI (image generation backend)
 
 Notes
 - Use trusted CA-signed certificates for production; self-signed certs require clients to skip verification or trust the CA.
-- Ensure network policies allow inbound 9443 and outbound connectivity to your IdP, the Atlassian Token Broker, and the ComfyUI instance.
+- Ensure network policies allow inbound 9443 and outbound connectivity to your IdP, the Atlassian Token Broker, the PostgreSQL instance, and the ComfyUI instance.

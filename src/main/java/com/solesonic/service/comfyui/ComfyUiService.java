@@ -54,30 +54,34 @@ public class ComfyUiService {
     private static final int PROGRESS_COMPLETE = 100;
 
     private final WebClient webClient;
-    private final ComfyWorkflowTemplate comfyWorkflowTemplate;
     private final long generationTimeoutSeconds;
     private final long pollIntervalMillis;
     private final double expectedSeconds;
 
     public ComfyUiService(
             @Qualifier(COMFY_UI_WEB_CLIENT) WebClient webClient,
-            ComfyWorkflowTemplate comfyWorkflowTemplate,
             @Value("${comfyui.generation.timeout-seconds}") long generationTimeoutSeconds,
             @Value("${comfyui.generation.poll-interval-millis}") long pollIntervalMillis,
             @Value("${comfyui.generation.expected-seconds}") double expectedSeconds
     ) {
         this.webClient = webClient;
-        this.comfyWorkflowTemplate = comfyWorkflowTemplate;
         this.generationTimeoutSeconds = generationTimeoutSeconds;
         this.pollIntervalMillis = pollIntervalMillis;
         this.expectedSeconds = expectedSeconds;
     }
 
-    public GeneratedImage generate(ImageGenerationRequest imageGenerationRequest, ProgressReporter progressReporter) {
-        log.info("Generating {}x{} image with {} steps at seed {}",
+    /**
+     * The workflow arrives per call rather than as a constructor dependency: each stored workflow is
+     * its own MCP tool, so which template to patch is a property of the invocation.
+     */
+    public GeneratedImage generate(
+            ComfyWorkflowTemplate comfyWorkflowTemplate,
+            ImageGenerationRequest imageGenerationRequest,
+            ProgressReporter progressReporter
+    ) {
+        log.info("Generating {}x{} image at seed {}",
                 imageGenerationRequest.width(),
                 imageGenerationRequest.height(),
-                imageGenerationRequest.steps(),
                 imageGenerationRequest.seed());
 
         long startNanos = System.nanoTime();

@@ -49,10 +49,5 @@
       "name": "comfyui.generation.expected-seconds",
       "type": "java.lang.Double",
       "description": "Expected generation duration used to ramp the progress estimate."
-    },
-    {
-      "name": "comfyui.workflow.flux-schnell",
-      "type": "org.springframework.core.io.Resource",
-      "description": "Classpath location of the API-format FLUX.1-schnell ComfyUI workflow."
     }
   ] }

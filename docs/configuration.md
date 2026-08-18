@@ -32,7 +32,13 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.timeout-seconds=180
   - comfyui.generation.poll-interval-millis=1000
   - comfyui.generation.expected-seconds=12
-  - comfyui.workflow.flux-schnell=classpath:comfyui/flux1-schnell.json
+  - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
+- Database (PostgreSQL)
+  - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server
+  - spring.datasource.username=(${DATABASE_USERNAME})
+  - spring.datasource.password=(${DATABASE_PASSWORD})
+  - spring.jpa.hibernate.ddl-auto=validate   # Flyway owns the schema
+  - spring.flyway.enabled=true
 - Jira tools
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
@@ -58,6 +64,9 @@ Examples
   - export TAVILY_API_KEY=<your-tavily-api-key>
   - export TAVILY_API_ENDPOINT=https://api.tavily.com/search
   - export COMFYUI_API_URI=https://comfy.izzy-bot.com
+  - export DATABASE_URL=jdbc:postgresql://localhost:5433/solesonic-mcp-server
+  - export DATABASE_USERNAME=solesonic-mcp
+  - export DATABASE_PASSWORD=<change-me>
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
@@ -70,5 +79,6 @@ Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
 - Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
-- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization. The workflow resource is also parsed and validated at startup, so a bad re-export fails fast rather than on the first tool call. See Image Generation: ./image-generation.md
+- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization.
+- A reachable database is required at startup: Flyway runs the migrations and the workflow table is read once during initialization. Individual **rows**, however, are tolerant — a malformed workflow row is logged and skipped rather than failing the context, because rows are inserted by hand and one bad paste should not take every unrelated tool down. See Image Generation: ./image-generation.md
 - Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.

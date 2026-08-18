@@ -1,7 +1,7 @@
 {
   "6": {
     "inputs": {
-      "text": "placeholder prompt",
+      "text": "__PROMPT__",
       "clip": [
         "30",
         1
@@ -43,8 +43,8 @@
   },
   "27": {
     "inputs": {
-      "width": 1024,
-      "height": 1024,
+      "width": "__WIDTH__",
+      "height": "__HEIGHT__",
       "batch_size": 1
     },
     "class_type": "EmptySD3LatentImage",
@@ -63,7 +63,7 @@
   },
   "31": {
     "inputs": {
-      "seed": 86619259454217,
+      "seed": "__SEED__",
       "steps": 4,
       "cfg": 1,
       "sampler_name": "euler",

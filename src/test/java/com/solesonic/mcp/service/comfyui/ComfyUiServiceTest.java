@@ -19,6 +19,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -66,8 +69,7 @@ class ComfyUiServiceTest {
     @BeforeEach
     void setUp() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        comfyWorkflowTemplate = new ComfyWorkflowTemplate(
-                new ClassPathResource("comfyui/flux1-schnell-test.json"), jsonMapper);
+        comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(readFixture(), jsonMapper);
 
         webClient = WebClient.builder()
                 .baseUrl("http://comfy.test")
@@ -85,12 +87,11 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_COMPLETE);
 
-        GeneratedImage generatedImage = service(180).generate(request(), progressReporter);
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
         assertThat(generatedImage.width()).isEqualTo(1024);
         assertThat(generatedImage.height()).isEqualTo(1024);
-        assertThat(generatedImage.steps()).isEqualTo(4);
         assertThat(generatedImage.seed()).isEqualTo(42L);
         assertThat(generatedImage.elapsedSeconds()).isPositive();
 
@@ -106,7 +107,7 @@ class ComfyUiServiceTest {
     void generate_nodeErrorsOnHttp200_throws() {
         promptResponses.add(PROMPT_WITH_NODE_ERRORS);
 
-        Throwable thrown = catchThrowable(() -> service(180).generate(request(), progressReporter));
+        Throwable thrown = catchThrowable(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter));
 
         assertThat(thrown).isInstanceOf(ComfyUiException.class).hasMessageContaining("node errors");
         assertThat(((ComfyUiException) thrown).getRawResponse()).contains("required input is missing");
@@ -120,7 +121,7 @@ class ComfyUiServiceTest {
         historyResponses.add(HISTORY_PENDING);
         historyResponses.add(HISTORY_COMPLETE);
 
-        GeneratedImage generatedImage = service(180).generate(request(), progressReporter);
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
         assertThat(historyCallCount).hasValue(3);
@@ -132,7 +133,7 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_PENDING);
 
-        assertThatThrownBy(() -> service(0).generate(request(), progressReporter))
+        assertThatThrownBy(() -> service(0).generate(comfyWorkflowTemplate, request(), progressReporter))
                 .isInstanceOf(ComfyUiException.class)
                 .hasMessageContaining(PROMPT_ID)
                 .hasMessageContaining("did not finish");
@@ -143,17 +144,25 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_FAILED);
 
-        assertThatThrownBy(() -> service(180).generate(request(), progressReporter))
+        assertThatThrownBy(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter))
                 .isInstanceOf(ComfyUiException.class)
                 .hasMessageContaining("failed during execution");
     }
 
     private ComfyUiService service(long generationTimeoutSeconds) {
-        return new ComfyUiService(webClient, comfyWorkflowTemplate, generationTimeoutSeconds, 1L, 12.0);
+        return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0);
     }
 
     private ImageGenerationRequest request() {
-        return new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 4, 42L);
+        return new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 42L);
+    }
+
+    private String readFixture() {
+        try (InputStream inputStream = new ClassPathResource("comfyui/flux1-schnell-test.json").getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ioException) {
+            throw new IllegalStateException("Unable to read the ComfyUI workflow fixture", ioException);
+        }
     }
 
     /**

@@ -61,12 +61,13 @@ Categories
   - Details: See Web Search docs: ./web-search.md
 
 - Image Generation Tools
-  - generate_image
-    - Description: Generates a 1024x1024 image from a text prompt using FLUX.1-schnell on a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs.
-    - Auth: ROLE_MCP-GENERATE-IMAGE
-    - Input: { "prompt": "<string>" } — the only parameter. Size (1024x1024), steps (4), and a fresh random seed are fixed server-side.
-    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the model, size, steps, seed, and elapsed time
-  - Details: See Image Generation docs: ./image-generation.md
+  - These tools are **defined by data, not by code**. Each enabled row in the `comfy_workflow` table is registered as one MCP tool at startup, named by its `tool_name` column, so the tool list depends on the database and the set below is not fixed. If the table is empty, no image tools are registered.
+  - One tool per stored ComfyUI workflow
+    - Description: Generates an image from a text prompt using a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs. Each tool carries its row's `description`, which is what a model reads when choosing between workflows.
+    - Auth: ROLE_MCP-GENERATE-IMAGE (all workflow tools)
+    - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional> } — `width` and `height` appear only if the stored workflow tokenises them, and default to 1024. Steps, cfg, sampler, and the checkpoint are baked into the stored workflow, so choosing a tool is how you choose them.
+    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the workflow name, size, seed, and elapsed time
+  - Details, including the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
 
 - Date and Time Tools
   - get_current_date

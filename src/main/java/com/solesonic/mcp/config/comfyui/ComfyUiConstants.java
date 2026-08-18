@@ -17,25 +17,19 @@ public final class ComfyUiConstants {
     public static final String MIME_TYPE_PNG = "image/png";
     public static final String OUTPUT_TYPE = "output";
 
-    public static final String NODE_TITLE_POSITIVE_PROMPT = "CLIP Text Encode (Positive Prompt)";
-    public static final String NODE_TITLE_SAMPLER = "KSampler";
-    public static final String NODE_TITLE_LATENT = "EmptySD3LatentImage";
-
-    public static final String CLASS_TYPE_CLIP_TEXT_ENCODE = "CLIPTextEncode";
-    public static final String CLASS_TYPE_K_SAMPLER = "KSampler";
-    public static final String CLASS_TYPE_EMPTY_SD3_LATENT = "EmptySD3LatentImage";
-
-    public static final String FIELD_CLASS_TYPE = "class_type";
-    public static final String FIELD_META = "_meta";
-    public static final String FIELD_TITLE = "title";
-    public static final String FIELD_INPUTS = "inputs";
-
-    public static final String INPUT_TEXT = "text";
-    public static final String INPUT_SEED = "seed";
-    public static final String INPUT_NOISE_SEED = "noise_seed";
-    public static final String INPUT_STEPS = "steps";
-    public static final String INPUT_WIDTH = "width";
-    public static final String INPUT_HEIGHT = "height";
+    /**
+     * Substitution tokens. A stored workflow carries these as literal string values wherever a
+     * caller-supplied value belongs; {@code ComfyWorkflowTemplate} replaces them with correctly
+     * typed JSON before submission, so ComfyUI never sees a token.
+     *
+     * <p>Binding by token rather than by node id or {@code _meta.title} is what lets an arbitrary
+     * API-format export work unmodified, and removes the failure mode where a re-export shifted ids
+     * and landed the prompt on the negative node — a wrong image generated with no error anywhere.
+     */
+    public static final String TOKEN_PROMPT = "__PROMPT__";
+    public static final String TOKEN_SEED = "__SEED__";
+    public static final String TOKEN_WIDTH = "__WIDTH__";
+    public static final String TOKEN_HEIGHT = "__HEIGHT__";
 
     public static final String STATUS_ERROR = "error";
 }
