@@ -55,10 +55,8 @@ services:
       - ./init_schema.sh:/docker-entrypoint-initdb.d/init_schema.sh
     networks:
       - solesonic-network
-    # 5433 on the host, not 5432: the solesonic-llm-api Postgres already publishes 5432 and both
-    # projects share the external solesonic-network. This matches DATABASE_URL in .env.
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5434:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${POSTGRES_DB:-solesonic-mcp-server}" ]
       interval: 5s
