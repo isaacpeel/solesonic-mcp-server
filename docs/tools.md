@@ -37,6 +37,14 @@ Categories
     - Auth: controlled by Atlassian Token Broker scopes; no additional role required at the tool level
     - Input/Output: see feature-specific docs when enabled
 
+- Gmail Tools
+  - list_gmail_messages
+    - Description: Lists the most recent messages in the caller's Gmail inbox, newest first, returning the subject, sender, and date of each. Message bodies are never returned.
+    - Auth: ROLE_MCP-GMAIL-LIST
+    - Input: { "maxResults": <int, optional> } — defaults to 10, clamped to 1..25
+    - Output: A text list of the messages; an empty inbox and an unconnected Google account each answer with an explanatory sentence rather than an error
+    - Requires: the caller must have connected their Google account through solesonic-llm-api's consent flow (`GET /google/auth/uri`). If they have not, the tool answers with a message asking them to connect it.
+
 - Web Search Tools
   - web_search
     - Description: General web search
@@ -105,11 +113,26 @@ Atlassian Token Broker exchange (used by Jira tools)
   - spring.security.oauth2.client.provider.atlassian-token-broker.token-uri
   - spring.security.oauth2.client.registration.atlassian-token-broker.*
 
+Google Token Broker exchange (used by Gmail tools)
+- Purpose: Obtain short-lived Google access tokens without this server ever holding a Google refresh token
+- Flow:
+  1) This server authenticates to the broker with the same OAuth2 client credentials registration as the Atlassian broker (registration id: atlassian-token-broker). One service client fronts both broker endpoints, so its service account needs the `token-mint-gmail` role in addition to `token-mint-jira`.
+  2) For a given end-user (subject), it posts a GoogleTokenExchange payload to google.token.broker.uri: { "subject_token": "<UUID>" }. There is no `audience` field — the endpoint identifies the provider.
+  3) The broker returns GoogleTokenResponse: { "accessToken": "...", "expiresInSeconds": 3600, "issuedAt": "<ISO8601>", "userId": "<UUID>" }
+  4) The accessToken is used for downstream Gmail API calls
+- Errors: the broker answers with a real status code and a { "code", "message" } body. `RECONNECT_REQUIRED` (400) means the user has never connected Google or has revoked it.
+- Caching: tokens are cached per user for their lifetime minus a 60 second skew. Listing an inbox costs one Gmail call per message, and the authorization filter runs on every one of them, so an uncached exchange would hit the broker a dozen times per tool call.
+- Configuration:
+  - google.api.uri
+  - google.token.broker.uri
+  - the shared spring.security.oauth2.client.registration.atlassian-token-broker.* entries
+
 Operational guidance
 - Idempotency: The create_jira_issue tool should not be called repeatedly for the same request; consider upstream guards to prevent duplicates
 - Authorization: Ensure callers have the required ROLE_ authorities:
   - Jira: ROLE_MCP-JIRA-CREATE, ROLE_MCP-JIRA-GET, ROLE_MCP-JIRA-DELETE
   - Agile: ROLE_MCP-JIRA-AGILE-LIST
+  - Gmail: ROLE_MCP-GMAIL-LIST
   - Web Search: ROLE_MCP-WEB-SEARCH
   - Image Generation: ROLE_MCP-GENERATE-IMAGE
   - Date/Time: ROLE_MCP-TIME

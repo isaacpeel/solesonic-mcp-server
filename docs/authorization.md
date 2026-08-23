@@ -153,6 +153,17 @@ Related configuration and code references:
 
 This allows fine-grained access control in addition to scope checks. Ensure your Authorization Server issues the appropriate claims.
 
+Tool roles currently enforced: `ROLE_MCP-JIRA-CREATE`, `ROLE_MCP-JIRA-GET`, `ROLE_MCP-JIRA-DELETE`,
+`ROLE_MCP-JIRA-AGILE-LIST`, `ROLE_MCP-GMAIL-LIST`, `ROLE_MCP-WEB-SEARCH`, `ROLE_MCP-GENERATE-IMAGE`,
+`ROLE_MCP-TIME`, `ROLE_MCP-GET-WEATHER`. A `roles` claim entry of `mcp-gmail-list` becomes
+`ROLE_MCP-GMAIL-LIST`, so roles are defined in the identity provider, not here.
+
+Beyond the caller's own roles, the Gmail tools additionally require that **this server's** service
+account — the client behind the `atlassian-token-broker` client-credentials registration — holds the
+`token-mint-gmail` role, since that is what solesonic-llm-api's `POST /broker/google/token` checks.
+That is separate from the caller's token and is a common cause of a Gmail tool failing for a caller
+whose own roles are correct.
+
 
 ## CORS and browsers
 

@@ -43,6 +43,13 @@ Key properties (environment variables in parentheses)
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
   - solesonic.llm.jira.cloud.id.path=(${JIRA_CLOUD_ID_PATH})
+- Gmail
+  - google.api.uri=https://gmail.googleapis.com
+
+- Google Token Broker (external service)
+  - google.token.broker.uri=(${GOOGLE_TOKEN_BROKER_URL}) — the full endpoint path, e.g. https://api.example.com/broker/google/token
+  - Reuses the atlassian-token-broker client credentials registration below; there are no separate Google client-id/secret properties. The service account behind that client needs the `token-mint-gmail` role.
+
 - Atlassian Token Broker (external service)
   - atlassian.token.broker.uri=(${ATLASSIAN_TOKEN_BROKER_URL})
   - spring.security.oauth2.client.provider.atlassian-token-broker.token-uri=(${ATLASSIAN_TOKEN_BROKER_ISSUER_URI})

@@ -46,12 +46,12 @@ public class AtlassianRequestAuthorizationFilter implements ExchangeFilterFuncti
 
                 TokenResponse atlassianAccessToken = atlassianTokenBrokerService.atlassianAccessToken(UUID.fromString(userId));
 
-                log.debug("Token received");
+                log.debug("Jira Token received");
 
                 String accessToken = atlassianAccessToken.accessToken();
 
                 if(StringUtils.isBlank(accessToken)) {
-                    throw new JiraException("Access Token is `null`");
+                    throw new JiraException("Jira Access Token is `null`");
                 }
 
                 ClientRequest authorizedRequest = ClientRequest.from(request)

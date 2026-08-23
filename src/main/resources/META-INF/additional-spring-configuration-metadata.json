@@ -11,6 +11,16 @@
       "description": "Template for returning a user clickable Jira Issue URL."
     },
     {
+      "name": "google.api.uri",
+      "type": "java.lang.String",
+      "description": "Base URI of the Gmail API."
+    },
+    {
+      "name": "google.token.broker.uri",
+      "type": "java.lang.String",
+      "description": "URI of the Google Token Broker."
+    },
+    {
       "name": "cors.allowed.origins",
       "type": "java.lang.String[]",
       "description": "List of allowed origins."
@@ -50,4 +60,5 @@
       "type": "java.lang.Double",
       "description": "Expected generation duration used to ramp the progress estimate."
     }
-  ] }
+  ]
+}

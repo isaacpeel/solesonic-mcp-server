@@ -22,6 +22,18 @@ MCP handshake issues
 - Confirm correct /mcp URL and HTTPS scheme when ssl is enabled
 - Validate JSON-RPC structure (jsonrpc, id, method, params)
 
+Gmail Issues
+- "Your Google account isn't connected"
+  - The token broker answered RECONNECT_REQUIRED: the user has never completed Google consent, or has revoked it. Fix it by running the consent flow in solesonic-llm-api (`GET /google/auth/uri`), not by changing anything here.
+- 403 Forbidden from the token broker (not from the MCP call)
+  - This server's service account is missing the `token-mint-gmail` role. Grant it to the client used by the `atlassian-token-broker` registration.
+- 403 Forbidden on the tool call
+  - Ensure the caller's token includes ROLE_MCP-GMAIL-LIST
+- "No authentication found in the security context"
+  - Gmail tools read the caller's user id from the JWT subject, so they cannot work with `solesonic.agent.security.enabled=false` (the `local` profile). Run with security enabled.
+- Consent fails for some users
+  - The Google OAuth consent screen for these Gmail scopes is in Testing mode; only listed test users can complete it until the app passes a CASA assessment.
+
 Web Search Issues
 - 403 Forbidden
   - Ensure your token includes ROLE_MCP-WEB-SEARCH
