@@ -37,7 +37,7 @@ class GoogleTokenBrokerServiceTest {
     private GoogleTokenBrokerService service() {
         WebClient webClient = WebClient.builder()
                 .baseUrl("https://broker.example.com/broker/google/token")
-                .exchangeFunction(clientRequest -> {
+                .exchangeFunction(_ -> {
                     brokerCalls.incrementAndGet();
 
                     return Mono.just(queuedResponses.removeFirst());
