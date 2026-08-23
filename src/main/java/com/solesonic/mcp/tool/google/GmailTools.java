@@ -25,8 +25,10 @@ public class GmailTools {
 
     private static final String LIST_GMAIL_MESSAGES_DESCRIPTION = """
             Lists the most recent messages in the user's Gmail inbox, newest first. Returns each
-            message's id, subject, sender, and date as structured data — format it however best
-            suits the response. Does not return message bodies.
+            message's id, subject, sender, and date as structured data. The id is the unique handle
+            for that exact message — always surface it in your reply (e.g. as a labeled field or
+            inline code) even when you format the rest freely, since the user needs it to reference
+            or act on a specific message afterward. Does not return message bodies.
             """;
 
     public static final String LIST_GMAIL_MESSAGES_BY_LABEL = "list_gmail_messages_by_label";
@@ -34,8 +36,10 @@ public class GmailTools {
     private static final String LIST_GMAIL_MESSAGES_BY_LABEL_DESCRIPTION = """
             Lists the most recent messages under a specific Gmail label, newest first — e.g. "STARRED",
             "IMPORTANT", or the name of a user-created label. Returns each message's id, subject,
-            sender, and date as structured data — format it however best suits the response. Does not
-            return message bodies.
+            sender, and date as structured data. The id is the unique handle for that exact message —
+            always surface it in your reply (e.g. as a labeled field or inline code) even when you
+            format the rest freely, since the user needs it to reference or act on a specific message
+            afterward. Does not return message bodies.
             """;
 
     static final int DEFAULT_MAX_RESULTS = 10;
