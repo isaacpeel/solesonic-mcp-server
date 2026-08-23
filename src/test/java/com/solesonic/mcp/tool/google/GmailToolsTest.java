@@ -1,6 +1,8 @@
 package com.solesonic.mcp.tool.google;
 
+import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.mcp.exception.google.GoogleReconnectRequiredException;
+import com.solesonic.model.google.gmail.GmailMessageListResponse;
 import com.solesonic.model.google.gmail.GmailMessageSummary;
 import com.solesonic.service.google.GmailMessageService;
 import org.junit.jupiter.api.Test;
@@ -15,8 +17,10 @@ import static com.solesonic.mcp.tool.google.GmailTools.DEFAULT_MAX_RESULTS;
 import static com.solesonic.mcp.tool.google.GmailTools.MAXIMUM_MAX_RESULTS;
 import static com.solesonic.mcp.tool.google.GmailTools.MINIMUM_MAX_RESULTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,25 +52,29 @@ class GmailToolsTest {
     }
 
     @Test
-    void listGmailMessages_formatsEachMessage() {
-        when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS)).thenReturn(List.of(
+    void listGmailMessages_returnsTheFullSummaryPerMessage_withNoNote() {
+        List<GmailMessageSummary> summaries = List.of(
                 new GmailMessageSummary("m1", "Standup notes", "Ada <ada@example.com>", "Mon, 18 Aug 2026"),
-                new GmailMessageSummary("m2", "Invoice 42", "billing@example.com", "")));
+                new GmailMessageSummary("m2", "Invoice 42", "billing@example.com", ""));
 
-        String result = new GmailTools(gmailMessageService).listGmailMessages(mcpSyncRequestContext, null);
+        when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS)).thenReturn(summaries);
 
-        assertTrue(result.contains("1. Standup notes — from Ada <ada@example.com> (Mon, 18 Aug 2026)"), result);
-        assertTrue(result.contains("2. Invoice 42 — from billing@example.com"), result);
-        assertTrue(result.contains("The 2 most recent inbox messages"), result);
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessages(mcpSyncRequestContext, null);
+
+        assertNull(result.note());
+        assertEquals(summaries, result.messages());
     }
 
     @Test
-    void listGmailMessages_reportsAnEmptyInbox() {
+    void listGmailMessages_reportsAnEmptyInbox_asANoteWithNoMessages() {
         when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS)).thenReturn(List.of());
 
-        String result = new GmailTools(gmailMessageService).listGmailMessages(mcpSyncRequestContext, null);
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessages(mcpSyncRequestContext, null);
 
-        assertEquals("There are no messages in the inbox.", result);
+        assertEquals("There are no messages in the inbox.", result.note());
+        assertEquals(List.of(), result.messages());
     }
 
     @Test
@@ -74,8 +82,66 @@ class GmailToolsTest {
         when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS))
                 .thenThrow(new GoogleReconnectRequiredException("No Google grant"));
 
-        String result = new GmailTools(gmailMessageService).listGmailMessages(mcpSyncRequestContext, null);
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessages(mcpSyncRequestContext, null);
 
-        assertTrue(result.contains("Connect Google in Solesonic settings"), result);
+        assertTrue(result.note().contains("Connect Google in Solesonic settings"), result.note());
+        assertEquals(List.of(), result.messages());
+    }
+
+    @Test
+    void listGmailMessagesByLabel_passesTheClampedCountAndLabelToTheService() {
+        when(gmailMessageService.listMessagesByLabel(eq("Receipts"), anyInt())).thenReturn(List.of());
+
+        new GmailTools(gmailMessageService).listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", 500);
+
+        verify(gmailMessageService).listMessagesByLabel("Receipts", MAXIMUM_MAX_RESULTS);
+    }
+
+    @Test
+    void listGmailMessagesByLabel_returnsTheFullSummaryPerMessage_withNoNote() {
+        List<GmailMessageSummary> summaries = List.of(
+                new GmailMessageSummary("m1", "Your receipt", "billing@example.com", "Mon, 18 Aug 2026"));
+
+        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS)).thenReturn(summaries);
+
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", null);
+
+        assertNull(result.note());
+        assertEquals(summaries, result.messages());
+    }
+
+    @Test
+    void listGmailMessagesByLabel_reportsAnEmptyLabel_asANoteWithNoMessages() {
+        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS)).thenReturn(List.of());
+
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", null);
+
+        assertEquals("There are no messages under the label 'Receipts'.", result.note());
+        assertEquals(List.of(), result.messages());
+    }
+
+    @Test
+    void listGmailMessagesByLabel_asksTheUserToConnectGoogle_ratherThanFailing() {
+        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS))
+                .thenThrow(new GoogleReconnectRequiredException("No Google grant"));
+
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", null);
+
+        assertTrue(result.note().contains("Connect Google in Solesonic settings"), result.note());
+    }
+
+    @Test
+    void listGmailMessagesByLabel_reportsAnUnrecognizedLabel_ratherThanFailing() {
+        when(gmailMessageService.listMessagesByLabel("Nonexistent", DEFAULT_MAX_RESULTS))
+                .thenThrow(new GmailLabelNotFoundException("No Gmail label named 'Nonexistent' was found"));
+
+        GmailMessageListResponse result = new GmailTools(gmailMessageService)
+                .listGmailMessagesByLabel(mcpSyncRequestContext, "Nonexistent", null);
+
+        assertEquals("No Gmail label named 'Nonexistent' was found.", result.note());
     }
 }

@@ -39,11 +39,25 @@ Categories
 
 - Gmail Tools
   - list_gmail_messages
-    - Description: Lists the most recent messages in the caller's Gmail inbox, newest first, returning the subject, sender, and date of each. Message bodies are never returned.
+    - Description: Lists the most recent messages in the caller's Gmail inbox, newest first. Message bodies are never returned.
     - Auth: ROLE_MCP-GMAIL-LIST
     - Input: { "maxResults": <int, optional> } — defaults to 10, clamped to 1..25
-    - Output: A text list of the messages; an empty inbox and an unconnected Google account each answer with an explanatory sentence rather than an error
-    - Requires: the caller must have connected their Google account through solesonic-llm-api's consent flow (`GET /google/auth/uri`). If they have not, the tool answers with a message asking them to connect it.
+    - Output: `GmailMessageListResponse` — `{ "note": "<string|null>", "messages": [{ "id", "subject", "from", "date" }, ...] }`. `note` is `null` on a normal result; it carries an explanatory sentence (and an empty `messages` array) for an empty inbox or an unconnected Google account rather than an error. The model decides how to present the data — this server returns structured data, not pre-formatted prose or Markdown.
+    - Requires: the caller must have connected their Google account through solesonic-llm-api's consent flow (`GET /google/auth/uri`). If they have not, the tool answers with a `note` asking them to connect it.
+  - list_gmail_messages_by_label
+    - Description: Lists the most recent messages under a specific Gmail label, newest first — a system label like `STARRED`/`IMPORTANT`, or a user-created label by its display name. Does not return message bodies.
+    - Auth: ROLE_MCP-GMAIL-LIST
+    - Input: { "label": "<string>", "maxResults": <int, optional> } — defaults to 10, clamped to 1..25
+    - Output: Same `GmailMessageListResponse` shape as `list_gmail_messages`; an unrecognized label, an empty result, and an unconnected Google account each surface as a `note` rather than an error
+    - Requires: same Google account connection as `list_gmail_messages`.
+
+- Xero Tools
+  - convert_email_to_xero_proposal
+    - Description: Converts a single Gmail message into a draft Xero proposal. **Mocked** — no real Xero account is contacted yet; this stands up the tool contract ahead of a real Xero integration.
+    - Auth: ROLE_MCP-XERO
+    - Input: { "messageId": "<string>" } — a Gmail message id, from the `id` field of a `list_gmail_messages` / `list_gmail_messages_by_label` result
+    - Output: A mock proposal summary prefixed `[MOCK]`; an unresolvable message id or an unconnected Google account each answer with an explanatory sentence rather than an error
+    - Requires: same Google account connection as the Gmail tools, since it reads the referenced email through them.
 
 - Web Search Tools
   - web_search

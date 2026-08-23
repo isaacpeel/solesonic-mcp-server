@@ -1,7 +1,10 @@
 package com.solesonic.service.google;
 
 import com.solesonic.mcp.exception.google.GmailException;
+import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.model.google.gmail.GmailHeader;
+import com.solesonic.model.google.gmail.GmailLabel;
+import com.solesonic.model.google.gmail.GmailLabelList;
 import com.solesonic.model.google.gmail.GmailMessageList;
 import com.solesonic.model.google.gmail.GmailMessageMetadata;
 import com.solesonic.model.google.gmail.GmailMessagePart;
@@ -37,10 +40,36 @@ public class GmailMessageService {
     public List<GmailMessageSummary> listInboxMessages(int maxResults) {
         log.info("Listing the {} most recent inbox messages", maxResults);
 
-        GmailMessageList messageList = listInboxIds(maxResults);
+        return listMessages(INBOX_LABEL, maxResults);
+    }
+
+    /**
+     * The most recent messages under a caller-supplied label, newest first. Gmail's label ids and
+     * display names only coincide for system labels, so a user-created label name is resolved to
+     * its id first.
+     */
+    public List<GmailMessageSummary> listMessagesByLabel(String label, int maxResults) {
+        log.info("Listing the {} most recent messages labeled '{}'", maxResults, label);
+
+        String labelId = resolveLabelId(label);
+
+        return listMessages(labelId, maxResults);
+    }
+
+    /** A single message by id, for callers that already have one — e.g. resolving "email number N" from a prior list. */
+    public GmailMessageSummary getMessageSummary(String messageId) {
+        log.info("Retrieving message summary for id {}", messageId);
+
+        GmailMessageMetadata metadata = messageMetadata(messageId);
+
+        return summarize(metadata);
+    }
+
+    private List<GmailMessageSummary> listMessages(String labelId, int maxResults) {
+        GmailMessageList messageList = listMessageIds(labelId, maxResults);
 
         if (messageList == null || messageList.messages() == null || messageList.messages().isEmpty()) {
-            log.info("No inbox messages returned");
+            log.info("No messages returned for label '{}'", labelId);
 
             return List.of();
         }
@@ -59,18 +88,18 @@ public class GmailMessageService {
             }
         }
 
-        log.info("Summarized {} inbox messages", summaries.size());
+        log.info("Summarized {} messages for label '{}'", summaries.size(), labelId);
 
         return summaries;
     }
 
-    private GmailMessageList listInboxIds(int maxResults) {
+    private GmailMessageList listMessageIds(String labelId, int maxResults) {
         String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, MESSAGES_PATH};
 
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
-                        .queryParam(LABEL_IDS_PARAM, INBOX_LABEL)
+                        .queryParam(LABEL_IDS_PARAM, labelId)
                         .queryParam(MAX_RESULTS_PARAM, maxResults)
                         .build())
                 .exchangeToMono(response -> {
@@ -78,13 +107,45 @@ public class GmailMessageService {
                         return response.bodyToMono(String.class)
                                 .defaultIfEmpty("")
                                 .flatMap(errorBody -> Mono.error(new GmailException(
-                                        "Failed to list inbox messages: %s".formatted(response.statusCode()),
+                                        "Failed to list messages for label '%s': %s".formatted(labelId, response.statusCode()),
                                         errorBody)));
                     }
 
                     return response.bodyToMono(GmailMessageList.class);
                 })
                 .block();
+    }
+
+    /** Matched case-insensitively against the label's display name — callers don't know opaque ids like {@code Label_15}. */
+    private String resolveLabelId(String label) {
+        String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, LABELS_PATH};
+
+        GmailLabelList labelList = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .pathSegment(basePathSegments)
+                        .build())
+                .exchangeToMono(response -> {
+                    if (response.statusCode().isError()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .flatMap(errorBody -> Mono.error(new GmailException(
+                                        "Failed to list labels: %s".formatted(response.statusCode()),
+                                        errorBody)));
+                    }
+
+                    return response.bodyToMono(GmailLabelList.class);
+                })
+                .block();
+
+        List<GmailLabel> labels = labelList == null || labelList.labels() == null
+                ? List.of()
+                : labelList.labels();
+
+        return labels.stream()
+                .filter(candidate -> label.equalsIgnoreCase(candidate.name()))
+                .map(GmailLabel::id)
+                .findFirst()
+                .orElseThrow(() -> new GmailLabelNotFoundException("No Gmail label named '%s' was found".formatted(label)));
     }
 
     private GmailMessageMetadata messageMetadata(String messageId) {

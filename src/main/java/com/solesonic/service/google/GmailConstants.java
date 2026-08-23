@@ -5,6 +5,7 @@ public class GmailConstants {
     public static final String VERSION_PATH = "v1";
     public static final String USERS_PATH = "users";
     public static final String MESSAGES_PATH = "messages";
+    public static final String LABELS_PATH = "labels";
 
     /** Gmail's alias for "whoever owns the access token". */
     public static final String ME = "me";
