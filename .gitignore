@@ -37,6 +37,4 @@ build/
 .env.*
 /docker/.env.*
 
-# AI scratch notes (excluded from git, visible to Claude via .claudeignore)
-ai-scratch/
 /.claude/

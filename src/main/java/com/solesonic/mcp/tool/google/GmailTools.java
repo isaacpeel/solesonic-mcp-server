@@ -114,11 +114,11 @@ public class GmailTools {
         try {
             summaries = gmailMessageService.listMessagesByLabel(label, requestedResults);
         } catch (GoogleReconnectRequiredException googleReconnectRequiredException) {
-            log.info("Gmail listing skipped - {}", googleReconnectRequiredException.getMessage());
+            log.info("Gmail listing skipped because reconnect is required - {}", googleReconnectRequiredException.getMessage());
 
             return GmailMessageListResponse.note(RECONNECT_MESSAGE);
         } catch (GmailLabelNotFoundException gmailLabelNotFoundException) {
-            log.info("Gmail listing skipped - {}", gmailLabelNotFoundException.getMessage());
+            log.info("Gmail listing skipped because the label isn't found - {}", gmailLabelNotFoundException.getMessage());
 
             return GmailMessageListResponse.note(NO_MATCHING_LABEL_MESSAGE.formatted(label));
         }
