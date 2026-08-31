@@ -59,6 +59,27 @@ Elicitation Issues
 - Template variable binding failures
   - Ensure required parameters (e.g., userMessage) are provided and correctly typed
 
+Prompt Template Compilation
+- `IllegalArgumentException: The template string is not valid.` in the server log
+  - A `.st` prompt under `src/main/resources/prompt/**` contains a literal `{` or `}`. Spring AI's
+    `StTemplateRenderer` uses those as its expression delimiters, so a JSON example inside a prompt
+    is parsed as an expression and fails to compile — e.g.
+    `'[' came as a complete surprise to me`.
+  - Write the example as prose, or escape the braces. `PromptTemplateCompilationTest` compiles every
+    prompt resource and will catch this before deployment.
+
+Tool Errors Reaching the Caller
+- A tool result of `Error invoking method: <tool>` followed by a bare `null`
+  - Spring AI's MCP tool callback renders the caller-visible error from the message of the
+    *deepest* cause in the chain. If that cause carries no message (StringTemplate's `STException`,
+    a bare `NullPointerException`, `Objects.requireNonNull` without a message), the calling model
+    is shown the literal text `null`, learns nothing, and retries the same failing call.
+  - Fail with `ToolFailures.describe(operation, exception)`
+    (`com.solesonic.mcp.exception`) instead of propagating the raw exception. It flattens the whole
+    cause chain into one message and carries no cause of its own, so the deepest cause is always
+    itself. Log the original with its stack trace first — the flattened message is for the caller,
+    the stack trace is for you.
+
 Atlassian Token Broker
 - 401/403 from broker: check client credentials, scopes, and token-uri
 - 5xx from broker: inspect broker logs and retry with backoff
