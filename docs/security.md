@@ -21,6 +21,7 @@ Authorization
   - Jira tools require ROLE_MCP-CREATE-JIRA
   - Web Search tools require ROLE_MCP-WEB-SEARCH
   - Image generation requires ROLE_MCP-GENERATE-IMAGE
+  - Gmail tools require ROLE_MCP-GMAIL-LIST, which covers get_gmail_message_body and therefore full message bodies
 - There is no hard-coded required scope for /mcp in this repository; use group/role/scope-based method constraints to control access to individual tools.
 
 Prompts

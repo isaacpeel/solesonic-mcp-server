@@ -39,16 +39,22 @@ Categories
 
 - Gmail Tools
   - list_gmail_messages
-    - Description: Lists the most recent messages in the caller's Gmail inbox, newest first. Message bodies are never returned.
+    - Description: Lists the most recent messages in the caller's Gmail inbox, newest first. Message bodies are never returned — call `get_gmail_message_body` with a returned id to read one message's contents.
     - Auth: ROLE_MCP-GMAIL-LIST
     - Input: { "maxResults": <int, optional> } — defaults to 10, clamped to 1..25
     - Output: `GmailMessageListResponse` — `{ "note": "<string|null>", "messages": [{ "id", "subject", "from", "date" }, ...] }`. `note` is `null` on a normal result; it carries an explanatory sentence (and an empty `messages` array) for an empty inbox or an unconnected Google account rather than an error. The model decides how to present the data — this server returns structured data, not pre-formatted prose or Markdown.
     - Requires: the caller must have connected their Google account through solesonic-llm-api's consent flow (`GET /google/auth/uri`). If they have not, the tool answers with a `note` asking them to connect it.
   - list_gmail_messages_by_label
-    - Description: Lists the most recent messages under a specific Gmail label, newest first — a system label like `STARRED`/`IMPORTANT`, or a user-created label by its display name. Does not return message bodies.
+    - Description: Lists the most recent messages under a specific Gmail label, newest first — a system label like `STARRED`/`IMPORTANT`, or a user-created label by its display name. Does not return message bodies — call `get_gmail_message_body` with a returned id to read one message's contents.
     - Auth: ROLE_MCP-GMAIL-LIST
     - Input: { "label": "<string>", "maxResults": <int, optional> } — defaults to 10, clamped to 1..25
     - Output: Same `GmailMessageListResponse` shape as `list_gmail_messages`; an unrecognized label, an empty result, and an unconnected Google account each surface as a `note` rather than an error
+    - Requires: same Google account connection as `list_gmail_messages`.
+  - get_gmail_message_body
+    - Description: Returns the body of a single Gmail message by id, for use after `list_gmail_messages` or `list_gmail_messages_by_label` has surfaced that id. Requests Gmail's `format=full` and walks the MIME tree for the best text part: the first `text/plain`, or the first `text/html` when the message carries no plain-text alternative.
+    - Auth: ROLE_MCP-GMAIL-LIST — the same authority as the listing tools, so granting it gives read access to message content, not only to subjects and senders
+    - Input: { "messageId": "<string>", "maxCharacters": <int, optional> } — `maxCharacters` defaults to 20000, clamped to 1000..100000
+    - Output: `GmailMessageBodyResponse` — `{ "note": "<string|null>", "message": { "id", "subject", "from", "date", "mimeType", "body" } }`. The body is returned **verbatim**, exactly as the chosen MIME part carried it; this server does not convert HTML to plain text, so `mimeType` tells the caller whether `body` is `text/plain` or raw `text/html` markup. `note` is `null` on a normal result; it carries an explanatory sentence (with `message` null) for an unknown id, a message with no readable text part, or an unconnected Google account. A body longer than the character limit is the one case that returns a `note` *and* the data — the note says it was truncated.
     - Requires: same Google account connection as `list_gmail_messages`.
 
 - Xero Tools
@@ -146,7 +152,7 @@ Operational guidance
 - Authorization: Ensure callers have the required ROLE_ authorities:
   - Jira: ROLE_MCP-JIRA-CREATE, ROLE_MCP-JIRA-GET, ROLE_MCP-JIRA-DELETE
   - Agile: ROLE_MCP-JIRA-AGILE-LIST
-  - Gmail: ROLE_MCP-GMAIL-LIST
+  - Gmail: ROLE_MCP-GMAIL-LIST (covers message bodies as well as listing)
   - Web Search: ROLE_MCP-WEB-SEARCH
   - Image Generation: ROLE_MCP-GENERATE-IMAGE
   - Date/Time: ROLE_MCP-TIME

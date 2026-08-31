@@ -17,6 +17,10 @@ public class GmailConstants {
 
     public static final String INBOX_LABEL = "INBOX";
     public static final String METADATA_FORMAT = "metadata";
+    public static final String FULL_FORMAT = "full";
+
+    public static final String TEXT_PLAIN_MIME_TYPE = "text/plain";
+    public static final String TEXT_HTML_MIME_TYPE = "text/html";
 
     public static final String SUBJECT_HEADER = "Subject";
     public static final String FROM_HEADER = "From";

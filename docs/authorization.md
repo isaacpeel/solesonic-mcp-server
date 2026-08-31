@@ -159,6 +159,10 @@ Tool roles currently enforced: `ROLE_MCP-JIRA-CREATE`, `ROLE_MCP-JIRA-GET`, `ROL
 claim entry of `mcp-gmail-list` becomes `ROLE_MCP-GMAIL-LIST`, so roles are defined in the identity
 provider, not here.
 
+`ROLE_MCP-GMAIL-LIST` covers message *content*, not just listing: it also guards
+`get_gmail_message_body`, which returns a message's full body text. Granting it therefore gives read
+access to the caller's mail, and not only to subjects, senders and dates.
+
 `ROLE_MCP-XERO` guards `convert_email_to_xero_proposal`, which is currently a mocked
 tool — no real Xero account is contacted. It still requires this role and a connected Google account
 (see below) because it reads the referenced email through the same Gmail plumbing the other Gmail
