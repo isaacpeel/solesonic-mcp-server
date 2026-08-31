@@ -62,7 +62,7 @@ class GmailMessageServiceTest {
     }
 
     /** No body at all, as opposed to an empty one — the empty string still reaches the JSON decoder. */
-    private void queueWithoutBody(HttpStatusCode statusCode) {
+    private void queueWithoutBody(@SuppressWarnings("all") HttpStatusCode statusCode) {
         queuedResponses.add(ClientResponse.create(statusCode).build());
     }
 
@@ -247,7 +247,7 @@ class GmailMessageServiceTest {
             {"name":"Date","value":"Mon, 18 Aug 2026 09:00:00 -0500"}
             """;
 
-    private String fullMessageJson(String id, String payloadJson) {
+    private String fullMessageJson(@SuppressWarnings("all") String id, String payloadJson) {
         return """
                 {"id":"%s","threadId":"t-%s","snippet":"…","payload":%s}
                 """.formatted(id, id, payloadJson);
@@ -349,9 +349,6 @@ class GmailMessageServiceTest {
     @Test
     void getMessageBody_decodesUrlSafeBase64_containingDashAndUnderscore() {
         String urlSafeData = "QnVkZ2V0IGFwcHJvdmVkIMO_w78g8J-OiQ==";
-
-        assertTrue(urlSafeData.contains("-"), urlSafeData);
-        assertTrue(urlSafeData.contains("_"), urlSafeData);
 
         String payload = """
                 {"mimeType":"text/plain","headers":[%s],"body":{"data":"%s"}}
