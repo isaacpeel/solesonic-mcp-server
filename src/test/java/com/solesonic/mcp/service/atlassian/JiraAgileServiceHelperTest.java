@@ -2,7 +2,11 @@ package com.solesonic.mcp.service.atlassian;
 
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.model.atlassian.agile.BoardColumn;
+import com.solesonic.model.atlassian.agile.BoardConfiguration;
 import com.solesonic.model.atlassian.agile.BoardIssues;
+import com.solesonic.model.atlassian.agile.ColumnConfig;
+import com.solesonic.model.atlassian.agile.ColumnStatus;
 import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.service.atlassian.JiraIssueService;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +78,7 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_noJqlFilter_saysAllIssues() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardIssues(boardIssuesWithTotal(5));
+        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(5));
 
         String result = service.handleCountQuery(board, queryResult);
 
@@ -96,7 +100,7 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_singleIssue_usesSingularWord() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardIssues(boardIssuesWithTotal(1));
+        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(1));
 
         String result = service.handleCountQuery(board, queryResult);
 
@@ -107,11 +111,34 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_zeroIssues_usesPlural() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardIssues(boardIssuesWithTotal(0));
+        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(0));
 
         String result = service.handleCountQuery(board, queryResult);
 
         assertThat(result).contains("0 issues");
+    }
+
+    @Test
+    void handleCountQuery_noExplicitScope_scopesToBoardVisibleColumns() {
+        Board board = new Board(1, "self", "My Board", "scrum");
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
+        stubBoardConfigurationThenIssues(boardConfigurationWithColumns("1", "3", "10001"), boardIssuesWithTotal(11));
+
+        String result = service.handleCountQuery(board, queryResult);
+
+        assertThat(result).contains("status in (1, 3, 10001)").contains("11").doesNotContain("all issues");
+    }
+
+    /**
+     * A blank-scope {@link AgileQueryIntent} triggers a board-configuration lookup before the
+     * board-issues call. Stub the two responses in call order.
+     */
+    private void stubBoardConfigurationThenIssues(BoardConfiguration configuration, BoardIssues boardIssues) {
+        doReturn(requestHeadersUriSpec).when(webClient).get();
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec)
+                .uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
+        doReturn(Mono.just(configuration), Mono.just(boardIssues))
+                .when(requestHeadersSpec).exchangeToMono(ArgumentMatchers.any());
     }
 
     private void stubBoardIssues(BoardIssues boardIssues) {
@@ -123,5 +150,18 @@ class JiraAgileServiceHelperTest {
 
     private BoardIssues boardIssuesWithTotal(int total) {
         return new BoardIssues(null, 0, 0, total, List.of());
+    }
+
+    private BoardConfiguration boardConfigurationWithNoColumns() {
+        return new BoardConfiguration(1, "My Board", "scrum", new ColumnConfig(List.of(), null));
+    }
+
+    @SuppressWarnings("all")
+    private BoardConfiguration boardConfigurationWithColumns(String... statusIds) {
+        List<ColumnStatus> statuses = List.of(statusIds).stream()
+                .map(statusId -> new ColumnStatus(statusId, "self/" + statusId))
+                .toList();
+        BoardColumn column = new BoardColumn("Column", statuses);
+        return new BoardConfiguration(1, "My Board", "scrum", new ColumnConfig(List.of(column), null));
     }
 }

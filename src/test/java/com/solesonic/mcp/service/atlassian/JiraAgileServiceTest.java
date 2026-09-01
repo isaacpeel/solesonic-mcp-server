@@ -3,7 +3,11 @@ package com.solesonic.mcp.service.atlassian;
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
 import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.model.atlassian.agile.BoardColumn;
+import com.solesonic.model.atlassian.agile.BoardConfiguration;
 import com.solesonic.model.atlassian.agile.Boards;
+import com.solesonic.model.atlassian.agile.ColumnConfig;
+import com.solesonic.model.atlassian.agile.ColumnStatus;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools.ListBoardsRequest;
 import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.service.atlassian.JiraIssueService;
@@ -86,6 +90,22 @@ class JiraAgileServiceTest {
 
         assertNotNull(board);
         assertEquals(1, board.id());
+        verify(requestHeadersUriSpec).uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
+    }
+
+    @Test
+    void getBoardConfiguration_shouldReturnConfiguration_fromApi() {
+        BoardConfiguration expected = new BoardConfiguration(1, "My Board", "scrum",
+                new ColumnConfig(List.of(new BoardColumn("To Do", List.of(new ColumnStatus("1", "self/1")))), "issueCount"));
+
+        doReturn(requestHeadersUriSpec).when(webClient).get();
+        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
+        doReturn(Mono.just(expected)).when(requestHeadersSpec).exchangeToMono(ArgumentMatchers.any());
+
+        BoardConfiguration configuration = service.getBoardConfiguration("1");
+
+        assertNotNull(configuration);
+        assertEquals("1", configuration.columnConfig().columns().getFirst().statuses().getFirst().id());
         verify(requestHeadersUriSpec).uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
     }
 

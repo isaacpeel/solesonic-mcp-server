@@ -2,6 +2,7 @@ package com.solesonic.agent.agile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Assembles a JQL expression from the structured fields of an {@link AgileQueryIntent}.
@@ -44,6 +45,29 @@ public final class AgileJqlBuilder {
         }
 
         return String.join(" AND ", clauses);
+    }
+
+    /**
+     * Builds a JQL expression scoped to a board's visible statuses when the intent carries no
+     * explicit scope. An explicit scope (issue keys, assignee, reporter, age, supplemental JQL)
+     * always wins outright, so a targeted lookup is never silently filtered by column status.
+     * {@code boardVisibleStatusIds} is only invoked when the intent has no explicit scope, so a
+     * targeted query never pays for a board-configuration lookup it doesn't need.
+     */
+    public static String build(AgileQueryIntent queryIntent, Supplier<List<String>> boardVisibleStatusIds) {
+        String explicit = build(queryIntent);
+
+        if (!explicit.isBlank()) {
+            return explicit;
+        }
+
+        List<String> statusIds = boardVisibleStatusIds.get();
+
+        if (statusIds == null || statusIds.isEmpty()) {
+            return explicit;
+        }
+
+        return "status in (" + String.join(", ", statusIds) + ")";
     }
 
     /**

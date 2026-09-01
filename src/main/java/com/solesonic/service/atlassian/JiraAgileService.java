@@ -6,9 +6,12 @@ import com.solesonic.agent.agile.AgileState;
 import com.solesonic.mcp.tool.McpConfirmations;
 import com.solesonic.mcp.tool.atlassian.JiraAgileTools;
 import com.solesonic.model.atlassian.agile.Board;
+import com.solesonic.model.atlassian.agile.BoardConfiguration;
 import com.solesonic.model.atlassian.agile.BoardIssue;
 import com.solesonic.model.atlassian.agile.BoardIssues;
 import com.solesonic.model.atlassian.agile.Boards;
+import com.solesonic.model.atlassian.agile.ColumnConfig;
+import com.solesonic.model.atlassian.agile.ColumnStatus;
 import com.solesonic.model.atlassian.jira.*;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import org.slf4j.Logger;
@@ -24,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 import static com.solesonic.agent.config.AgileChatClientConfig.AGILE_CHAT_CLIENT;
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
@@ -139,8 +143,7 @@ public class JiraAgileService {
                 .block();
     }
 
-    @SuppressWarnings("unused")
-    public String getBoardConfiguration(String boardId) {
+    public BoardConfiguration getBoardConfiguration(String boardId) {
         log.debug("Getting Jira board configuration: {}", boardId);
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, CONFIGURATION_PATH};
@@ -149,8 +152,30 @@ public class JiraAgileService {
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(base)
                         .build())
-                .exchangeToMono(response -> response.bodyToMono(String.class))
+                .exchangeToMono(response -> response.bodyToMono(BoardConfiguration.class))
                 .block();
+    }
+
+    /**
+     * Status IDs mapped to the board's visible columns — the same scope the Jira board UI
+     * renders. Used to default unscoped queries to "what's on the board" instead of the board's
+     * full underlying project filter.
+     */
+    private List<String> boardVisibleStatusIds(Board board) {
+        BoardConfiguration configuration = getBoardConfiguration(String.valueOf(board.id()));
+        ColumnConfig columnConfig = configuration.columnConfig();
+
+        if (columnConfig == null || columnConfig.columns() == null) {
+            return List.of();
+        }
+
+        return columnConfig.columns().stream()
+                .filter(Objects::nonNull)
+                .flatMap(column -> column.statuses() == null ? Stream.empty() : column.statuses().stream())
+                .map(ColumnStatus::id)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     public BoardIssues getBoardIssues(JiraAgileTools.BoardIssuesRequest boardIssuesRequest) {
@@ -198,7 +223,7 @@ public class JiraAgileService {
     }
 
     public String handleCountQuery(Board board, AgileQueryIntent queryResult) {
-        String resolvedJql = AgileJqlBuilder.build(queryResult);
+        String resolvedJql = AgileJqlBuilder.build(queryResult, () -> boardVisibleStatusIds(board));
         JiraAgileTools.BoardIssuesRequest request = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
                 emptyToNull(resolvedJql),
@@ -218,8 +243,10 @@ public class JiraAgileService {
             AgileQueryIntent queryResult,
             String userMessage
     ) {
+        String jql = AgileJqlBuilder.build(queryResult, () -> boardVisibleStatusIds(board));
+
         return collectAndFormatPages(
-                mcpSyncRequestContext, board, queryResult, userMessage,
+                mcpSyncRequestContext, board, jql, userMessage,
                 queryResult.resolvedStartAt(), new ArrayList<>(), true
         );
     }
@@ -227,13 +254,13 @@ public class JiraAgileService {
     private String collectAndFormatPages(
             McpSyncRequestContext mcpSyncRequestContext,
             Board board,
-            AgileQueryIntent queryResult,
+            String jql,
             String userMessage,
             int startAt,
             List<BoardIssue> accumulatedIssues,
             boolean shouldElicit
     ) {
-        PagedQueryResult pagedResult = fetchPage(board, queryResult, startAt);
+        PagedQueryResult pagedResult = fetchPage(board, jql, startAt);
         accumulatedIssues.addAll(pagedResult.issues());
 
         if (!pagedResult.hasMorePages()) {
@@ -243,7 +270,7 @@ public class JiraAgileService {
 
         if (!shouldElicit) {
             return collectAndFormatPages(
-                    mcpSyncRequestContext, board, queryResult, userMessage,
+                    mcpSyncRequestContext, board, jql, userMessage,
                     pagedResult.nextStartAt(), accumulatedIssues, false
             );
         }
@@ -259,7 +286,7 @@ public class JiraAgileService {
 
             return switch (elicitResult.action()) {
                 case ACCEPT -> collectAndFormatPages(
-                        mcpSyncRequestContext, board, queryResult, userMessage,
+                        mcpSyncRequestContext, board, jql, userMessage,
                         pagedResult.nextStartAt(), accumulatedIssues, false
                 );
                 case DECLINE, CANCEL -> enrichAndFormatIssueList(board, accumulatedIssues, userMessage,
@@ -272,10 +299,10 @@ public class JiraAgileService {
         }
     }
 
-    private PagedQueryResult fetchPage(Board board, AgileQueryIntent queryResult, int startAt) {
+    private PagedQueryResult fetchPage(Board board, String jql, int startAt) {
         JiraAgileTools.BoardIssuesRequest request = new JiraAgileTools.BoardIssuesRequest(
                 String.valueOf(board.id()),
-                emptyToNull(AgileJqlBuilder.build(queryResult)),
+                emptyToNull(jql),
                 startAt == 0 ? null : startAt,
                 DEFAULT_PAGE_SIZE,
                 false
@@ -410,7 +437,7 @@ public class JiraAgileService {
         }
 
         String targetStatus = queryResult.targetStatus();
-        String resolvedJql = AgileJqlBuilder.build(queryResult);
+        String resolvedJql = AgileJqlBuilder.build(queryResult, () -> boardVisibleStatusIds(board));
         boolean requiresBatching = state.requiresBatching().orElse(false);
 
         log.info("Transition requested on board '{}' to '{}', jql='{}', batching={}", board.name(), targetStatus, resolvedJql, requiresBatching);

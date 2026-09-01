@@ -17,6 +17,12 @@ Key properties (environment variables in parentheses)
   - spring.ai.mcp.server.name=solesonic-mcp-server
   - spring.ai.mcp.server.version=1.0.0
   - spring.ai.mcp.server.type=sync
+- MCP server session timeouts
+  - spring.ai.mcp.server.request-timeout=600s
+    - Bounds server-initiated requests (elicitation, sampling, roots). Does not affect tool execution or inbound client requests.
+    - Spring AI defaults to 20s, which is shorter than a human takes to answer a confirmation prompt. The late answer then comes back as HTTP 500 on POST /mcp — see ./elicitation.md.
+    - Keep it in application.properties so every profile inherits it, not in a single profile.
+  - spring.ai.mcp.server.streamable-http.keep-alive-interval=600s
 - Web Search (Tavily)
   - websearch.provider=tavily
   - tavily.api.key=(${TAVILY_API_KEY})
