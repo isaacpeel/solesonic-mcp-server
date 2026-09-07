@@ -9,7 +9,7 @@ If a run configuration doesn't exist, create one.
 
 JDK 25 + Netty requires `--enable-native-access=ALL-UNNAMED`. Surefire already sets it in `pom.xml`; add it as a VM option in IntelliJ run configurations and when running the jar directly.
 
-Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.0, A2A Java SDK 1.0.0.Final, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + A2A task store) and Ollama (`qwen3.5:9b`, `granite4.1:3b`, pulled `WHEN_MISSING`).
+Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.1, A2A Java SDK 1.0.0.Final, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + A2A task store) and the OpenAI API (`OPENAI_API_KEY`; models selected per chat client in `agent/config/*ChatClientConfig`).
 
 ## Architecture
 
