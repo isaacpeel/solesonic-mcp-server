@@ -36,7 +36,7 @@ Production with SSL
 PostgreSQL (workflow storage)
 - Required at startup. Flyway runs the migrations in `src/main/resources/db/migration`, and the `comfy_workflow` table is read once during initialization to register the image generation tools.
 - Configured via `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
-- **The database is not part of `docker/docker-compose.yml`** — that file provides only Redis and the server itself. Deployment currently assumes an externally managed PostgreSQL instance; provision one before first start.
+- `docker/docker-compose.yml` runs PostgreSQL as the `solesonic-mcp-postgres` service, with its data on the named volume `solesonic-mcp-postgres` mounted at `/var/lib/postgresql` — the path the `postgres` image declares as its volume, with `PGDATA` in the major-version subdirectory below it. Mounting that volume anywhere else silently leaves the data directory in a per-container anonymous volume, so every `docker compose up --build` starts an empty cluster, re-runs `init_schema.sh` and Flyway, and `comfy_workflow` comes back empty. To use an externally managed instance instead, drop the service and point `DATABASE_URL` at it.
 - Verification from the host running this server:
   - `psql "$DATABASE_URL" -c 'select tool_name, enabled from comfy_workflow'`
 - The table starts empty. Until you insert a workflow row, the server starts normally but registers no image generation tools — see Image Generation: ./image-generation.md
