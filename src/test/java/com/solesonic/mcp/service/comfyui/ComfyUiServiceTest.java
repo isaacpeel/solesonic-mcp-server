@@ -58,6 +58,8 @@ class ComfyUiServiceTest {
     private final Deque<String> promptResponses = new ArrayDeque<>();
     private final Deque<String> historyResponses = new ArrayDeque<>();
     private final AtomicInteger historyCallCount = new AtomicInteger();
+    private final AtomicInteger freeCallCount = new AtomicInteger();
+    private boolean freeEndpointErrors;
 
     private final List<Integer> capturedPercents = new ArrayList<>();
     private final List<String> capturedMessages = new ArrayList<>();
@@ -149,6 +151,32 @@ class ComfyUiServiceTest {
                 .hasMessageContaining("failed during execution");
     }
 
+    @Test
+    void generate_happyPath_releasesMemoryAfterDownload() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(freeCallCount).hasValue(1);
+    }
+
+    /**
+     * The {@code /free} call is fire-and-forget: a failure there must never surface to the caller,
+     * since it would otherwise turn a successful generation into a reported failure.
+     */
+    @Test
+    void generate_freeEndpointErrors_stillReturnsImage() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        freeEndpointErrors = true;
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        assertThat(freeCallCount).hasValue(1);
+    }
+
     private ComfyUiService service(long generationTimeoutSeconds) {
         return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0);
     }
@@ -187,6 +215,11 @@ class ComfyUiServiceTest {
                 return Mono.just(binaryResponse());
             }
 
+            if (path.startsWith("/free")) {
+                freeCallCount.incrementAndGet();
+                return Mono.just(freeEndpointErrors ? errorResponse() : jsonResponse("{}"));
+            }
+
             return Mono.error(new IllegalStateException("Unexpected ComfyUI request path: " + path));
         };
     }
@@ -195,6 +228,13 @@ class ComfyUiServiceTest {
         return ClientResponse.create(HttpStatus.OK)
                 .header(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .body(body == null ? "{}" : body)
+                .build();
+    }
+
+    private ClientResponse errorResponse() {
+        return ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR)
+                .header(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body("{}")
                 .build();
     }
 

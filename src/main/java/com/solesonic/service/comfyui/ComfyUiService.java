@@ -2,6 +2,7 @@ package com.solesonic.service.comfyui;
 
 import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ComfyFreeRequest;
 import com.solesonic.model.comfyui.ComfyHistoryEntry;
 import com.solesonic.model.comfyui.ComfyImageReference;
 import com.solesonic.model.comfyui.ComfyNodeOutput;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.COMFY_UI_WEB_CLIENT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FREE_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.HISTORY_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.OUTPUT_TYPE;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.PROMPT_ENDPOINT;
@@ -100,6 +102,8 @@ public class ComfyUiService {
 
         String base64Png = Base64.getEncoder().encodeToString(download(imageReference));
 
+        releaseMemory();
+
         double elapsedSeconds = elapsedSeconds(startNanos);
 
         progressReporter.emit(PROGRESS_COMPLETE, "Generated %d×%d in %.1fs (seed %d)"
@@ -115,6 +119,27 @@ public class ComfyUiService {
                 .base64Png(base64Png)
                 .elapsedSeconds(elapsedSeconds)
                 .build();
+    }
+
+    /**
+     * Fire-and-forget: ComfyUI keeps the generated model resident in VRAM between requests, so this
+     * releases it now that the image is safely in hand. A failure here must never fail {@code
+     * generate()} — the image was already produced successfully — so the response is neither
+     * blocked on nor propagated, only logged.
+     */
+    private void releaseMemory() {
+        webClient.post()
+                .uri(FREE_ENDPOINT)
+                .bodyValue(new ComfyFreeRequest(true, true))
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
+                        .defaultIfEmpty("")
+                        .flatMap(body -> Mono.error(new ComfyUiException(
+                                "ComfyUI /free failed with status " + clientResponse.statusCode(), body))))
+                .bodyToMono(Void.class)
+                .doOnError(error -> log.warn("ComfyUI /free call failed, memory was not released", error))
+                .onErrorComplete()
+                .subscribe();
     }
 
     /**

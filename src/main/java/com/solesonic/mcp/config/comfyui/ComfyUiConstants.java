@@ -9,6 +9,7 @@ public final class ComfyUiConstants {
     public static final String PROMPT_ENDPOINT = "/prompt";
     public static final String HISTORY_ENDPOINT = "/history/{promptId}";
     public static final String VIEW_ENDPOINT = "/view";
+    public static final String FREE_ENDPOINT = "/free";
 
     public static final String QUERY_PARAM_FILENAME = "filename";
     public static final String QUERY_PARAM_SUBFOLDER = "subfolder";
