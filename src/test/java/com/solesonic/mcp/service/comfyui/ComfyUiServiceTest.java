@@ -204,6 +204,7 @@ class ComfyUiServiceTest {
      * The release delay is real (50ms in tests, per {@code application-test.properties}), so
      * asserting on it requires polling rather than a synchronous check.
      */
+    @SuppressWarnings("all")
     private void awaitFreeCallCount(int expected) {
         long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
 
