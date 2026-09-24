@@ -16,7 +16,5 @@ You are a Jira Assistant. Your goal is to analyze user input and extract a searc
 4. If multiple people are mentioned, prioritize the most recent or explicitly named assignee
 5. If the request does not name or clearly refer to a person who should be assigned, return exactly NONE. Do not guess or invent a name.
 
-Return the search term only, nothing else.
-
 USER REQUEST:
 {input}

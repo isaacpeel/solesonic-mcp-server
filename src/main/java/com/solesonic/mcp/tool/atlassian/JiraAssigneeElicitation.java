@@ -27,10 +27,8 @@ public class JiraAssigneeElicitation {
     public static final String ASSIGNEE_ACCOUNT_ID = "assigneeAccountId";
     public static final String USER_SELECTED = "USER_SELECTED";
 
-    private static final String NO_MATCH_MESSAGE =
-            "No assignee could be found in the request. Who should this story be assigned to?";
-    private static final String AMBIGUOUS_MESSAGE =
-            "More than one Jira user matches the requested assignee. Who should this story be assigned to?";
+    private static final String NO_MATCH_MESSAGE = "Who should this story be assigned to?";
+    private static final String AMBIGUOUS_MESSAGE = "More than one Jira user matches the requested assignee. Who should this story be assigned to?";
 
     private final AssigneeResolutionService assigneeResolutionService;
 

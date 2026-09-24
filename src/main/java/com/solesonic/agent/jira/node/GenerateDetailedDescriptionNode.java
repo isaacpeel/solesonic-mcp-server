@@ -9,6 +9,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -30,6 +31,8 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
     private static final String OPERATION = "Generating the detailed description";
 
     private static final String INPUT = "input";
+
+    private static final int DESCRIPTION_MAX_TOKENS = 300;
 
     private final ChatClient chatClient;
     private final PromptTemplate descriptionPromptTemplate;
@@ -60,6 +63,7 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
                         advisorSpec.advisors(messageChatMemoryAdvisor);
                         advisorSpec.param(CONVERSATION_ID, conversationId);
                     }))
+                    .options(OpenAiChatOptions.builder().maxTokens(DESCRIPTION_MAX_TOKENS))
                     .call()
                     .content();
 

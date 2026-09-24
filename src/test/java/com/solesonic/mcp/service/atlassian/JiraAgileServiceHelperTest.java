@@ -188,7 +188,7 @@ class JiraAgileServiceHelperTest {
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClientRequestSpec).user(promptCaptor.capture());
-        assertThat(promptCaptor.getValue()).doesNotContain("could not be retrieved");
+        assertThat(promptCaptor.getValue()).doesNotContain("and are omitted below");
     }
 
     private BoardIssues boardIssuesWithKeys(String... keys) {

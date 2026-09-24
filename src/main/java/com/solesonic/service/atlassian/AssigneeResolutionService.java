@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.solesonic.agent.config.JiraChatClientConfig.USER_STORY_CHAT_CLIENT;
+import static com.solesonic.agent.config.JiraChatClientConfig.JIRA_ASSIGNEE_CHAT_CLIENT;
 
 @Service
 public class AssigneeResolutionService {
@@ -39,7 +39,7 @@ public class AssigneeResolutionService {
     private final Resource jiraAssigneeLookupPrompt;
 
     public AssigneeResolutionService(JiraUserService jiraUserService,
-                                     @Qualifier(USER_STORY_CHAT_CLIENT) ChatClient chatClient,
+                                     @Qualifier(JIRA_ASSIGNEE_CHAT_CLIENT) ChatClient chatClient,
                                      @Value("classpath:prompt/jira/jira_assignee_lookup.st") Resource jiraAssigneeLookupPrompt) {
         this.jiraUserService = jiraUserService;
         this.chatClient = chatClient;

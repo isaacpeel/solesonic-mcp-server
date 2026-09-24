@@ -145,13 +145,10 @@ public class JiraIssueTools {
                     finalStateRef.set(output.state());
 
                     int progressPercent = switch (output.node()) {
-                        case JiraGraphConfig.GENERATE_DETAILED_DESCRIPTION -> 20;
-                        case JiraGraphConfig.GENERATE_STORY_SUMMARY        -> 40;
-                        case JiraGraphConfig.GENERATE_ACCEPTANCE_CRITERIA  -> 60;
-                        case JiraGraphConfig.RESOLVE_ASSIGNEE              -> 75;
-                        case JiraGraphConfig.ASSEMBLE_PAYLOAD              -> 90;
-                        case END                                           -> 100;
-                        default                                            -> 10;
+                        case JiraGraphConfig.GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE -> 60;
+                        case JiraGraphConfig.ASSEMBLE_PAYLOAD                      -> 90;
+                        case END                                                   -> 100;
+                        default                                                    -> 10;
                     };
 
                     String node = output.node();
@@ -202,7 +199,7 @@ public class JiraIssueTools {
 
         log.info("Jira story created: {}", issueKey);
 
-        return "Created Jira story %s: %s".formatted(issueKey, jiraUrlTemplate.formatted(issueKey));
+        return "Created Jira story %s: %s".formatted(issueKey, jiraUrlTemplate.replace("{key}", issueKey));
     }
 
     private static JiraIssueCreatePayload withAssignee(JiraIssueCreatePayload payload, AssigneeLookupResult assigneeLookupResult) {

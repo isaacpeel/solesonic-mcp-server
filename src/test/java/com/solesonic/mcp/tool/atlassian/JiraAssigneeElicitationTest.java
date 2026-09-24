@@ -95,7 +95,7 @@ class JiraAssigneeElicitationTest {
                 new AssigneeLookupResult(true, "acc-2", JiraAssigneeElicitation.USER_SELECTED, "Alice")));
 
         ElicitFormRequest sentRequest = sentRequest();
-        assertThat(sentRequest.message()).contains("No assignee");
+        assertThat(sentRequest.message()).contains("Who should this story be assigned to?");
         assertThat(sentRequest.meta()).isEqualTo(META);
         assertThat(sentRequest.requestedSchema()).isEqualTo(expectedSchema(List.of(
                 Map.of("const", "acc-1", "title", "Bob"),
