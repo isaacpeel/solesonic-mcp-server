@@ -3,6 +3,7 @@ package com.solesonic.agent.jira.node;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeResolution;
 import com.solesonic.service.atlassian.AssigneeResolutionService;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(ResolveAssigneeNode.class);
+
+    private static final String OPERATION = "Resolving the issue assignee";
 
     private final AssigneeResolutionService assigneeResolutionService;
 
@@ -63,7 +66,7 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
             return completedFuture(updates);
         } catch (Exception exception) {
             log.error("Failed to resolve assignee", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

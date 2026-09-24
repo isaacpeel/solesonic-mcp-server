@@ -60,7 +60,7 @@ public final class McpConfirmations {
         try {
             return context.elicit(elicitRequest);
         } catch (Exception exception) {
-            log.info("Confirmation prompt failed. chatId={} prompt=\"{}\"", chatId(elicitRequest.meta()), elicitRequest.message(), exception);
+            log.warn("Confirmation prompt failed. chatId={} prompt=\"{}\"", chatId(elicitRequest.meta()), elicitRequest.message(), exception);
 
             throw ToolFailures.describe(
                     "Waiting for the user to confirm \"%s\"".formatted(elicitRequest.message()),

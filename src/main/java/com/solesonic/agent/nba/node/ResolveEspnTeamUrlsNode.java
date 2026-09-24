@@ -4,6 +4,7 @@ import com.solesonic.agent.nba.EspnTeamRegistry;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.EspnTeamProfile;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class ResolveEspnTeamUrlsNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(ResolveEspnTeamUrlsNode.class);
+
+    private static final String OPERATION = "Resolving ESPN team URLs";
 
     private final EspnTeamRegistry espnTeamRegistry;
 
@@ -58,7 +61,8 @@ public class ResolveEspnTeamUrlsNode implements AsyncNodeAction<SportsState> {
 
             return completedFuture(Map.of(SportsState.RESOLVED_TEAMS, resolvedTeams));
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to resolve ESPN team URLs", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

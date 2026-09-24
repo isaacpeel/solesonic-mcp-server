@@ -59,6 +59,8 @@ public class JiraAgileService {
 
             Board: %s (showing %d of %d issues)
 
+            %s
+
             Issues:
             %s
 
@@ -69,6 +71,7 @@ public class JiraAgileService {
             - Include description content only when it adds value to answering the question
             - If an issue has no assignee, say "Unassigned"
             - Keep descriptions concise — two or three sentences at most
+            - If the note above says some issues could not be retrieved, briefly mention that to the user
             - Do not include a preamble or closing remarks, just the formatted issue list
             """;
 
@@ -209,7 +212,6 @@ public class JiraAgileService {
         return boardIssues;
     }
 
-    @SuppressWarnings("unused")
     public String buildBoardSelectionMessage(List<Board> boards) {
         StringBuilder message = new StringBuilder();
         message.append("Multiple Jira boards are available. Please enter the ID of the board you'd like to query:\n\n");
@@ -336,7 +338,7 @@ public class JiraAgileService {
                         try {
                             return jiraIssueService.get(issueKey);
                         } catch (Exception exception) {
-                            log.warn("Failed to fetch details for issue {}: {}", issueKey, exception.getMessage());
+                            log.warn("Failed to fetch details for issue {}", issueKey, exception);
                             return null;
                         }
                     }, fetchExecutor))
@@ -347,9 +349,14 @@ public class JiraAgileService {
                     .filter(Objects::nonNull)
                     .toList();
 
+            int failedCount = issueKeys.size() - fullIssues.size();
+            String failureNote = failedCount > 0
+                    ? "Note: %d of %d issues could not be retrieved and are omitted below.".formatted(failedCount, issueKeys.size())
+                    : "";
+
             String issueData = buildIssueDataForLlm(fullIssues);
             String prompt = ISSUE_ENRICHMENT_PROMPT_TEMPLATE.formatted(
-                    userMessage, board.name(), shownCount, total, issueData);
+                    userMessage, board.name(), shownCount, total, failureNote, issueData);
 
             return chatClient.prompt().user(prompt).call().content();
         } finally {

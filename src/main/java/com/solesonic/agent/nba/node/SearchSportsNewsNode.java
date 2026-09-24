@@ -6,6 +6,7 @@ import com.solesonic.service.tavily.TavilySearchService;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(SearchSportsNewsNode.class);
+
+    private static final String OPERATION = "Searching for NBA news";
 
     static final Set<SportsQuestionType> APPLICABLE_INTENTS = Set.of(
             SportsQuestionType.GAME_PREVIEW,
@@ -77,14 +80,15 @@ public class SearchSportsNewsNode implements AsyncNodeAction<SportsState> {
                     summary.append(formatSearchResults(response));
                     summary.append("\n");
                 } catch (Exception exception) {
-                    log.warn("News search failed for query '{}': {}", query, exception.getMessage());
+                    log.warn("News search failed for query '{}'", query, exception);
                     summary.append("=== News: ").append(query).append(" ===\nSearch unavailable.\n\n");
                 }
             }
 
             return completedFuture(Map.of(SportsState.NEWS_SEARCH_SUMMARY, summary.toString()));
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to search NBA news", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 

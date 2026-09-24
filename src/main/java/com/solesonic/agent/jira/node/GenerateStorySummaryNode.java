@@ -1,6 +1,7 @@
 package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateStorySummaryNode.class);
+
+    private static final String OPERATION = "Generating the story summary";
 
     private static final String INPUT = "input";
 
@@ -51,7 +54,7 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
             return completedFuture(Map.of(JiraState.STORY_SUMMARY, summary));
         } catch (Exception exception) {
             log.error("Failed to generate story summary", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

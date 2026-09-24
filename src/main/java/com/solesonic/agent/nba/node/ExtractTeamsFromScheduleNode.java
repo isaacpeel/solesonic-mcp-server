@@ -7,6 +7,7 @@ import com.solesonic.model.espn.EspnCompetition;
 import com.solesonic.model.espn.EspnCompetitor;
 import com.solesonic.model.espn.EspnEvent;
 import com.solesonic.model.espn.EspnScheduleSummary;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class ExtractTeamsFromScheduleNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(ExtractTeamsFromScheduleNode.class);
+
+    private static final String OPERATION = "Extracting teams from the ESPN schedule";
 
     private final EspnTeamRegistry espnTeamRegistry;
 
@@ -71,7 +74,8 @@ public class ExtractTeamsFromScheduleNode implements AsyncNodeAction<SportsState
 
             return completedFuture(Map.of(SportsState.RESOLVED_TEAMS, resolvedTeams));
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to extract teams from schedule", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 

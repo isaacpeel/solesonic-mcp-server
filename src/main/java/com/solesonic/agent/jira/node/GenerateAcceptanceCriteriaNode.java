@@ -1,6 +1,7 @@
 package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateAcceptanceCriteriaNode.class);
+
+    private static final String OPERATION = "Generating acceptance criteria";
 
     private static final String USER_REQUEST = "user_request";
     private static final String USER_STORY = "user_story";
@@ -68,7 +71,7 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
             return completedFuture(Map.of(JiraState.ACCEPTANCE_CRITERIA, acceptanceCriteria));
         } catch (Exception exception) {
             log.error("Failed to generate acceptance criteria", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

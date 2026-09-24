@@ -4,18 +4,22 @@ import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.model.atlassian.agile.BoardColumn;
 import com.solesonic.model.atlassian.agile.BoardConfiguration;
+import com.solesonic.model.atlassian.agile.BoardIssue;
 import com.solesonic.model.atlassian.agile.BoardIssues;
 import com.solesonic.model.atlassian.agile.ColumnConfig;
 import com.solesonic.model.atlassian.agile.ColumnStatus;
+import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.service.atlassian.JiraIssueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
@@ -24,9 +28,13 @@ import reactor.core.publisher.Mono;
 import java.net.URI;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class JiraAgileServiceHelperTest {
@@ -46,12 +54,22 @@ class JiraAgileServiceHelperTest {
     @Mock
     private ChatClient chatClient;
 
+    @Mock
+    private ChatClient.ChatClientRequestSpec chatClientRequestSpec;
+
+    @Mock
+    private ChatClient.CallResponseSpec callResponseSpec;
+
+    @Mock
+    private McpSyncRequestContext mcpSyncRequestContext;
+
     private JiraAgileService service;
 
     @BeforeEach
     void setUp() {
         service = new JiraAgileService(webClient, jiraIssueService, chatClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
+        ReflectionTestUtils.setField(service, "jiraUrlTemplate", "https://example.atlassian.net/browse/{key}");
     }
 
     @Test
@@ -127,6 +145,57 @@ class JiraAgileServiceHelperTest {
         String result = service.handleCountQuery(board, queryResult);
 
         assertThat(result).contains("status in (1, 3, 10001)").contains("11").doesNotContain("all issues");
+    }
+
+    @Test
+    void handleListQuery_someIssuesFailToFetch_notesThePartialFailureForTheUser() {
+        Board board = new Board(1, "self", "My Board", "scrum");
+        AgileQueryIntent queryResult = new AgileQueryIntent(
+                List.of(), "currentUser()", null, null, "", "LIST", null, null);
+        stubBoardIssues(boardIssuesWithKeys("IB-1", "IB-2"));
+
+        when(jiraIssueService.get("IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
+        when(jiraIssueService.get("IB-2")).thenThrow(new RuntimeException("boom"));
+
+        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("formatted response");
+
+        String result = service.handleListQuery(mcpSyncRequestContext, board, queryResult, "list my issues");
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(chatClientRequestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue()).contains("Note: 1 of 2 issues could not be retrieved and are omitted below.");
+        assertThat(result).isEqualTo("formatted response");
+    }
+
+    @Test
+    void handleListQuery_allIssuesFetchSuccessfully_omitsTheFailureNote() {
+        Board board = new Board(1, "self", "My Board", "scrum");
+        AgileQueryIntent queryResult = new AgileQueryIntent(
+                List.of(), "currentUser()", null, null, "", "LIST", null, null);
+        stubBoardIssues(boardIssuesWithKeys("IB-1"));
+
+        when(jiraIssueService.get("IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
+
+        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("formatted response");
+
+        service.handleListQuery(mcpSyncRequestContext, board, queryResult, "list my issues");
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(chatClientRequestSpec).user(promptCaptor.capture());
+        assertThat(promptCaptor.getValue()).doesNotContain("could not be retrieved");
+    }
+
+    private BoardIssues boardIssuesWithKeys(String... keys) {
+        List<BoardIssue> issues = Stream.of(keys)
+                .map(key -> new BoardIssue(key, "self/" + key, key))
+                .toList();
+        return new BoardIssues(null, 0, issues.size(), issues.size(), issues);
     }
 
     /**
