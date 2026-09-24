@@ -9,7 +9,11 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.service.atlassian.AtlassianConstants.*;
@@ -18,8 +22,13 @@ import static com.solesonic.service.atlassian.AtlassianConstants.*;
 public class JiraUserService {
     private final Logger log =  LoggerFactory.getLogger(JiraUserService.class);
 
+    private static final String ALL_USERS_QUERY = "";
+
     @Value("${solesonic.llm.jira.cloud.id.path}")
     private String cloudIdPath;
+
+    @Value("${solesonic.llm.jira.assignee.page-size:100}")
+    private int pageSize;
 
     private final WebClient webClient;
 
@@ -27,15 +36,64 @@ public class JiraUserService {
         this.webClient = webClient;
     }
 
+    /**
+     * The first page of assignable users matching {@code userName}.
+     */
     public List<User> search(String userName) {
         log.info("Searching for user: {}", userName);
+
+        return fetchAssignableUsers(userName, 0);
+    }
+
+    /**
+     * Every assignable user on the project, following Jira's pagination until a short page.
+     */
+    public List<User> listAssignableUsers() {
+        List<User> assignableUsers = new ArrayList<>();
+        Set<String> seenAccountIds = new HashSet<>();
+        int startAt = 0;
+
+        while (true) {
+            List<User> page = fetchAssignableUsers(ALL_USERS_QUERY, startAt);
+
+            int newUserCount = 0;
+
+            for (User user : page) {
+                if (user != null && seenAccountIds.add(user.accountId())) {
+                    assignableUsers.add(user);
+                    newUserCount++;
+                }
+            }
+
+            log.info("Assignable users page at startAt={} returned {} user(s), {} new", startAt, page.size(), newUserCount);
+
+            if (page.size() < pageSize) {
+                break;
+            }
+
+            if (newUserCount == 0) {
+                log.warn("Assignable users page at startAt={} added no new users; stopping pagination", startAt);
+                break;
+            }
+
+            startAt += page.size();
+        }
+
+        log.info("Listed {} assignable user(s) in total", assignableUsers.size());
+
+        return assignableUsers;
+    }
+
+    private List<User> fetchAssignableUsers(String query, int startAt) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, USER_PATH, ASSIGNABLE_PATH, SEARCH_PATH};
 
-        return webClient.get()
+        List<User> users = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
-                        .queryParam(QUERY_PARAM, userName)
+                        .queryParam(QUERY_PARAM, query)
                         .queryParam(PROJECT_PARAM, PROJECT_ID)
+                        .queryParam(START_AT_PARAM, startAt)
+                        .queryParam(MAX_RESULTS_PARAM, pageSize)
                         .build())
                 .exchangeToMono(response -> {
                     log.info("Request URI: {}", response.request().getURI());
@@ -43,5 +101,6 @@ public class JiraUserService {
                 })
                 .block();
 
+        return Objects.requireNonNullElse(users, List.of());
     }
 }

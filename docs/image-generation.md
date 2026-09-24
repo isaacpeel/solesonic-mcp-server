@@ -130,6 +130,7 @@ Configuration
 | `comfyui.generation.timeout-seconds` | `180` | Deadline for a whole generation |
 | `comfyui.generation.poll-interval-millis` | `1000` | Delay between history polls |
 | `comfyui.generation.expected-seconds` | `12` | Drives the progress ramp |
+| `comfyui.generation.release-memory-delay-millis` | `300000` | Delay before calling `/free` after the last generation |
 | `spring.datasource.url` | `${DATABASE_URL}` | Postgres holding `comfy_workflow` |
 
 Environment variables
@@ -181,6 +182,7 @@ Troubleshooting
 | Connection failures within 30s | ComfyUI unreachable | `curl https://<comfyui-host>/system_stats` from the server host |
 
 Operational notes
+- After each generation, the service schedules a call to `/free` (unloading the model and releasing VRAM) `comfyui.generation.release-memory-delay-millis` later. A generation that lands before that delay elapses cancels and reschedules it, so `/free` fires at most once — always that delay after the *last* generation — instead of forcing a reload between back-to-back requests.
 - The poll loop blocks a request thread for the duration of the generation. That is acceptable at 5–15 seconds and is bounded by `comfyui.generation.timeout-seconds`, but it is the constraint that would push toward async task handoff if a slower model (e.g. FLUX.1-dev) were adopted.
 - A 1024×1024 PNG is roughly 2MB once base64-encoded. The ComfyUI WebClient raises its in-memory codec limit to 32MB so there is headroom if larger sizes are ever enabled.
 - Workflows are read from the database **once at startup**. Editing a row has no effect until the server restarts.

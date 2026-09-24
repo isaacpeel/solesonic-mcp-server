@@ -38,6 +38,7 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.timeout-seconds=180
   - comfyui.generation.poll-interval-millis=1000
   - comfyui.generation.expected-seconds=12
+  - comfyui.generation.release-memory-delay-millis=300000
   - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
 - Database (PostgreSQL)
   - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server
@@ -49,6 +50,8 @@ Key properties (environment variables in parentheses)
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
   - solesonic.llm.jira.cloud.id.path=(${JIRA_CLOUD_ID_PATH})
+  - solesonic.llm.jira.assignee.page-size=100
+    - Assignable users requested per page. A name search reads one page. The `create_jira_story` assignee picker pages through every assignable user, so this sets the request size, not a limit on the list. See ./elicitation.md.
 - Gmail
   - google.api.uri=https://gmail.googleapis.com
 

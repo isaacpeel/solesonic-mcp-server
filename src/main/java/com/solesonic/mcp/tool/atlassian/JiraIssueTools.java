@@ -3,6 +3,8 @@ package com.solesonic.mcp.tool.atlassian;
 import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.agent.jira.JiraGraphConfig;
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.agent.model.AssigneeCandidate;
+import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
 import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraIssueService;
@@ -40,17 +42,22 @@ public class JiraIssueTools {
     private static final String CREATE_JIRA_STORY_DESCRIPTION = """
             A guided workflow that generates a complete Jira story from a natural language description.
             Produces a summary, detailed description, acceptance criteria, and resolves the assignee before creating the issue.
+            If the assignee cannot be determined, the user is asked to pick one; the story is not created without an assignee.
             """;
 
     private final JiraIssueService jiraIssueService;
     private final CompiledGraph<JiraState> jiraCreateGraph;
+    private final JiraAssigneeElicitation jiraAssigneeElicitation;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    public JiraIssueTools(JiraIssueService jiraIssueService, CompiledGraph<JiraState> jiraCreateGraph) {
+    public JiraIssueTools(JiraIssueService jiraIssueService,
+                          CompiledGraph<JiraState> jiraCreateGraph,
+                          JiraAssigneeElicitation jiraAssigneeElicitation) {
         this.jiraIssueService = jiraIssueService;
         this.jiraCreateGraph = jiraCreateGraph;
+        this.jiraAssigneeElicitation = jiraAssigneeElicitation;
     }
 
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {
@@ -161,12 +168,34 @@ public class JiraIssueTools {
 
         JiraState finalState = finalStateRef.get();
 
-        if (finalState.assigneeNotResolved().orElse(false)) {
-            return "Could not resolve an assignee from the description. Please clarify who the story should be assigned to and try again.";
-        }
-
         JiraIssueCreatePayload payload = finalState.finalPayload().orElseThrow(
                 () -> new IllegalStateException("Graph completed without assembling a Jira payload"));
+
+        if (finalState.assigneeNotResolved().orElse(false)) {
+            progressReporter.emit(80, "Waiting for an assignee to be chosen…");
+
+            List<AssigneeCandidate> matchingCandidates = finalState.assigneeCandidates().orElse(List.of());
+
+            JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(
+                    mcpSyncRequestContext, matchingCandidates, Map.of(CHAT_ID, conversationId));
+
+            switch (selection) {
+                case JiraAssigneeElicitation.Selection.Selected selected ->
+                        payload = withAssignee(payload, selected.assigneeLookupResult());
+                case JiraAssigneeElicitation.Selection.Declined _ -> {
+                    return "Story not created: Jira requires an assignee and none was selected.";
+                }
+                case JiraAssigneeElicitation.Selection.Cancelled _ -> {
+                    return "Story creation cancelled.";
+                }
+                case JiraAssigneeElicitation.Selection.NoCandidates _ -> {
+                    return "Story not created: Jira returned no assignable users for the project, and Jira requires an assignee.";
+                }
+                case JiraAssigneeElicitation.Selection.InvalidSelection _ -> {
+                    return "Story not created: the selected assignee is not an assignable Jira user.";
+                }
+            }
+        }
 
         JiraIssue createdIssue = jiraIssueService.create(jiraIssueService.convert(payload));
         String issueKey = createdIssue.key();
@@ -174,6 +203,15 @@ public class JiraIssueTools {
         log.info("Jira story created: {}", issueKey);
 
         return "Created Jira story %s: %s".formatted(issueKey, jiraUrlTemplate.formatted(issueKey));
+    }
+
+    private static JiraIssueCreatePayload withAssignee(JiraIssueCreatePayload payload, AssigneeLookupResult assigneeLookupResult) {
+        return new JiraIssueCreatePayload(
+                payload.summary(),
+                payload.description(),
+                payload.acceptanceCriteria(),
+                assigneeLookupResult
+        );
     }
 
     private static String extractConversationId(McpSyncRequestContext mcpSyncRequestContext) {

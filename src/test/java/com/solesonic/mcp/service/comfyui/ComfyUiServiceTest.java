@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -158,7 +159,7 @@ class ComfyUiServiceTest {
 
         service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
-        assertThat(freeCallCount).hasValue(1);
+        awaitFreeCallCount(1);
     }
 
     /**
@@ -174,11 +175,43 @@ class ComfyUiServiceTest {
         GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
-        assertThat(freeCallCount).hasValue(1);
+        awaitFreeCallCount(1);
+    }
+
+    /**
+     * {@code /free} is debounced: a generation that lands before the previous release delay
+     * elapses must cancel and reschedule it, rather than letting both fire.
+     */
+    @Test
+    void generate_calledTwiceQuickly_releasesMemoryOnlyOnceAfterLastCall() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        ComfyUiService comfyUiService = service(180);
+        comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
+        comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        awaitFreeCallCount(1);
     }
 
     private ComfyUiService service(long generationTimeoutSeconds) {
-        return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0);
+        return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0, 50L);
+    }
+
+    /**
+     * The release delay is real (50ms in tests, per {@code application-test.properties}), so
+     * asserting on it requires polling rather than a synchronous check.
+     */
+    private void awaitFreeCallCount(int expected) {
+        long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+
+        while (freeCallCount.get() != expected && System.nanoTime() < deadlineNanos) {
+            Thread.onSpinWait();
+        }
+
+        assertThat(freeCallCount).hasValue(expected);
     }
 
     private ImageGenerationRequest request() {

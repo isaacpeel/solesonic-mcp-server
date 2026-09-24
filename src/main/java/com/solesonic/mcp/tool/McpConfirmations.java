@@ -23,13 +23,24 @@ public final class McpConfirmations {
     }
 
     public static ElicitResult confirm(McpSyncRequestContext context, String message, Map<String, Object> meta) {
-        return elicit(context, ElicitFormRequest.builder(message, CONFIRMATION_SCHEMA)
-                .meta(meta)
-                .build());
+        return elicit(context, message, CONFIRMATION_SCHEMA, meta);
     }
 
     public static ElicitResult confirm(McpSyncRequestContext context, String message) {
-        return elicit(context, ElicitFormRequest.builder(message, CONFIRMATION_SCHEMA)
+        return send(context, ElicitFormRequest.builder(message, CONFIRMATION_SCHEMA)
+                .build());
+    }
+
+    /**
+     * Asks the user to fill in a form described by {@code requestedSchema}, with the same failure
+     * handling as {@link #confirm(McpSyncRequestContext, String, Map)}.
+     */
+    public static ElicitResult elicit(McpSyncRequestContext context,
+                                      String message,
+                                      Map<String, Object> requestedSchema,
+                                      Map<String, Object> meta) {
+        return send(context, ElicitFormRequest.builder(message, requestedSchema)
+                .meta(meta)
                 .build());
     }
 
@@ -45,7 +56,7 @@ public final class McpConfirmations {
      * chat id that correlates it to the client's own elicitation records, is what makes that
      * traceable end to end.
      */
-    private static ElicitResult elicit(McpSyncRequestContext context, ElicitRequest elicitRequest) {
+    private static ElicitResult send(McpSyncRequestContext context, ElicitRequest elicitRequest) {
         try {
             return context.elicit(elicitRequest);
         } catch (Exception exception) {

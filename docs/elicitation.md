@@ -76,6 +76,33 @@ Interactive confirmations (MCP elicitation protocol)
 - Callers branch on `ElicitResult.Action` (`ACCEPT` / `DECLINE` / `CANCEL`). Call sites: `JiraIssueTools.deleteJiraIssue`, and the pagination and bulk-transition paths in `JiraAgileService`.
 - The confirmation carries a `chatId` in the request `_meta` so the answer can be correlated back to the originating conversation on the client side.
 
+Assignee picker (`create_jira_story`)
+- Jira rejects issues without an assignee, so when the story workflow cannot settle one, `JiraAssigneeElicitation` asks the user to choose via `McpConfirmations.elicit(...)` before the issue is created.
+- It asks in two cases:
+  - Nobody matched, or the request named nobody (the assignee lookup prompt returns `NONE`): every assignable user in the project is offered. The list is read page by page (`solesonic.llm.jira.assignee.page-size` per request) until Jira returns a short page, so it isn't cut off.
+  - The search matched more than one user: only those matches are offered.
+- Schema: a single required string property whose choices use the titled-enum form:
+  ```
+  {
+    "type": "object",
+    "properties": {
+      "assigneeAccountId": {
+        "type": "string",
+        "title": "Assignee",
+        "oneOf": [ { "const": "<accountId>", "title": "<displayName>" } ]
+      }
+    },
+    "required": ["assigneeAccountId"]
+  }
+  ```
+- Outcomes. The story is created only on a valid `ACCEPT`:
+  - `ACCEPT` with an offered account id: the story is created with that assignee.
+  - `DECLINE`, `CANCEL`, an account id that was not offered, or no assignable users: nothing is created and the tool returns a message saying why.
+- As a final guard, `JiraIssueService.convert(...)` throws a `JiraException` for a payload with no assignee id, so no caller can send an unassigned issue to Jira.
+- Logging:
+  - `AssigneeResolutionService` logs the extracted search term, the match count, and a WARN (with the abbreviated request) for an empty, ambiguous, or missing assignee.
+  - `JiraAssigneeElicitation` logs what was offered and what the user chose, with the `chatId`.
+
 Request timeout — why this matters
 - `spring.ai.mcp.server.request-timeout` (in `application.properties`, currently `600s`) bounds every **server-initiated** request, elicitation included. It does not affect tool execution or inbound client requests.
 - Spring AI defaults this to **20 seconds**. That default is far too short for a prompt a human has to read and answer, and the failure mode is not a clean timeout:

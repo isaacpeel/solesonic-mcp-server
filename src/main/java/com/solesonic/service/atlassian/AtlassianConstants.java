@@ -6,6 +6,8 @@ public class AtlassianConstants {
     public static final String SEARCH_PATH = "search";
     public static final String QUERY_PARAM = "query";
     public static final String PROJECT_PARAM = "project";
+    public static final String MAX_RESULTS_PARAM = "maxResults";
+    public static final String START_AT_PARAM = "startAt";
     public static final String PROJECT_ID = "10000";
     public static final String ISSUE_TYPE_ID = "10001";
 

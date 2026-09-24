@@ -1,8 +1,7 @@
 package com.solesonic.agent.jira.node;
 
-import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.agent.jira.JiraState;
-import com.solesonic.agent.model.AssigneeLookupResult;
+import com.solesonic.agent.model.AssigneeResolution;
 import com.solesonic.service.atlassian.AssigneeResolutionService;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
@@ -35,16 +34,32 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
 
             log.info("Resolving assignee for: {}", userMessage);
 
-            AssigneeLookupResult assigneeLookupResult = assigneeResolutionService.resolve(userMessage);
+            AssigneeResolution assigneeResolution = assigneeResolutionService.resolve(userMessage);
 
             Map<String, Object> updates = new HashMap<>();
-            updates.put(JiraState.ASSIGNEE_LOOKUP_RESULT, assigneeLookupResult);
-            updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, false);
-            return completedFuture(updates);
-        } catch (JiraException jiraException) {
-            log.warn("Assignee could not be resolved: {}", jiraException.getMessage());
-            Map<String, Object> updates = new HashMap<>();
-            updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
+
+            switch (assigneeResolution) {
+                case AssigneeResolution.Resolved resolved -> {
+                    updates.put(JiraState.ASSIGNEE_LOOKUP_RESULT, resolved.assigneeLookupResult());
+                    updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, false);
+                }
+                case AssigneeResolution.Ambiguous ambiguous -> {
+                    log.info("Assignee not resolved: {} users match \"{}\"; the user will choose between them",
+                            ambiguous.candidates().size(), ambiguous.searchTerm());
+                    updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
+                    updates.put(JiraState.ASSIGNEE_CANDIDATES, ambiguous.candidates());
+                }
+                case AssigneeResolution.NotFound notFound -> {
+                    log.info("Assignee not resolved: nobody matches \"{}\"; the user will pick from every assignable user",
+                            notFound.searchTerm());
+                    updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
+                }
+                case AssigneeResolution.NotRequested _ -> {
+                    log.info("Assignee not resolved: the request names nobody; the user will pick from every assignable user");
+                    updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
+                }
+            }
+
             return completedFuture(updates);
         } catch (Exception exception) {
             log.error("Failed to resolve assignee", exception);

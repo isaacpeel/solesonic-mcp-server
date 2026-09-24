@@ -1,5 +1,6 @@
 package com.solesonic.agent.jira;
 
+import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
 import org.bsc.langgraph4j.state.AgentState;
@@ -17,6 +18,7 @@ public class JiraState extends AgentState {
     public static final String ACCEPTANCE_CRITERIA    = "acceptanceCriteria";
     public static final String ASSIGNEE_LOOKUP_RESULT = "assigneeLookupResult";
     public static final String ASSIGNEE_NOT_RESOLVED  = "assigneeNotResolved";
+    public static final String ASSIGNEE_CANDIDATES    = "assigneeCandidates";
     public static final String FINAL_PAYLOAD          = "finalPayload";
 
     public JiraState(Map<String, Object> initData) {
@@ -51,7 +53,10 @@ public class JiraState extends AgentState {
         return value(ASSIGNEE_NOT_RESOLVED);
     }
 
-    @SuppressWarnings("unused")
+    public Optional<List<AssigneeCandidate>> assigneeCandidates() {
+        return value(ASSIGNEE_CANDIDATES);
+    }
+
     public Optional<JiraIssueCreatePayload> finalPayload() {
         return value(FINAL_PAYLOAD);
     }

@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.mcp.annotation.context.DefaultMcpSyncRequestContext;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -88,6 +89,44 @@ class McpConfirmationsTest {
         verify(exchange).createElicitation(captor.capture());
         assertThat(captor.getValue().message()).isEqualTo(PROMPT);
         assertThat(captor.getValue().meta()).isNull();
+    }
+
+    @Test
+    void elicitSendsTheCallersSchemaAndMeta() {
+        ElicitResult accepted = mock(ElicitResult.class);
+        when(accepted.action()).thenReturn(ElicitResult.Action.ACCEPT);
+        when(exchange.createElicitation(any(ElicitRequest.class))).thenReturn(accepted);
+
+        Map<String, Object> requestedSchema = Map.of(
+                "type", "object",
+                "properties", Map.of("assigneeAccountId", Map.of("type", "string")),
+                "required", List.of("assigneeAccountId")
+        );
+
+        ElicitResult result = McpConfirmations.elicit(context, PROMPT, requestedSchema, Map.of(CHAT_ID, "test-chat-id"));
+
+        assertThat(result.action()).isEqualTo(ElicitResult.Action.ACCEPT);
+
+        ArgumentCaptor<ElicitFormRequest> captor = ArgumentCaptor.forClass(ElicitFormRequest.class);
+        verify(exchange).createElicitation(captor.capture());
+        ElicitFormRequest sentRequest = captor.getValue();
+
+        assertThat(sentRequest.message()).isEqualTo(PROMPT);
+        assertThat(sentRequest.requestedSchema()).isEqualTo(requestedSchema);
+        assertThat(sentRequest.meta()).containsEntry(CHAT_ID, "test-chat-id");
+    }
+
+    @Test
+    void elicitTimeoutIsWrappedLikeAConfirmation() {
+        when(exchange.createElicitation(any(ElicitRequest.class)))
+                .thenThrow(new RuntimeException(new TimeoutException("timed out")));
+
+        Map<String, Object> requestedSchema = Map.of("type", "object", "properties", Map.of());
+
+        assertThatThrownBy(() -> McpConfirmations.elicit(context, PROMPT, requestedSchema, Map.of(CHAT_ID, "test-chat-id")))
+                .isInstanceOf(McpToolFailureException.class)
+                .hasMessageContaining(PROMPT)
+                .hasMessageContaining("timed out");
     }
 
     @Test

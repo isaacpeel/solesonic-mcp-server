@@ -18,9 +18,11 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
@@ -59,17 +61,22 @@ public class ComfyUiService {
     private final long generationTimeoutSeconds;
     private final long pollIntervalMillis;
     private final double expectedSeconds;
+    private final Duration releaseMemoryDelay;
+
+    private Disposable pendingMemoryRelease;
 
     public ComfyUiService(
             @Qualifier(COMFY_UI_WEB_CLIENT) WebClient webClient,
             @Value("${comfyui.generation.timeout-seconds}") long generationTimeoutSeconds,
             @Value("${comfyui.generation.poll-interval-millis}") long pollIntervalMillis,
-            @Value("${comfyui.generation.expected-seconds}") double expectedSeconds
+            @Value("${comfyui.generation.expected-seconds}") double expectedSeconds,
+            @Value("${comfyui.generation.release-memory-delay-millis}") long releaseMemoryDelayMillis
     ) {
         this.webClient = webClient;
         this.generationTimeoutSeconds = generationTimeoutSeconds;
         this.pollIntervalMillis = pollIntervalMillis;
         this.expectedSeconds = expectedSeconds;
+        this.releaseMemoryDelay = Duration.ofMillis(releaseMemoryDelayMillis);
     }
 
     /**
@@ -102,7 +109,7 @@ public class ComfyUiService {
 
         String base64Png = Base64.getEncoder().encodeToString(download(imageReference));
 
-        releaseMemory();
+        scheduleReleaseMemory();
 
         double elapsedSeconds = elapsedSeconds(startNanos);
 
@@ -119,6 +126,27 @@ public class ComfyUiService {
                 .base64Png(base64Png)
                 .elapsedSeconds(elapsedSeconds)
                 .build();
+    }
+
+    /**
+     * Debounces {@link #releaseMemory()}: each call cancels whatever release was previously
+     * pending and schedules a new one {@code releaseMemoryDelay} out, so back-to-back generations
+     * never force ComfyUI to reload the model between requests — {@code /free} only fires once
+     * {@code releaseMemoryDelay} has passed since the *last* generation.
+     *
+     * <p>{@code synchronized} because {@code generate()} can run concurrently for different
+     * requests: cancelling the previous timer and installing the new one must happen as one
+     * atomic step, otherwise two racing calls can interleave such that the earlier call's timer
+     * survives instead of the later one's.
+     */
+    private synchronized void scheduleReleaseMemory() {
+        if (pendingMemoryRelease != null) {
+            pendingMemoryRelease.dispose();
+        }
+
+        pendingMemoryRelease = Mono.delay(releaseMemoryDelay)
+                .then(Mono.fromRunnable(this::releaseMemory))
+                .subscribe();
     }
 
     /**

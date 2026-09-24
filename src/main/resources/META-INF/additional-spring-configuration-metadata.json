@@ -11,6 +11,12 @@
       "description": "Template for returning a user clickable Jira Issue URL."
     },
     {
+      "name": "solesonic.llm.jira.assignee.page-size",
+      "type": "java.lang.Integer",
+      "description": "Number of assignable Jira users requested per page. A name search reads one page; the create_jira_story assignee picker pages through every assignable user.",
+      "defaultValue": 100
+    },
+    {
       "name": "google.api.uri",
       "type": "java.lang.String",
       "description": "Base URI of the Gmail API."
@@ -59,6 +65,11 @@
       "name": "comfyui.generation.expected-seconds",
       "type": "java.lang.Double",
       "description": "Expected generation duration used to ramp the progress estimate."
+    },
+    {
+      "name": "comfyui.generation.release-memory-delay-millis",
+      "type": "java.lang.Long",
+      "description": "How long to wait after the last generation before calling ComfyUI's /free endpoint; reset by every new generation."
     }
   ]
 }

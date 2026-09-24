@@ -2,6 +2,7 @@ package com.solesonic.service.atlassian;
 
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
+import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
 import com.solesonic.model.atlassian.jira.*;
 import org.apache.commons.lang3.StringUtils;
@@ -178,13 +179,24 @@ public class JiraIssueService {
         log.info("Issue {} transitioned successfully", issueKey);
     }
 
-    @SuppressWarnings("unused")
+    /**
+     * Builds the Jira create request for a story. Jira rejects issues without an assignee, so a
+     * payload without one is refused here rather than sent.
+     */
     public JiraIssue convert(JiraIssueCreatePayload jiraIssueCreatePayload) {
+        AssigneeLookupResult assigneeLookupResult = jiraIssueCreatePayload.assigneeLookupResult();
+
+        if (assigneeLookupResult == null || assigneeLookupResult.assigneeId() == null || assigneeLookupResult.assigneeId().isBlank()) {
+            log.warn("Refusing to build Jira story \"{}\" without an assignee", jiraIssueCreatePayload.summary());
+            throw new JiraException("Cannot create Jira story \"%s\" without an assignee; Jira requires one."
+                    .formatted(jiraIssueCreatePayload.summary()));
+        }
+
         JiraIssueTools.CreateJiraRequest createJiraRequest = new JiraIssueTools.CreateJiraRequest(
                 jiraIssueCreatePayload.summary(),
                 jiraIssueCreatePayload.description(),
                 jiraIssueCreatePayload.acceptanceCriteria(),
-                jiraIssueCreatePayload.assigneeLookupResult().assigneeId());
+                assigneeLookupResult.assigneeId());
 
         TextContent descriptionText = TextContent.text(createJiraRequest.description())
                 .type(TEXT)

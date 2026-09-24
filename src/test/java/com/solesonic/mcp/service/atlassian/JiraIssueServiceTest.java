@@ -1,5 +1,7 @@
 package com.solesonic.mcp.service.atlassian;
 
+import com.solesonic.agent.model.AssigneeLookupResult;
+import com.solesonic.agent.model.JiraIssueCreatePayload;
 import com.solesonic.mcp.exception.atlassian.JiraException;
 import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraIssueService;
@@ -13,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.List;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -75,6 +78,36 @@ class JiraIssueServiceTest {
 
         assertEquals("123", created.id());
         assertEquals("ISSUE-2", created.key());
+    }
+
+    @Test
+    void convert_withoutAnAssignee_isRefused() {
+        JiraIssueCreatePayload payload = new JiraIssueCreatePayload("Login page", "Build it", List.of("It works"), null);
+
+        JiraException exception = assertThrows(JiraException.class, () -> service.convert(payload));
+
+        assertTrue(exception.getMessage().contains("without an assignee"));
+        assertTrue(exception.getMessage().contains("Login page"));
+        verifyNoInteractions(webClient);
+    }
+
+    @Test
+    void convert_withABlankAssigneeId_isRefused() {
+        AssigneeLookupResult blankAssignee = new AssigneeLookupResult(true, " ", "RESOLVED", "Nobody");
+        JiraIssueCreatePayload payload = new JiraIssueCreatePayload("Login page", "Build it", List.of("It works"), blankAssignee);
+
+        assertThrows(JiraException.class, () -> service.convert(payload));
+    }
+
+    @Test
+    void convert_withAnAssignee_setsTheAssigneeAccountId() {
+        AssigneeLookupResult assignee = new AssigneeLookupResult(true, "acc-1", "RESOLVED", "Bob");
+        JiraIssueCreatePayload payload = new JiraIssueCreatePayload("Login page", "Build it", List.of("It works"), assignee);
+
+        JiraIssue jiraIssue = service.convert(payload);
+
+        assertEquals("acc-1", jiraIssue.fields().assignee().accountId());
+        assertEquals("Login page", jiraIssue.fields().summary());
     }
 
     @Test
