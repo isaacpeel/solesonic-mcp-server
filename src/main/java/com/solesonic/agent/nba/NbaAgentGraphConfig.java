@@ -11,6 +11,7 @@ import com.solesonic.agent.nba.node.SearchCurrentScheduleNode;
 import com.solesonic.agent.nba.node.SearchSportsNewsNode;
 import com.solesonic.agent.nba.node.SearchStatisticsNode;
 import com.solesonic.agent.nba.node.SynthesizeSportsAnalysisNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
@@ -56,7 +57,8 @@ public class NbaAgentGraphConfig {
             SearchCurrentScheduleNode searchCurrentScheduleNode,
             SearchSportsNewsNode searchSportsNewsNode,
             SearchStatisticsNode searchStatisticsNode,
-            SynthesizeSportsAnalysisNode synthesizeSportsAnalysisNode
+            SynthesizeSportsAnalysisNode synthesizeSportsAnalysisNode,
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         return new StateGraph<>(SportsState::new)
@@ -114,7 +116,7 @@ public class NbaAgentGraphConfig {
                 .addEdge(FETCH_ESPN_ROSTER, SEARCH_STATS)
 
                 .addEdge(SYNTHESIZE_ANALYSIS, END)
-                .compile();
+                .compile(graphCompileConfig);
     }
 
     private static String routeByIntent(SportsState state) {

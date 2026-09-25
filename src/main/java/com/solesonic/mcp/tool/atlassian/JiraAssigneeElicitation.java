@@ -2,6 +2,7 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.mcp.tool.McpConfirmations;
 import com.solesonic.service.atlassian.AssigneeResolutionService;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
@@ -58,14 +59,15 @@ public class JiraAssigneeElicitation {
      * @param matchingCandidates the users an ambiguous search matched; empty when nobody matched or
      *                           nobody was named, in which case every assignable user is offered
      */
-    public Selection selectAssignee(McpSyncRequestContext context,
+    public Selection selectAssignee(CallerIdentity callerIdentity,
+                                    McpSyncRequestContext context,
                                     List<AssigneeCandidate> matchingCandidates,
                                     Map<String, Object> meta) {
         boolean ambiguous = !matchingCandidates.isEmpty();
 
         List<AssigneeCandidate> candidates = ambiguous
                 ? matchingCandidates
-                : assigneeResolutionService.listAssigneeCandidates();
+                : assigneeResolutionService.listAssigneeCandidates(callerIdentity);
 
         if (candidates.isEmpty()) {
             log.warn("Cannot ask for an assignee: Jira returned no assignable users. meta={}", meta);

@@ -4,6 +4,7 @@ import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.node.FanOutNode;
 import com.solesonic.agent.nba.node.MetaSynthesizeNode;
 import com.solesonic.agent.nba.node.ParseSportsIntentNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
@@ -19,6 +20,8 @@ import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 
 @Configuration
 public class NbaOrchestratorGraphConfig {
+
+    public static final String GRAPH_NAME = "nba";
 
     public static final String PARSE_SPORTS_INTENT = NbaAgentGraphConfig.PARSE_SPORTS_INTENT;
     public static final String FAN_OUT = "fanOut";
@@ -49,7 +52,8 @@ public class NbaOrchestratorGraphConfig {
             @Qualifier("nbaGamePreviewGraph") CompiledGraph<SportsState> nbaGamePreviewGraph,
             @Qualifier("nbaPlayerGraph") CompiledGraph<SportsState> nbaPlayerGraph,
             FanOutNode fanOutNode,
-            MetaSynthesizeNode metaSynthesizeNode
+            MetaSynthesizeNode metaSynthesizeNode,
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         return new StateGraph<>(SportsState::new)
@@ -89,7 +93,7 @@ public class NbaOrchestratorGraphConfig {
                 // Multi-type route: fan out, then meta-synthesize the combined results
                 .addEdge(FAN_OUT, META_SYNTHESIZE)
                 .addEdge(META_SYNTHESIZE, END)
-                .compile();
+                .compile(graphCompileConfig);
     }
 
     private static String routeByIntent(SportsState state) {

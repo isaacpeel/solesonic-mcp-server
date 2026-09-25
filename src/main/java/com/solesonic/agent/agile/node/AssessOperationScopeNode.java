@@ -64,7 +64,7 @@ public class AssessOperationScopeNode implements AsyncNodeAction<AgileState> {
                     false
             );
 
-            var boardIssues = jiraAgileService.getBoardIssues(boardIssuesRequest);
+            var boardIssues = jiraAgileService.getBoardIssues(state.requireCallerIdentity(), boardIssuesRequest);
             int totalCount = boardIssues.total() != null ? boardIssues.total() : 0;
             boolean needsBatching = totalCount > BATCH_THRESHOLD;
 

@@ -3,13 +3,13 @@ package com.solesonic.agent.jira;
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
-import org.bsc.langgraph4j.state.AgentState;
+import com.solesonic.agent.state.IdentifiedAgentState;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class JiraState extends AgentState {
+public class JiraState extends IdentifiedAgentState {
 
     public static final String USER_MESSAGE           = "userMessage";
     public static final String CONVERSATION_ID        = "conversationId";

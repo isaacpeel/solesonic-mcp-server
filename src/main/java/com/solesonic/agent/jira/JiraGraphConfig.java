@@ -7,7 +7,6 @@ import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
-import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,6 +15,8 @@ import static org.bsc.langgraph4j.GraphDefinition.START;
 
 @Configuration
 public class JiraGraphConfig {
+
+    public static final String GRAPH_NAME = "jira-create";
 
     public static final String GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE = "generateContentAndResolveAssignee";
     public static final String AWAIT_ASSIGNEE_SELECTION = "awaitAssigneeSelection";
@@ -26,7 +27,7 @@ public class JiraGraphConfig {
             ParallelContentAndAssigneeNode parallelContentAndAssigneeNode,
             AwaitAssigneeSelectionNode awaitAssigneeSelectionNode,
             AssembleJiraPayloadNode assembleJiraPayloadNode,
-            MemorySaver jiraAssigneeCheckpointSaver
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         return new StateGraph<>(JiraState::new)
@@ -39,8 +40,6 @@ public class JiraGraphConfig {
                 .addEdge(AWAIT_ASSIGNEE_SELECTION, ASSEMBLE_PAYLOAD)
                 .addEdge(ASSEMBLE_PAYLOAD, END)
 
-                .compile(CompileConfig.builder()
-                        .checkpointSaver(jiraAssigneeCheckpointSaver)
-                        .build());
+                .compile(graphCompileConfig);
     }
 }

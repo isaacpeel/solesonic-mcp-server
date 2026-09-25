@@ -3,6 +3,7 @@ package com.solesonic.mcp.service.google;
 import com.solesonic.mcp.exception.google.GmailException;
 import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.mcp.exception.google.GmailMessageNotFoundException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.google.gmail.GmailMessageBody;
 import com.solesonic.model.google.gmail.GmailMessageSummary;
 import com.solesonic.service.google.GmailMessageService;
@@ -21,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,14 +41,18 @@ import static org.springframework.http.HttpStatus.OK;
  */
 class GmailMessageServiceTest {
 
+    private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
+
     private final Deque<ClientResponse> queuedResponses = new ArrayDeque<>();
     private final List<URI> requestedUris = new ArrayList<>();
+    private final List<Optional<CallerIdentity>> requestedCallers = new ArrayList<>();
 
     private GmailMessageService service() {
         WebClient webClient = WebClient.builder()
                 .baseUrl("https://gmail.googleapis.com")
                 .exchangeFunction(clientRequest -> {
                     requestedUris.add(clientRequest.url());
+                    requestedCallers.add(CallerIdentity.from(clientRequest));
 
                     return Mono.just(queuedResponses.removeFirst());
                 })
@@ -89,7 +96,7 @@ class GmailMessageServiceTest {
                 {"name":"Date","value":"Sun, 17 Aug 2026 12:00:00 -0500"}
                 """));
 
-        List<GmailMessageSummary> summaries = service().listInboxMessages(10);
+        List<GmailMessageSummary> summaries = service().listInboxMessages(CALLER,10);
 
         assertEquals(2, summaries.size());
 
@@ -102,11 +109,22 @@ class GmailMessageServiceTest {
     }
 
     @Test
+    void listInboxMessages_carriesTheCallerOnTheListAndEveryMetadataRequest() {
+        queue(OK, "{\"messages\":[{\"id\":\"m1\",\"threadId\":\"t1\"},{\"id\":\"m2\",\"threadId\":\"t2\"}]}");
+        queue(OK, metadataJson("m1", "{\"name\":\"Subject\",\"value\":\"One\"}"));
+        queue(OK, metadataJson("m2", "{\"name\":\"Subject\",\"value\":\"Two\"}"));
+
+        service().listInboxMessages(CALLER, 2);
+
+        assertEquals(List.of(Optional.of(CALLER), Optional.of(CALLER), Optional.of(CALLER)), requestedCallers);
+    }
+
+    @Test
     void listInboxMessages_buildsExpectedUris() {
         queue(OK, "{\"messages\":[{\"id\":\"m1\",\"threadId\":\"t1\"}]}");
         queue(OK, metadataJson("m1", "{\"name\":\"Subject\",\"value\":\"Hello\"}"));
 
-        service().listInboxMessages(3);
+        service().listInboxMessages(CALLER,3);
 
         String listUri = requestedUris.getFirst().toString();
         assertTrue(listUri.contains("/gmail/v1/users/me/messages"), listUri);
@@ -129,7 +147,7 @@ class GmailMessageServiceTest {
                 {"name":"FROM","value":"shouty@example.com"}
                 """));
 
-        GmailMessageSummary summary = service().listInboxMessages(1).getFirst();
+        GmailMessageSummary summary = service().listInboxMessages(CALLER,1).getFirst();
 
         assertEquals("Lowercase header", summary.subject());
         assertEquals("shouty@example.com", summary.from());
@@ -140,7 +158,7 @@ class GmailMessageServiceTest {
         queue(OK, "{\"messages\":[{\"id\":\"m1\",\"threadId\":\"t1\"}]}");
         queue(OK, metadataJson("m1", "{\"name\":\"Date\",\"value\":\"Mon, 18 Aug 2026 09:00:00 -0500\"}"));
 
-        GmailMessageSummary summary = service().listInboxMessages(1).getFirst();
+        GmailMessageSummary summary = service().listInboxMessages(CALLER,1).getFirst();
 
         assertEquals("(no subject)", summary.subject());
         assertEquals("(unknown sender)", summary.from());
@@ -151,7 +169,7 @@ class GmailMessageServiceTest {
     void listInboxMessages_returnsEmptyList_whenGmailOmitsTheMessagesField() {
         queue(OK, "{\"resultSizeEstimate\":0}");
 
-        assertEquals(List.of(), service().listInboxMessages(10));
+        assertEquals(List.of(), service().listInboxMessages(CALLER,10));
         assertEquals(1, requestedUris.size());
     }
 
@@ -159,7 +177,7 @@ class GmailMessageServiceTest {
     void listInboxMessages_throwsGmailException_whenTheListCallFails() {
         queue(INTERNAL_SERVER_ERROR, "{\"error\":{\"message\":\"backend error\"}}");
 
-        GmailException exception = assertThrows(GmailException.class, () -> service().listInboxMessages(10));
+        GmailException exception = assertThrows(GmailException.class, () -> service().listInboxMessages(CALLER,10));
 
         assertTrue(exception.getMessage().contains("Failed to list messages for label"));
         assertTrue(exception.getResponseBody().contains("backend error"));
@@ -174,7 +192,7 @@ class GmailMessageServiceTest {
         queue(OK, "{\"messages\":[{\"id\":\"m1\",\"threadId\":\"t1\"}]}");
         queue(OK, metadataJson("m1", "{\"name\":\"Subject\",\"value\":\"Your receipt\"}"));
 
-        List<GmailMessageSummary> summaries = service().listMessagesByLabel("Receipts", 5);
+        List<GmailMessageSummary> summaries = service().listMessagesByLabel(CALLER,"Receipts", 5);
 
         assertEquals(1, summaries.size());
         assertEquals("Your receipt", summaries.getFirst().subject());
@@ -193,7 +211,7 @@ class GmailMessageServiceTest {
         queue(OK, "{\"messages\":[{\"id\":\"m1\",\"threadId\":\"t1\"}]}");
         queue(OK, metadataJson("m1", "{\"name\":\"Subject\",\"value\":\"Flagged\"}"));
 
-        List<GmailMessageSummary> summaries = service().listMessagesByLabel("starred", 5);
+        List<GmailMessageSummary> summaries = service().listMessagesByLabel(CALLER,"starred", 5);
 
         assertEquals(1, summaries.size());
 
@@ -206,7 +224,7 @@ class GmailMessageServiceTest {
         queue(OK, "{\"labels\":[{\"id\":\"INBOX\",\"name\":\"INBOX\",\"type\":\"system\"}]}");
 
         GmailLabelNotFoundException exception = assertThrows(GmailLabelNotFoundException.class,
-                () -> service().listMessagesByLabel("Does Not Exist", 5));
+                () -> service().listMessagesByLabel(CALLER,"Does Not Exist", 5));
 
         assertTrue(exception.getMessage().contains("Does Not Exist"));
         assertEquals(1, requestedUris.size());
@@ -220,7 +238,7 @@ class GmailMessageServiceTest {
                 {"name":"Date","value":"Sun, 17 Aug 2026 12:00:00 -0500"}
                 """));
 
-        GmailMessageSummary summary = service().getMessageSummary("m1");
+        GmailMessageSummary summary = service().getMessageSummary(CALLER,"m1");
 
         assertEquals("m1", summary.id());
         assertEquals("Invoice 42", summary.subject());
@@ -234,7 +252,7 @@ class GmailMessageServiceTest {
     void getMessageSummary_throwsGmailException_whenTheMessageIsNotFound() {
         queue(NOT_FOUND, "{\"error\":{\"message\":\"Not Found\"}}");
 
-        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageSummary("missing"));
+        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageSummary(CALLER,"missing"));
 
         assertTrue(exception.getMessage().contains("missing"));
     }
@@ -267,7 +285,7 @@ class GmailMessageServiceTest {
     void getMessageBody_asksGmailForTheFullFormat() {
         queue(OK, fullMessageJson("m1", plainTextPayload("Hello there")));
 
-        service().getMessageBody("m1");
+        service().getMessageBody(CALLER,"m1");
 
         String requestedUri = requestedUris.getFirst().toString();
         assertTrue(requestedUri.contains("/gmail/v1/users/me/messages/m1"), requestedUri);
@@ -279,7 +297,7 @@ class GmailMessageServiceTest {
     void getMessageBody_returnsTheBody_whenThePayloadIsItselfTextPlain() {
         queue(OK, fullMessageJson("m1", plainTextPayload("The quarterly numbers are attached.")));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("m1", messageBody.id());
         assertEquals("text/plain", messageBody.mimeType());
@@ -297,7 +315,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("text/plain", messageBody.mimeType());
         assertEquals("Plain words", messageBody.body());
@@ -315,7 +333,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("text/html", messageBody.mimeType());
         assertEquals(markup, messageBody.body());
@@ -335,7 +353,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("text/plain", messageBody.mimeType());
         assertEquals("Signed and returned.", messageBody.body());
@@ -356,7 +374,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("Budget approved ÿÿ 🎉", messageBody.body());
     }
@@ -371,7 +389,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertNull(messageBody.body());
         assertNull(messageBody.mimeType());
@@ -386,7 +404,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertNull(messageBody.body());
         assertNull(messageBody.mimeType());
@@ -396,7 +414,7 @@ class GmailMessageServiceTest {
     void getMessageBody_readsSubjectFromAndDate_fromThePayloadHeaders() {
         queue(OK, fullMessageJson("m1", plainTextPayload("Body")));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("Budget review", messageBody.subject());
         assertEquals("ada@example.com", messageBody.from());
@@ -413,7 +431,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("(no subject)", messageBody.subject());
         assertEquals("(unknown sender)", messageBody.from());
@@ -424,7 +442,7 @@ class GmailMessageServiceTest {
         queue(NOT_FOUND, "{\"error\":{\"message\":\"Not Found\"}}");
 
         GmailMessageNotFoundException exception = assertThrows(GmailMessageNotFoundException.class,
-                () -> service().getMessageBody("missing"));
+                () -> service().getMessageBody(CALLER,"missing"));
 
         assertTrue(exception.getMessage().contains("missing"), exception.getMessage());
     }
@@ -433,7 +451,7 @@ class GmailMessageServiceTest {
     void getMessageBody_throwsGmailException_whenGmailFailsForAnyOtherReason() {
         queue(INTERNAL_SERVER_ERROR, "{\"error\":{\"message\":\"backend error\"}}");
 
-        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageBody("m1"));
+        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageBody(CALLER,"m1"));
 
         assertTrue(exception.getResponseBody().contains("backend error"), exception.getResponseBody());
     }
@@ -443,7 +461,7 @@ class GmailMessageServiceTest {
     void getMessageBody_throwsGmailException_whenGmailReturnsNoContent() {
         queueWithoutBody(NO_CONTENT);
 
-        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageBody("m1"));
+        GmailException exception = assertThrows(GmailException.class, () -> service().getMessageBody(CALLER,"m1"));
 
         assertTrue(exception.getMessage().contains("m1"), exception.getMessage());
     }
@@ -463,7 +481,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("text/html", messageBody.mimeType());
         assertEquals("<p>Still readable</p>", messageBody.body());
@@ -480,7 +498,7 @@ class GmailMessageServiceTest {
 
         queue(OK, fullMessageJson("m1", payload));
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("text/html", messageBody.mimeType());
         assertEquals("<p>The real content</p>", messageBody.body());
@@ -492,7 +510,7 @@ class GmailMessageServiceTest {
                 {"id":"m1","threadId":"t-m1","snippet":"…"}
                 """);
 
-        GmailMessageBody messageBody = service().getMessageBody("m1");
+        GmailMessageBody messageBody = service().getMessageBody(CALLER,"m1");
 
         assertEquals("m1", messageBody.id());
         assertNull(messageBody.body());

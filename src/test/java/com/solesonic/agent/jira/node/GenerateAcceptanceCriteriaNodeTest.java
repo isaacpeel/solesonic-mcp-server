@@ -60,7 +60,6 @@ class GenerateAcceptanceCriteriaNodeTest {
 
         ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
         when(chatClient.prompt(promptCaptor.capture())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.options(any())).thenReturn(chatClientRequestSpec);
         when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn(modelResponse);
 
@@ -80,7 +79,6 @@ class GenerateAcceptanceCriteriaNodeTest {
         String criterionWithCommas = "Given a comma, in the criterion, when parsed, then it stays one line";
 
         when(chatClient.prompt(any(Prompt.class))).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.options(any())).thenReturn(chatClientRequestSpec);
         when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.content()).thenReturn(criterionWithCommas);
 

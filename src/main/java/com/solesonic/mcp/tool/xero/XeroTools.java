@@ -2,6 +2,7 @@ package com.solesonic.mcp.tool.xero;
 
 import com.solesonic.mcp.exception.google.GmailException;
 import com.solesonic.mcp.exception.google.GoogleReconnectRequiredException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.google.gmail.GmailMessageSummary;
 import com.solesonic.model.xero.XeroProposal;
 import com.solesonic.service.google.GmailMessageService;
@@ -55,7 +56,7 @@ public class XeroTools {
         GmailMessageSummary emailSummary;
 
         try {
-            emailSummary = gmailMessageService.getMessageSummary(messageId);
+            emailSummary = gmailMessageService.getMessageSummary(CallerIdentity.requireCurrent(), messageId);
         } catch (GoogleReconnectRequiredException googleReconnectRequiredException) {
             log.info("Xero proposal conversion skipped - {}", googleReconnectRequiredException.getMessage());
 

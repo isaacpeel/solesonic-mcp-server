@@ -3,18 +3,26 @@ package com.solesonic.mcp.tool.google;
 import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.mcp.exception.google.GmailMessageNotFoundException;
 import com.solesonic.mcp.exception.google.GoogleReconnectRequiredException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.google.gmail.GmailMessageBody;
 import com.solesonic.model.google.gmail.GmailMessageBodyResponse;
 import com.solesonic.model.google.gmail.GmailMessageListResponse;
 import com.solesonic.model.google.gmail.GmailMessageSummary;
 import com.solesonic.service.google.GmailMessageService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import static com.solesonic.mcp.tool.google.GmailTools.DEFAULT_MAX_CHARACTERS;
 import static com.solesonic.mcp.tool.google.GmailTools.DEFAULT_MAX_RESULTS;
@@ -41,6 +49,23 @@ class GmailToolsTest {
     @Mock
     private McpSyncRequestContext mcpSyncRequestContext;
 
+    private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
+
+    @BeforeEach
+    void authenticateCaller() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject(CALLER.userId().toString())
+                .issuedAt(Instant.now())
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void clamp_appliesTheDefaultAndTheBounds() {
         assertEquals(DEFAULT_MAX_RESULTS, GmailTools.clamp(null));
@@ -52,11 +77,11 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessages_passesTheClampedCountToTheService() {
-        when(gmailMessageService.listInboxMessages(anyInt())).thenReturn(List.of());
+        when(gmailMessageService.listInboxMessages(eq(CALLER), anyInt())).thenReturn(List.of());
 
         new GmailTools(gmailMessageService).listGmailMessages(mcpSyncRequestContext, 500);
 
-        verify(gmailMessageService).listInboxMessages(MAXIMUM_MAX_RESULTS);
+        verify(gmailMessageService).listInboxMessages(CALLER, MAXIMUM_MAX_RESULTS);
     }
 
     @Test
@@ -65,7 +90,7 @@ class GmailToolsTest {
                 new GmailMessageSummary("m1", "Standup notes", "Ada <ada@example.com>", "Mon, 18 Aug 2026"),
                 new GmailMessageSummary("m2", "Invoice 42", "billing@example.com", ""));
 
-        when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS)).thenReturn(summaries);
+        when(gmailMessageService.listInboxMessages(CALLER, DEFAULT_MAX_RESULTS)).thenReturn(summaries);
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
                 .listGmailMessages(mcpSyncRequestContext, null);
@@ -76,7 +101,7 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessages_reportsAnEmptyInbox_asANoteWithNoMessages() {
-        when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS)).thenReturn(List.of());
+        when(gmailMessageService.listInboxMessages(CALLER, DEFAULT_MAX_RESULTS)).thenReturn(List.of());
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
                 .listGmailMessages(mcpSyncRequestContext, null);
@@ -87,7 +112,7 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessages_asksTheUserToConnectGoogle_ratherThanFailing() {
-        when(gmailMessageService.listInboxMessages(DEFAULT_MAX_RESULTS))
+        when(gmailMessageService.listInboxMessages(CALLER, DEFAULT_MAX_RESULTS))
                 .thenThrow(new GoogleReconnectRequiredException("No Google grant"));
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
@@ -99,11 +124,11 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessagesByLabel_passesTheClampedCountAndLabelToTheService() {
-        when(gmailMessageService.listMessagesByLabel(eq("Receipts"), anyInt())).thenReturn(List.of());
+        when(gmailMessageService.listMessagesByLabel(eq(CALLER), eq("Receipts"), anyInt())).thenReturn(List.of());
 
         new GmailTools(gmailMessageService).listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", 500);
 
-        verify(gmailMessageService).listMessagesByLabel("Receipts", MAXIMUM_MAX_RESULTS);
+        verify(gmailMessageService).listMessagesByLabel(CALLER, "Receipts", MAXIMUM_MAX_RESULTS);
     }
 
     @Test
@@ -111,7 +136,7 @@ class GmailToolsTest {
         List<GmailMessageSummary> summaries = List.of(
                 new GmailMessageSummary("m1", "Your receipt", "billing@example.com", "Mon, 18 Aug 2026"));
 
-        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS)).thenReturn(summaries);
+        when(gmailMessageService.listMessagesByLabel(CALLER, "Receipts", DEFAULT_MAX_RESULTS)).thenReturn(summaries);
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
                 .listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", null);
@@ -122,7 +147,7 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessagesByLabel_reportsAnEmptyLabel_asANoteWithNoMessages() {
-        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS)).thenReturn(List.of());
+        when(gmailMessageService.listMessagesByLabel(CALLER, "Receipts", DEFAULT_MAX_RESULTS)).thenReturn(List.of());
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
                 .listGmailMessagesByLabel(mcpSyncRequestContext, "Receipts", null);
@@ -133,7 +158,7 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessagesByLabel_asksTheUserToConnectGoogle_ratherThanFailing() {
-        when(gmailMessageService.listMessagesByLabel("Receipts", DEFAULT_MAX_RESULTS))
+        when(gmailMessageService.listMessagesByLabel(CALLER, "Receipts", DEFAULT_MAX_RESULTS))
                 .thenThrow(new GoogleReconnectRequiredException("No Google grant"));
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
@@ -144,7 +169,7 @@ class GmailToolsTest {
 
     @Test
     void listGmailMessagesByLabel_reportsAnUnrecognizedLabel_ratherThanFailing() {
-        when(gmailMessageService.listMessagesByLabel("Nonexistent", DEFAULT_MAX_RESULTS))
+        when(gmailMessageService.listMessagesByLabel(CALLER, "Nonexistent", DEFAULT_MAX_RESULTS))
                 .thenThrow(new GmailLabelNotFoundException("No Gmail label named 'Nonexistent' was found"));
 
         GmailMessageListResponse result = new GmailTools(gmailMessageService)
@@ -171,18 +196,18 @@ class GmailToolsTest {
 
     @Test
     void getGmailMessageBody_passesTheMessageIdToTheService() {
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(messageBody("Short body"));
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(messageBody("Short body"));
 
         new GmailTools(gmailMessageService).getGmailMessageBody(mcpSyncRequestContext, "m1", null);
 
-        verify(gmailMessageService).getMessageBody("m1");
+        verify(gmailMessageService).getMessageBody(CALLER, "m1");
     }
 
     @Test
     void getGmailMessageBody_returnsTheBodyAndItsMimeType_withNoNote() {
         GmailMessageBody expected = messageBody("The quarterly numbers are attached.");
 
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(expected);
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(expected);
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", null);
@@ -199,7 +224,7 @@ class GmailToolsTest {
         GmailMessageBody htmlBody = new GmailMessageBody("m1", "Budget review", "ada@example.com",
                 "Mon, 18 Aug 2026 09:00:00 -0500", "text/html", markup);
 
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(htmlBody);
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(htmlBody);
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", null);
@@ -211,7 +236,7 @@ class GmailToolsTest {
 
     @Test
     void getGmailMessageBody_truncatesALongBody_andSaysSoInTheNote() {
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(messageBody("x".repeat(2_500)));
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(messageBody("x".repeat(2_500)));
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", 1_000);
@@ -223,7 +248,7 @@ class GmailToolsTest {
 
     @Test
     void getGmailMessageBody_leavesABodyShorterThanTheLimitAlone() {
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(messageBody("x".repeat(1_200)));
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(messageBody("x".repeat(1_200)));
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", null);
@@ -237,7 +262,7 @@ class GmailToolsTest {
         GmailMessageBody withoutText = new GmailMessageBody("m1", "Budget review", "ada@example.com",
                 "Mon, 18 Aug 2026 09:00:00 -0500", null, null);
 
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(withoutText);
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(withoutText);
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", null);
@@ -248,7 +273,7 @@ class GmailToolsTest {
 
     @Test
     void getGmailMessageBody_reportsAMissingMessage_ratherThanFailing() {
-        when(gmailMessageService.getMessageBody("nope"))
+        when(gmailMessageService.getMessageBody(CALLER, "nope"))
                 .thenThrow(new GmailMessageNotFoundException("No Gmail message found with id 'nope'"));
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
@@ -260,7 +285,7 @@ class GmailToolsTest {
 
     @Test
     void getGmailMessageBody_asksTheUserToConnectGoogle_ratherThanFailing() {
-        when(gmailMessageService.getMessageBody("m1"))
+        when(gmailMessageService.getMessageBody(CALLER, "m1"))
                 .thenThrow(new GoogleReconnectRequiredException("No Google grant"));
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
@@ -278,7 +303,7 @@ class GmailToolsTest {
     void getGmailMessageBody_doesNotSplitASurrogatePair_whenTruncating() {
         String bodyWithEmojiOnTheBoundary = "x".repeat(999) + "\uD83C\uDF89" + "x".repeat(500);
 
-        when(gmailMessageService.getMessageBody("m1")).thenReturn(messageBody(bodyWithEmojiOnTheBoundary));
+        when(gmailMessageService.getMessageBody(CALLER, "m1")).thenReturn(messageBody(bodyWithEmojiOnTheBoundary));
 
         GmailMessageBodyResponse result = new GmailTools(gmailMessageService)
                 .getGmailMessageBody(mcpSyncRequestContext, "m1", 1_000);

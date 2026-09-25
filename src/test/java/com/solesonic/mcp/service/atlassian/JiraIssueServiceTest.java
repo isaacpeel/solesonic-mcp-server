@@ -3,81 +3,103 @@ package com.solesonic.mcp.service.atlassian;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
 import com.solesonic.mcp.exception.atlassian.JiraException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.jira.JiraIssue;
+import com.solesonic.model.atlassian.jira.Transitions;
 import com.solesonic.service.atlassian.JiraIssueService;
+import com.solesonic.testsupport.RecordingExchangeFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.Optional;
+import java.util.UUID;
 
+import static com.solesonic.testsupport.RecordingExchangeFunction.callerIdentityOf;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-@SuppressWarnings({"unchecked", "rawtypes"})
 class JiraIssueServiceTest {
 
-    @Mock
-    private WebClient webClient;
+    private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
 
-    @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-
-    @Mock
-    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
-
-    @Mock
-    private WebClient.RequestBodySpec requestBodySpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
-
+    private RecordingExchangeFunction backend;
     private JiraIssueService service;
 
     @BeforeEach
     void setUp() {
-        service = new JiraIssueService(webClient, new JsonMapper());
+        backend = new RecordingExchangeFunction();
+        service = new JiraIssueService(backend.webClient(), JsonMapper.builder().build());
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
     }
 
     @Test
-    void get_shouldReturnIssue_fromApi() {
-        JiraIssue expected = new JiraIssue.Builder().id("123").key("ISSUE-1").build();
+    void get_shouldReturnIssue_andCarryTheCaller() {
+        backend.respondWithJson("{\"id\":\"123\",\"key\":\"ISSUE-1\"}");
 
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        doReturn(requestHeadersSpec).when(requestHeadersUriSpec).uri(any(Function.class));
-        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(expected));
-
-        JiraIssue result = service.get("ISSUE-1");
+        JiraIssue result = service.get(CALLER, "ISSUE-1");
 
         assertEquals("123", result.id());
         assertEquals("ISSUE-1", result.key());
-        verify(requestHeadersUriSpec).uri(any(Function.class));
+        assertEquals(Optional.of(CALLER), callerIdentityOf(backend.onlyRequest()));
+        assertTrue(backend.onlyRequest().url().getPath().endsWith("/issue/ISSUE-1"));
     }
 
     @Test
-    void create_shouldPostIssue_parseJson_andStoreKey() {
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-
-        String responseJson = "{\"id\":\"123\",\"key\":\"ISSUE-2\"}";
-        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(responseJson));
+    void create_shouldPostIssue_parseJson_andCarryTheCaller() {
+        backend.respondWithJson("{\"id\":\"123\",\"key\":\"ISSUE-2\"}");
 
         JiraIssue input = new JiraIssue.Builder().id("999").key("TEMP").build();
-        JiraIssue created = service.create(input);
+        JiraIssue created = service.create(CALLER, input);
 
         assertEquals("123", created.id());
         assertEquals("ISSUE-2", created.key());
+        assertEquals(HttpMethod.POST, backend.onlyRequest().method());
+        assertEquals(Optional.of(CALLER), callerIdentityOf(backend.onlyRequest()));
+    }
+
+    @Test
+    void create_shouldThrowJiraException_withErrorDetails_whenJiraReturnsErrors() {
+        String errorJson = "{" +
+                "\"errorMessages\":[]," +
+                "\"errors\":{\"summary\":\"You must specify a summary of the issue.\"}" +
+                "}";
+        backend.respondWithJson(errorJson);
+
+        JiraIssue input = new JiraIssue.Builder().id("1").key("TEMP").build();
+
+        JiraException exception = assertThrows(JiraException.class, () -> service.create(CALLER, input));
+        assertTrue(exception.getMessage().contains("Jira issue creation failed"));
+        assertTrue(exception.getMessage().contains("summary: You must specify a summary of the issue."));
+        assertEquals(errorJson, exception.getResponseBody());
+    }
+
+    @Test
+    void delete_carriesTheCaller() {
+        service.delete(CALLER, "ISSUE-3");
+
+        assertEquals(HttpMethod.DELETE, backend.onlyRequest().method());
+        assertEquals(Optional.of(CALLER), callerIdentityOf(backend.onlyRequest()));
+    }
+
+    @Test
+    void getTransitions_carriesTheCaller() {
+        backend.respondWithJson("{\"transitions\":[{\"id\":\"31\",\"name\":\"Done\"}]}");
+
+        Transitions transitions = service.getTransitions(CALLER, "ISSUE-4");
+
+        assertEquals("31", transitions.transitions().getFirst().id());
+        assertEquals(Optional.of(CALLER), callerIdentityOf(backend.onlyRequest()));
+    }
+
+    @Test
+    void transitionIssue_carriesTheCaller() {
+        service.transitionIssue(CALLER, "ISSUE-5", "31");
+
+        assertEquals(HttpMethod.POST, backend.onlyRequest().method());
+        assertEquals(Optional.of(CALLER), callerIdentityOf(backend.onlyRequest()));
     }
 
     @Test
@@ -88,7 +110,7 @@ class JiraIssueServiceTest {
 
         assertTrue(exception.getMessage().contains("without an assignee"));
         assertTrue(exception.getMessage().contains("Login page"));
-        verifyNoInteractions(webClient);
+        assertTrue(backend.requests().isEmpty());
     }
 
     @Test
@@ -119,7 +141,7 @@ class JiraIssueServiceTest {
         JiraException exception = assertThrows(JiraException.class, () -> service.convert(payload));
 
         assertTrue(exception.getMessage().contains("without a summary"));
-        verifyNoInteractions(webClient);
+        assertTrue(backend.requests().isEmpty());
     }
 
     @Test
@@ -130,25 +152,5 @@ class JiraIssueServiceTest {
         JiraIssue jiraIssue = service.convert(payload);
 
         assertEquals(1, jiraIssue.fields().description().content().size());
-    }
-
-    @Test
-    void create_shouldThrowJiraException_withErrorDetails_whenJiraReturnsErrors() {
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        doReturn(requestBodySpec).when(requestBodyUriSpec).uri(any(Function.class));
-        doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-
-        String errorJson = "{" +
-                "\"errorMessages\":[]," +
-                "\"errors\":{\"summary\":\"You must specify a summary of the issue.\"}" +
-                "}";
-        when(requestHeadersSpec.exchangeToMono(any())).thenReturn(Mono.just(errorJson));
-
-        JiraIssue input = new JiraIssue.Builder().id("1").key("TEMP").build();
-
-        JiraException exception = assertThrows(JiraException.class, () -> service.create(input));
-        assertTrue(exception.getMessage().contains("Jira issue creation failed"));
-        assertTrue(exception.getMessage().contains("summary: You must specify a summary of the issue."));
-        assertEquals(errorJson, exception.getResponseBody());
     }
 }

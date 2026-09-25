@@ -3,6 +3,7 @@ package com.solesonic.mcp.tool.google;
 import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.mcp.exception.google.GmailMessageNotFoundException;
 import com.solesonic.mcp.exception.google.GoogleReconnectRequiredException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.google.gmail.GmailMessageBody;
 import com.solesonic.model.google.gmail.GmailMessageBodyResponse;
 import com.solesonic.model.google.gmail.GmailMessageListResponse;
@@ -111,7 +112,7 @@ public class GmailTools {
         List<GmailMessageSummary> summaries;
 
         try {
-            summaries = gmailMessageService.listInboxMessages(requestedResults);
+            summaries = gmailMessageService.listInboxMessages(CallerIdentity.requireCurrent(), requestedResults);
         } catch (GoogleReconnectRequiredException googleReconnectRequiredException) {
             log.info("Gmail listing skipped - {}", googleReconnectRequiredException.getMessage());
 
@@ -142,7 +143,7 @@ public class GmailTools {
         List<GmailMessageSummary> summaries;
 
         try {
-            summaries = gmailMessageService.listMessagesByLabel(label, requestedResults);
+            summaries = gmailMessageService.listMessagesByLabel(CallerIdentity.requireCurrent(), label, requestedResults);
         } catch (GoogleReconnectRequiredException googleReconnectRequiredException) {
             log.info("Gmail listing skipped because reconnect is required - {}", googleReconnectRequiredException.getMessage());
 
@@ -180,7 +181,7 @@ public class GmailTools {
         GmailMessageBody messageBody;
 
         try {
-            messageBody = gmailMessageService.getMessageBody(messageId);
+            messageBody = gmailMessageService.getMessageBody(CallerIdentity.requireCurrent(), messageId);
         } catch (GoogleReconnectRequiredException googleReconnectRequiredException) {
             log.info("Gmail body read skipped because reconnect is required - {}", googleReconnectRequiredException.getMessage());
 

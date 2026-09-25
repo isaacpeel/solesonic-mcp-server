@@ -53,6 +53,14 @@ Atlassian Token Broker (high-level)
 - The broker returns a TokenResponse containing an accessToken and metadata (expiresInSeconds, issuedAt, userId, optional siteId)
 - The returned accessToken is then used for Atlassian API calls
 
+Caller identity on outbound calls
+- The user a request acts for travels as data, not ambient thread state: each tool (or A2A executor) captures the JWT subject once as a `CallerIdentity`, puts it in graph state, and passes it to every Atlassian and Gmail service call, which attaches it to the outgoing request
+- `AtlassianRequestAuthorizationFilter` and `GoogleRequestAuthorizationFilter` read the caller only from that request attribute, so graph nodes and fan-out work on pooled threads (which carry no security context) still act as the right user
+- A request without a caller fails with a clear error instead of going out unauthenticated. With `solesonic.agent.security.enabled=false` there is no caller, so Jira, Confluence and Gmail tools fail; the NBA agent, which calls no per-user APIs, still runs
+- Only the user id is stored in graph checkpoints — never an access token; tokens are brokered fresh for every call
+- Checkpoint threads for resumable runs are scoped to caller and conversation, so one user can never resume another user's paused run
+- Non-2xx Atlassian responses surface as errors carrying the HTTP status and Atlassian's message, rather than as JSON decoding failures
+
 Troubleshooting
 - Verify issuer-uri/jwk-set-uri matches the token’s issuer
 - Confirm your token has the required groups/scopes

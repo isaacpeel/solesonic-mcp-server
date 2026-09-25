@@ -3,6 +3,7 @@ package com.solesonic.service.google;
 import com.solesonic.mcp.exception.google.GmailException;
 import com.solesonic.mcp.exception.google.GmailLabelNotFoundException;
 import com.solesonic.mcp.exception.google.GmailMessageNotFoundException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.google.gmail.GmailHeader;
 import com.solesonic.model.google.gmail.GmailLabel;
 import com.solesonic.model.google.gmail.GmailLabelList;
@@ -45,10 +46,10 @@ public class GmailMessageService {
      * The most recent inbox messages, newest first. Gmail's list endpoint returns ids and nothing
      * else, so each subject costs its own request.
      */
-    public List<GmailMessageSummary> listInboxMessages(int maxResults) {
+    public List<GmailMessageSummary> listInboxMessages(CallerIdentity callerIdentity, int maxResults) {
         log.info("Listing the {} most recent inbox messages", maxResults);
 
-        return listMessages(INBOX_LABEL, maxResults);
+        return listMessages(callerIdentity, INBOX_LABEL, maxResults);
     }
 
     /**
@@ -56,19 +57,19 @@ public class GmailMessageService {
      * display names only coincide for system labels, so a user-created label name is resolved to
      * its id first.
      */
-    public List<GmailMessageSummary> listMessagesByLabel(String label, int maxResults) {
+    public List<GmailMessageSummary> listMessagesByLabel(CallerIdentity callerIdentity, String label, int maxResults) {
         log.info("Listing the {} most recent messages labeled '{}'", maxResults, label);
 
-        String labelId = resolveLabelId(label);
+        String labelId = resolveLabelId(callerIdentity, label);
 
-        return listMessages(labelId, maxResults);
+        return listMessages(callerIdentity, labelId, maxResults);
     }
 
     /** A single message by id, for callers that already have one — e.g. resolving "email number N" from a prior list. */
-    public GmailMessageSummary getMessageSummary(String messageId) {
+    public GmailMessageSummary getMessageSummary(CallerIdentity callerIdentity, String messageId) {
         log.info("Retrieving message summary for id {}", messageId);
 
-        GmailMessageMetadata metadata = messageMetadata(messageId);
+        GmailMessageMetadata metadata = messageMetadata(callerIdentity, messageId);
 
         return summarize(metadata);
     }
@@ -79,10 +80,10 @@ public class GmailMessageService {
      * back exactly as that part carried it — HTML is not converted — with {@code mimeType} naming
      * what it is. Both are {@code null} when nothing in the message is readable text.
      */
-    public GmailMessageBody getMessageBody(String messageId) {
+    public GmailMessageBody getMessageBody(CallerIdentity callerIdentity, String messageId) {
         log.info("Retrieving message body for id {}", messageId);
 
-        GmailMessageMetadata message = fullMessage(messageId);
+        GmailMessageMetadata message = fullMessage(callerIdentity, messageId);
 
         if (message == null) {
             throw new GmailException("Gmail returned an empty response for message %s".formatted(messageId), "");
@@ -101,8 +102,8 @@ public class GmailMessageService {
                 decodedText == null ? null : decodedText.body());
     }
 
-    private List<GmailMessageSummary> listMessages(String labelId, int maxResults) {
-        GmailMessageList messageList = listMessageIds(labelId, maxResults);
+    private List<GmailMessageSummary> listMessages(CallerIdentity callerIdentity, String labelId, int maxResults) {
+        GmailMessageList messageList = listMessageIds(callerIdentity, labelId, maxResults);
 
         if (messageList == null || messageList.messages() == null || messageList.messages().isEmpty()) {
             log.info("No messages returned for label '{}'", labelId);
@@ -112,12 +113,10 @@ public class GmailMessageService {
 
         List<GmailMessageSummary> summaries = new ArrayList<>();
 
-        // Deliberately sequential. A reactive fan-out would subscribe each request on a Reactor
-        // thread, and those threads do not carry the inheritable security context that
-        // GoogleRequestAuthorizationFilter reads the caller's JWT from — the requests would go out
-        // with no Authorization header and come back 401.
+        // Sequential to keep per-user Gmail request rates modest. The caller travels on each request
+        // as a CallerIdentity attribute, so a fan-out would no longer lose authorization.
         for (GmailMessageRef messageRef : messageList.messages()) {
-            GmailMessageMetadata metadata = messageMetadata(messageRef.id());
+            GmailMessageMetadata metadata = messageMetadata(callerIdentity, messageRef.id());
 
             if (metadata != null) {
                 summaries.add(summarize(metadata));
@@ -129,7 +128,7 @@ public class GmailMessageService {
         return summaries;
     }
 
-    private GmailMessageList listMessageIds(String labelId, int maxResults) {
+    private GmailMessageList listMessageIds(CallerIdentity callerIdentity, String labelId, int maxResults) {
         String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, MESSAGES_PATH};
 
         return webClient.get()
@@ -138,6 +137,7 @@ public class GmailMessageService {
                         .queryParam(LABEL_IDS_PARAM, labelId)
                         .queryParam(MAX_RESULTS_PARAM, maxResults)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> {
                     if (response.statusCode().isError()) {
                         return response.bodyToMono(String.class)
@@ -153,13 +153,14 @@ public class GmailMessageService {
     }
 
     /** Matched case-insensitively against the label's display name — callers don't know opaque ids like {@code Label_15}. */
-    private String resolveLabelId(String label) {
+    private String resolveLabelId(CallerIdentity callerIdentity, String label) {
         String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, LABELS_PATH};
 
         GmailLabelList labelList = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> {
                     if (response.statusCode().isError()) {
                         return response.bodyToMono(String.class)
@@ -184,7 +185,7 @@ public class GmailMessageService {
                 .orElseThrow(() -> new GmailLabelNotFoundException("No Gmail label named '%s' was found".formatted(label)));
     }
 
-    private GmailMessageMetadata messageMetadata(String messageId) {
+    private GmailMessageMetadata messageMetadata(CallerIdentity callerIdentity, String messageId) {
         String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, MESSAGES_PATH, messageId};
 
         return webClient.get()
@@ -193,6 +194,7 @@ public class GmailMessageService {
                         .queryParam(FORMAT_PARAM, METADATA_FORMAT)
                         .queryParam(METADATA_HEADERS_PARAM, SUBJECT_HEADER, FROM_HEADER, DATE_HEADER)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> {
                     if (response.statusCode().isError()) {
                         return response.bodyToMono(String.class)
@@ -237,7 +239,7 @@ public class GmailMessageService {
                 .orElse(fallback);
     }
 
-    private GmailMessageMetadata fullMessage(String messageId) {
+    private GmailMessageMetadata fullMessage(CallerIdentity callerIdentity, String messageId) {
         String[] basePathSegments = {GMAIL_PATH, VERSION_PATH, USERS_PATH, ME, MESSAGES_PATH, messageId};
 
         return webClient.get()
@@ -245,6 +247,7 @@ public class GmailMessageService {
                         .pathSegment(basePathSegments)
                         .queryParam(FORMAT_PARAM, FULL_FORMAT)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> {
                     // A 404 means the id is wrong or the message belongs to someone else. Callers
                     // answer that with a sentence, so it gets its own type rather than a GmailException.

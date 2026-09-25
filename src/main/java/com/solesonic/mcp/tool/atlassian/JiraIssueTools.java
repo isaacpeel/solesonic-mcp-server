@@ -1,19 +1,23 @@
 package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.a2a.progress.ProgressReporter;
+import com.solesonic.agent.checkpoint.GraphRunner;
+import com.solesonic.agent.checkpoint.GraphThread;
 import com.solesonic.agent.jira.JiraGraphConfig;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
+import com.solesonic.mcp.security.identity.CallerIdentity;
+import com.solesonic.mcp.tool.McpConfirmations;
+import com.solesonic.mcp.tool.McpConversations;
 import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraIssueService;
-import com.solesonic.mcp.tool.McpConfirmations;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphInput;
 import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.RunnableConfig;
-import org.bsc.langgraph4j.checkpoint.MemorySaver;
+import org.bsc.langgraph4j.checkpoint.BaseCheckpointSaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -25,8 +29,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
@@ -39,7 +41,7 @@ public class JiraIssueTools {
     public static final String DELETE_JIRA_ISSUE = "delete_jira_issue";
     public static final String GET_JIRA_ISSUE = "get_jira_issue";
     public static final String CREATE_JIRA_STORY = "create_jira_story";
-    public static final String CHAT_ID = "chatId";
+    public static final String CHAT_ID = McpConversations.CHAT_ID;
 
     private static final String CREATE_JIRA_STORY_DESCRIPTION = """
             A guided workflow that generates a complete Jira story from a natural language description.
@@ -50,7 +52,8 @@ public class JiraIssueTools {
     private final JiraIssueService jiraIssueService;
     private final CompiledGraph<JiraState> jiraCreateGraph;
     private final JiraAssigneeElicitation jiraAssigneeElicitation;
-    private final MemorySaver jiraAssigneeCheckpointSaver;
+    private final GraphRunner graphRunner;
+    private final BaseCheckpointSaver graphCheckpointSaver;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
@@ -58,11 +61,13 @@ public class JiraIssueTools {
     public JiraIssueTools(JiraIssueService jiraIssueService,
                           CompiledGraph<JiraState> jiraCreateGraph,
                           JiraAssigneeElicitation jiraAssigneeElicitation,
-                          MemorySaver jiraAssigneeCheckpointSaver) {
+                          GraphRunner graphRunner,
+                          BaseCheckpointSaver graphCheckpointSaver) {
         this.jiraIssueService = jiraIssueService;
         this.jiraCreateGraph = jiraCreateGraph;
         this.jiraAssigneeElicitation = jiraAssigneeElicitation;
-        this.jiraAssigneeCheckpointSaver = jiraAssigneeCheckpointSaver;
+        this.graphRunner = graphRunner;
+        this.graphCheckpointSaver = graphCheckpointSaver;
     }
 
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {
@@ -75,18 +80,12 @@ public class JiraIssueTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The key or id of the jira issue to delete.") String keyOrIssueId
     ) {
+        CallerIdentity callerIdentity = CallerIdentity.requireCurrent();
+
         mcpSyncRequestContext.log(logging -> logging.message("Delete Jira Issue Tool Started for: " + keyOrIssueId));
         log.info("Delete request for jira issue: {}", keyOrIssueId);
 
-        Map<String, Object> toolContext = mcpSyncRequestContext.requestMeta();
-
-        String chatId;
-        if (toolContext != null && toolContext.containsKey(CHAT_ID)) {
-            chatId = toolContext.get(CHAT_ID).toString();
-            log.info("Chat ID from ToolContext: {}", chatId);
-        } else {
-            chatId = UUID.randomUUID().toString();
-        }
+        String chatId = McpConversations.conversationId(mcpSyncRequestContext);
 
         log.info("Prompting user to confirm deletion of Jira issue: {}", keyOrIssueId);
 
@@ -102,7 +101,7 @@ public class JiraIssueTools {
 
         return switch (action) {
             case ACCEPT -> {
-                jiraIssueService.delete(keyOrIssueId);
+                jiraIssueService.delete(callerIdentity, keyOrIssueId);
                 mcpSyncRequestContext.log(logging -> logging.message("Successfully deleted Jira issue: " + keyOrIssueId));
                 yield "Successfully deleted Jira Issue: " + keyOrIssueId;
             }
@@ -124,7 +123,7 @@ public class JiraIssueTools {
     public JiraIssue get(String issueId) {
         log.info("Retrieving jira issue by ID: {}", issueId);
 
-        return jiraIssueService.get(issueId);
+        return jiraIssueService.get(CallerIdentity.requireCurrent(), issueId);
     }
 
     @PreAuthorize("hasAuthority('ROLE_MCP-JIRA-CREATE')")
@@ -134,22 +133,24 @@ public class JiraIssueTools {
             @McpToolParam(description = "A natural language description of the story to create, including any relevant context such as the desired assignee.") String userMessage
     ) {
         log.info("Create jira tool called.");
-        String conversationId = extractConversationId(mcpSyncRequestContext);
+        CallerIdentity callerIdentity = CallerIdentity.requireCurrent();
+        String conversationId = McpConversations.conversationId(mcpSyncRequestContext);
 
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         progressReporter.emit(5, "Starting Jira story workflow…");
 
-        RunnableConfig config = RunnableConfig.builder()
-                .threadId(conversationId)
-                .build();
+        // Conversation-scoped: a run paused for an assignee is resumed by this caller's next call in the chat.
+        RunnableConfig config = GraphThread.conversation(JiraGraphConfig.GRAPH_NAME, callerIdentity, conversationId)
+                .runnableConfig();
 
-        boolean resumingInFlightRequest = jiraAssigneeCheckpointSaver.get(config).isPresent();
+        boolean resumingInFlightRequest = graphCheckpointSaver.get(config).isPresent();
 
         GraphInput input = resumingInFlightRequest
                 ? GraphInput.resume(Map.of())
                 : GraphInput.args(Map.of(
                         JiraState.USER_MESSAGE, userMessage,
-                        JiraState.CONVERSATION_ID, conversationId
+                        JiraState.CONVERSATION_ID, conversationId,
+                        JiraState.CALLER_IDENTITY, callerIdentity
                 ));
 
         NodeOutput<JiraState> output = runGraph(input, config, progressReporter);
@@ -160,8 +161,17 @@ public class JiraIssueTools {
             JiraState pausedState = output.state();
             List<AssigneeCandidate> matchingCandidates = pausedState.assigneeCandidates().orElse(List.of());
 
-            JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(
-                    mcpSyncRequestContext, matchingCandidates, Map.of(CHAT_ID, conversationId));
+            JiraAssigneeElicitation.Selection selection;
+
+            try {
+                selection = jiraAssigneeElicitation.selectAssignee(
+                        callerIdentity, mcpSyncRequestContext, matchingCandidates, Map.of(CHAT_ID, conversationId));
+            } catch (RuntimeException elicitationFailure) {
+                // An unanswered picker must not leave the run paused, or the next story request in this
+                // conversation would resume it instead of starting fresh.
+                graphRunner.discard(config);
+                throw elicitationFailure;
+            }
 
             switch (selection) {
                 case JiraAssigneeElicitation.Selection.Selected selected -> {
@@ -172,19 +182,19 @@ public class JiraIssueTools {
                     output = runGraph(GraphInput.resume(resumeData), config, progressReporter);
                 }
                 case JiraAssigneeElicitation.Selection.Declined _ -> {
-                    releaseCheckpoint(config);
+                    graphRunner.discard(config);
                     return "Story not created: Jira requires an assignee and none was selected.";
                 }
                 case JiraAssigneeElicitation.Selection.Cancelled _ -> {
-                    releaseCheckpoint(config);
+                    graphRunner.discard(config);
                     return "Story creation cancelled.";
                 }
                 case JiraAssigneeElicitation.Selection.NoCandidates _ -> {
-                    releaseCheckpoint(config);
+                    graphRunner.discard(config);
                     return "Story not created: Jira returned no assignable users for the project, and Jira requires an assignee.";
                 }
                 case JiraAssigneeElicitation.Selection.InvalidSelection _ -> {
-                    releaseCheckpoint(config);
+                    graphRunner.discard(config);
                     return "Story not created: the selected assignee is not an assignable Jira user.";
                 }
             }
@@ -195,7 +205,7 @@ public class JiraIssueTools {
         JiraIssueCreatePayload payload = finalState.finalPayload().orElseThrow(
                 () -> new IllegalStateException("Graph completed without assembling a Jira payload"));
 
-        JiraIssue createdIssue = jiraIssueService.create(jiraIssueService.convert(payload));
+        JiraIssue createdIssue = jiraIssueService.create(callerIdentity, jiraIssueService.convert(payload));
         String issueKey = createdIssue.key();
 
         log.info("Jira story created: {}", issueKey);
@@ -204,61 +214,29 @@ public class JiraIssueTools {
     }
 
     /**
-     * Streams the graph to completion (either a fresh run or a resume), reporting progress along
-     * the way, and returns the last emitted output. That output is either the natural end of the
-     * graph or, per {@link NodeOutput#isEND()}, the point where {@code AwaitAssigneeSelectionNode}
-     * paused it.
+     * Runs the graph (a fresh run or a resume), reporting progress along the way, and returns the
+     * last output: either the natural end of the graph or, per {@link NodeOutput#isEND()}, the point
+     * where {@code AwaitAssigneeSelectionNode} paused it.
      */
     private NodeOutput<JiraState> runGraph(GraphInput input, RunnableConfig config, ProgressReporter progressReporter) {
-        AtomicReference<NodeOutput<JiraState>> finalOutputRef = new AtomicReference<>();
+        return graphRunner.run(jiraCreateGraph, input, config, output -> {
+            int progressPercent = switch (output.node()) {
+                case JiraGraphConfig.GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE -> 60;
+                case JiraGraphConfig.AWAIT_ASSIGNEE_SELECTION              -> 80;
+                case JiraGraphConfig.ASSEMBLE_PAYLOAD                      -> 90;
+                case END                                                   -> 100;
+                default                                                    -> 10;
+            };
 
-        jiraCreateGraph.stream(input, config)
-                .forEachAsync(output -> {
-                    finalOutputRef.set(output);
+            String node = output.node();
 
-                    int progressPercent = switch (output.node()) {
-                        case JiraGraphConfig.GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE -> 60;
-                        case JiraGraphConfig.AWAIT_ASSIGNEE_SELECTION              -> 80;
-                        case JiraGraphConfig.ASSEMBLE_PAYLOAD                      -> 90;
-                        case END                                                   -> 100;
-                        default                                                    -> 10;
-                    };
+            switch(node) {
+                case START -> node = "Jira create agent started.";
+                case END -> node = "Jira create agent finished.";
+                default -> node = "Completed: " + node;
+            }
 
-                    String node = output.node();
-
-                    switch(node) {
-                        case START -> node = "Jira create agent started.";
-                        case END -> node = "Jira create agent finished.";
-                        default -> node = "Completed: " + node;
-                    }
-
-                    progressReporter.emit(progressPercent, node);
-                })
-                .join();
-
-        return finalOutputRef.get();
-    }
-
-    /**
-     * Discards the checkpoint for a conversation that ended without an assignee, so a later,
-     * unrelated story request in the same conversation doesn't resume this abandoned attempt's
-     * already-generated content.
-     */
-    private void releaseCheckpoint(RunnableConfig config) {
-        try {
-            jiraAssigneeCheckpointSaver.release(config);
-        } catch (Exception exception) {
-            log.warn("Failed to release the Jira story checkpoint for this conversation", exception);
-        }
-    }
-
-    private static String extractConversationId(McpSyncRequestContext mcpSyncRequestContext) {
-        Map<String, Object> meta = mcpSyncRequestContext.requestMeta();
-
-        if (meta != null && meta.containsKey(CHAT_ID)) {
-            return meta.get(CHAT_ID).toString();
-        }
-
-        return UUID.randomUUID().toString();
+            progressReporter.emit(progressPercent, node);
+        });
     }
 }

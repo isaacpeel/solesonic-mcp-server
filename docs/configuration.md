@@ -55,6 +55,11 @@ Key properties (environment variables in parentheses)
 - Gmail
   - google.api.uri=https://gmail.googleapis.com
 
+- Graph checkpoints (Redis)
+  - Every LangGraph4j graph checkpoints to the same Redis server as `spring.data.redis.*`, through a separate Redisson client that connects lazily on the first checkpoint.
+  - All keys live under `mcp:checkpoint:`. A run's keys are deleted when it finishes; only a run paused for user input (the `create_jira_story` assignee picker) keeps its checkpoint until the user answers.
+  - solesonic.checkpoint.ttl=24h — a backstop expiry for checkpoints of runs abandoned mid-flight (for example, a crash). It does not bound normal runs.
+
 - Google Token Broker (external service)
   - google.token.broker.uri=(${GOOGLE_TOKEN_BROKER_URL}) — the full endpoint path, e.g. https://api.example.com/broker/google/token
   - Reuses the atlassian-token-broker client credentials registration below; there are no separate Google client-id/secret properties. The service account behind that client needs the `token-mint-gmail` role.

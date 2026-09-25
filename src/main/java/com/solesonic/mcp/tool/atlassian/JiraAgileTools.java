@@ -4,10 +4,14 @@ import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.agent.agile.AgileGraph;
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
+import com.solesonic.agent.checkpoint.GraphRunner;
+import com.solesonic.agent.checkpoint.GraphThread;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.service.atlassian.JiraAgileService;
 import org.bsc.langgraph4j.CompiledGraph;
-import org.bsc.langgraph4j.RunnableConfig;
+import org.bsc.langgraph4j.GraphInput;
+import org.bsc.langgraph4j.NodeOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -18,7 +22,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
@@ -54,10 +57,12 @@ public class JiraAgileTools {
 
     private final JiraAgileService jiraAgileService;
     private final CompiledGraph<AgileState> agileGraph;
+    private final GraphRunner graphRunner;
 
-    public JiraAgileTools(JiraAgileService jiraAgileService, CompiledGraph<AgileState> agileGraph) {
+    public JiraAgileTools(JiraAgileService jiraAgileService, CompiledGraph<AgileState> agileGraph, GraphRunner graphRunner) {
         this.jiraAgileService = jiraAgileService;
         this.agileGraph = agileGraph;
+        this.graphRunner = graphRunner;
     }
 
     public record ListBoardsRequest(@McpToolParam(required = false, description = START_AT_DESCRIPTION)
@@ -94,17 +99,21 @@ public class JiraAgileTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The user's natural language question about their agile boards or issues.") String userMessage
     ) {
+        CallerIdentity callerIdentity = CallerIdentity.requireCurrent();
+
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         progressReporter.emit(5, "Parsing intent and loading boards…");
 
-        Map<String, Object> graphInput = Map.of(AgileState.USER_MESSAGE, userMessage);
+        Map<String, Object> graphInput = Map.of(
+                AgileState.USER_MESSAGE, userMessage,
+                AgileState.CALLER_IDENTITY, callerIdentity
+        );
 
-        AtomicReference<AgileState> finalStateRef = new AtomicReference<>();
-
-        agileGraph.stream(graphInput, RunnableConfig.builder().build())
-                .forEachAsync(output -> {
-                    finalStateRef.set(output.state());
-
+        NodeOutput<AgileState> finalOutput = graphRunner.run(
+                agileGraph,
+                GraphInput.args(graphInput),
+                GraphThread.run(AgileGraph.GRAPH_NAME, callerIdentity).runnableConfig(),
+                output -> {
                     int progressPercent = switch (output.node()) {
                         case AgileGraph.PARSE_AND_FETCH -> 50;
                         case AgileGraph.ASSESS_SCOPE -> 80;
@@ -121,32 +130,29 @@ public class JiraAgileTools {
                     }
 
                     progressReporter.emit(progressPercent, node);
-                })
-                .join();
+                });
 
-        AgileState agileState = finalStateRef.get();
+        AgileState agileState = finalOutput.state();
         AgileQueryIntent queryResult = agileState.agileQueryResult().orElseThrow(() -> new IllegalStateException("Graph completed without an agile query result"));
 
         Board board = requireFirstBoard(agileState);
         String resolvedUserMessage = agileState.userMessage().orElse(userMessage);
 
         return switch (queryResult.userIntent().toUpperCase()) {
-            case COUNT -> jiraAgileService.handleCountQuery(board, queryResult);
-            case LIST -> jiraAgileService.handleListQuery(mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
-            case TRANSITION -> jiraAgileService.handleTransitionQuery(mcpSyncRequestContext, board, queryResult, agileState);
+            case COUNT -> jiraAgileService.handleCountQuery(callerIdentity, board, queryResult);
+            case LIST -> jiraAgileService.handleListQuery(callerIdentity, mcpSyncRequestContext, board, queryResult, resolvedUserMessage);
+            case TRANSITION -> jiraAgileService.handleTransitionQuery(callerIdentity, mcpSyncRequestContext, board, queryResult, agileState);
             default -> "Unrecognised query type: " + queryResult.userIntent();
         };
     }
 
-
-    @SuppressWarnings("unchecked")
     private Board requireFirstBoard(AgileState state) {
-        List<Board> boards = (List<Board>) state.boards()
-                .map(List.class::cast)
-                .orElse(List.of());
+        List<Board> boards = state.boards().orElse(List.of());
+
         if (boards.isEmpty()) {
             throw new IllegalStateException("No Jira boards are accessible.");
         }
+
         return boards.getFirst();
     }
 }

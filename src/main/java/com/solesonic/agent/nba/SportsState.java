@@ -2,15 +2,15 @@ package com.solesonic.agent.nba;
 
 import com.solesonic.agent.nba.model.EspnTeamProfile;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
+import com.solesonic.agent.state.IdentifiedAgentState;
 import com.solesonic.model.espn.EspnScheduleSummary;
-import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 @SuppressWarnings("unused")
-public class SportsState extends AgentState {
+public class SportsState extends IdentifiedAgentState {
 
     public static final String USER_MESSAGE = "userMessage";
     public static final String CONVERSATION_ID = "conversationId";

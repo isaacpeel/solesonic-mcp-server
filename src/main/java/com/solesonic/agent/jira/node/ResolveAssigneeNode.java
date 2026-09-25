@@ -2,6 +2,7 @@ package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeResolution;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.service.atlassian.AssigneeResolutionService;
 import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
@@ -34,12 +35,14 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
         log.info("Resolve Assignee Node: apply");
 
         try {
+            CallerIdentity callerIdentity = jiraState.requireCallerIdentity();
+
             String userMessage = jiraState.userMessage()
                     .orElseThrow(() -> new IllegalStateException("userMessage is required"));
 
             log.info("Resolving assignee for: {}", userMessage);
 
-            AssigneeResolution assigneeResolution = assigneeResolutionService.resolve(userMessage);
+            AssigneeResolution assigneeResolution = assigneeResolutionService.resolve(callerIdentity, userMessage);
 
             Map<String, Object> updates = new HashMap<>();
 

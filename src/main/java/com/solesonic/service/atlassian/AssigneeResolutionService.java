@@ -3,6 +3,7 @@ package com.solesonic.service.atlassian;
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.AssigneeResolution;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.jira.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,7 @@ public class AssigneeResolutionService {
         this.jiraAssigneeLookupPrompt = jiraAssigneeLookupPrompt;
     }
 
-    public AssigneeResolution resolve(String userRequest) {
+    public AssigneeResolution resolve(CallerIdentity callerIdentity, String userRequest) {
         String searchTerm = extractSearchTerm(userRequest);
 
         if (searchTerm.isEmpty() || NO_ASSIGNEE_SENTINEL.equalsIgnoreCase(searchTerm)) {
@@ -57,7 +58,7 @@ public class AssigneeResolutionService {
 
         log.info("Assignee search term extracted from the story request: \"{}\"", searchTerm);
 
-        List<User> users = Objects.requireNonNullElse(jiraUserService.search(searchTerm), List.of());
+        List<User> users = Objects.requireNonNullElse(jiraUserService.search(callerIdentity, searchTerm), List.of());
 
         log.info("Assignable user search for \"{}\" returned {} user(s)", searchTerm, users.size());
 
@@ -85,8 +86,8 @@ public class AssigneeResolutionService {
     /**
      * Every user Jira allows as an assignee on the project, for the assignee picker.
      */
-    public List<AssigneeCandidate> listAssigneeCandidates() {
-        List<User> users = Objects.requireNonNullElse(jiraUserService.listAssignableUsers(), List.of());
+    public List<AssigneeCandidate> listAssigneeCandidates(CallerIdentity callerIdentity) {
+        List<User> users = Objects.requireNonNullElse(jiraUserService.listAssignableUsers(callerIdentity), List.of());
         List<AssigneeCandidate> candidates = toCandidates(users);
 
         if (candidates.isEmpty()) {

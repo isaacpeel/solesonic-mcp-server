@@ -4,6 +4,7 @@ import com.solesonic.agent.nba.NbaAgentGraphConfig;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.node.FetchEspnRosterNode;
 import com.solesonic.agent.nba.node.ResolveEspnTeamUrlsNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
@@ -23,7 +24,8 @@ public class NbaRosterGraphConfig {
     @Bean
     public CompiledGraph<SportsState> nbaRosterGraph(
             ResolveEspnTeamUrlsNode resolveEspnTeamUrlsNode,
-            FetchEspnRosterNode fetchEspnRosterNode
+            FetchEspnRosterNode fetchEspnRosterNode,
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         return new StateGraph<>(SportsState::new)
@@ -32,6 +34,6 @@ public class NbaRosterGraphConfig {
                 .addEdge(START, NbaAgentGraphConfig.RESOLVE_ESPN_TEAM_URLS)
                 .addEdge(NbaAgentGraphConfig.RESOLVE_ESPN_TEAM_URLS, NbaAgentGraphConfig.FETCH_ESPN_ROSTER)
                 .addEdge(NbaAgentGraphConfig.FETCH_ESPN_ROSTER, END)
-                .compile();
+                .compile(graphCompileConfig);
     }
 }

@@ -1,5 +1,6 @@
 package com.solesonic.service.atlassian;
 
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.jira.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,22 +40,22 @@ public class JiraUserService {
     /**
      * The first page of assignable users matching {@code userName}.
      */
-    public List<User> search(String userName) {
+    public List<User> search(CallerIdentity callerIdentity, String userName) {
         log.info("Searching for user: {}", userName);
 
-        return fetchAssignableUsers(userName, 0);
+        return fetchAssignableUsers(callerIdentity, userName, 0);
     }
 
     /**
      * Every assignable user on the project, following Jira's pagination until a short page.
      */
-    public List<User> listAssignableUsers() {
+    public List<User> listAssignableUsers(CallerIdentity callerIdentity) {
         List<User> assignableUsers = new ArrayList<>();
         Set<String> seenAccountIds = new HashSet<>();
         int startAt = 0;
 
         while (true) {
-            List<User> page = fetchAssignableUsers(ALL_USERS_QUERY, startAt);
+            List<User> page = fetchAssignableUsers(callerIdentity, ALL_USERS_QUERY, startAt);
 
             int newUserCount = 0;
 
@@ -84,7 +85,7 @@ public class JiraUserService {
         return assignableUsers;
     }
 
-    private List<User> fetchAssignableUsers(String query, int startAt) {
+    private List<User> fetchAssignableUsers(CallerIdentity callerIdentity, String query, int startAt) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, USER_PATH, ASSIGNABLE_PATH, SEARCH_PATH};
 
         List<User> users = webClient.get()
@@ -95,6 +96,7 @@ public class JiraUserService {
                         .queryParam(START_AT_PARAM, startAt)
                         .queryParam(MAX_RESULTS_PARAM, pageSize)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> {
                     log.info("Request URI: {}", response.request().getURI());
                     return response.bodyToMono(new ParameterizedTypeReference<List<User>>() {});

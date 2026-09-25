@@ -30,7 +30,7 @@ public class ListBoardsNode implements AsyncNodeAction<AgileState> {
     @Override
     public CompletableFuture<Map<String, Object>> apply(AgileState agileState) {
         try {
-            var boards = jiraAgileService.listBoards();
+            var boards = jiraAgileService.listBoards(agileState.requireCallerIdentity());
             int boardCount = boards.values().size();
             log.info("Found {} accessible boards", boardCount);
 

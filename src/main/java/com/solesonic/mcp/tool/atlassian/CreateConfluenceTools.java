@@ -1,5 +1,6 @@
 package com.solesonic.mcp.tool.atlassian;
 
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.confluence.Body;
 import com.solesonic.model.atlassian.confluence.Page;
 import com.solesonic.model.atlassian.confluence.Storage;
@@ -55,7 +56,7 @@ public class CreateConfluenceTools {
         body.setStorage(storage);
         page.setBody(body);
 
-        Page createdPage = confluencePageService.createPage(page);
+        Page createdPage = confluencePageService.createPage(CallerIdentity.requireCurrent(), page);
         log.debug("Created confluence page: {}", createdPage.getId());
         String pageUri = CONFLUENCE_URL_TEMPLATE
                 .replace("{spaceId}", DEFAULT_SPACE_ID)

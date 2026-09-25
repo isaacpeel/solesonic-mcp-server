@@ -2,6 +2,7 @@ package com.solesonic.mcp.tool.atlassian;
 
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.service.atlassian.AssigneeResolutionService;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
@@ -17,6 +18,7 @@ import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +31,7 @@ class JiraAssigneeElicitationTest {
 
     private static final String CHAT_ID = "chatId";
     private static final Map<String, Object> META = Map.of(CHAT_ID, "test-chat-id");
+    private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
 
     private static final List<AssigneeCandidate> ALL_ASSIGNABLE = List.of(
             new AssigneeCandidate("acc-1", "Bob"),
@@ -86,10 +89,10 @@ class JiraAssigneeElicitationTest {
 
     @Test
     void noMatches_offersEveryAssignableUser_andReturnsTheChosenOne() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(ALL_ASSIGNABLE);
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(ALL_ASSIGNABLE);
         userAnswers(ElicitResult.Action.ACCEPT, Map.of(JiraAssigneeElicitation.ASSIGNEE_ACCOUNT_ID, "acc-2"));
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.Selected(
                 new AssigneeLookupResult(true, "acc-2", JiraAssigneeElicitation.USER_SELECTED, "Alice")));
@@ -111,11 +114,11 @@ class JiraAssigneeElicitationTest {
         );
         userAnswers(ElicitResult.Action.ACCEPT, Map.of(JiraAssigneeElicitation.ASSIGNEE_ACCOUNT_ID, "acc-3"));
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, matches, META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,matches, META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.Selected(
                 new AssigneeLookupResult(true, "acc-3", JiraAssigneeElicitation.USER_SELECTED, "John Smith")));
-        verify(assigneeResolutionService, never()).listAssigneeCandidates();
+        verify(assigneeResolutionService, never()).listAssigneeCandidates(any());
 
         ElicitFormRequest sentRequest = sentRequest();
         assertThat(sentRequest.message()).contains("More than one");
@@ -127,10 +130,10 @@ class JiraAssigneeElicitationTest {
 
     @Test
     void candidateWithoutADisplayName_isTitledByItsAccountId() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(List.of(new AssigneeCandidate("acc-9", null)));
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(List.of(new AssigneeCandidate("acc-9", null)));
         userAnswers(ElicitResult.Action.ACCEPT, Map.of(JiraAssigneeElicitation.ASSIGNEE_ACCOUNT_ID, "acc-9"));
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.Selected(
                 new AssigneeLookupResult(true, "acc-9", JiraAssigneeElicitation.USER_SELECTED, "acc-9")));
@@ -141,29 +144,29 @@ class JiraAssigneeElicitationTest {
 
     @Test
     void decline_isDeclined() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(ALL_ASSIGNABLE);
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(ALL_ASSIGNABLE);
         userAnswers(ElicitResult.Action.DECLINE, null);
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.Declined());
     }
 
     @Test
     void cancel_isCancelled() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(ALL_ASSIGNABLE);
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(ALL_ASSIGNABLE);
         userAnswers(ElicitResult.Action.CANCEL, null);
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.Cancelled());
     }
 
     @Test
     void noAssignableUsers_neverPromptsTheUser() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(List.of());
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(List.of());
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.NoCandidates());
         verify(exchange, never()).createElicitation(any(ElicitRequest.class));
@@ -171,20 +174,20 @@ class JiraAssigneeElicitationTest {
 
     @Test
     void acceptWithAnAccountIdThatWasNotOffered_isInvalid() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(ALL_ASSIGNABLE);
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(ALL_ASSIGNABLE);
         userAnswers(ElicitResult.Action.ACCEPT, Map.of(JiraAssigneeElicitation.ASSIGNEE_ACCOUNT_ID, "acc-unknown"));
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.InvalidSelection("acc-unknown"));
     }
 
     @Test
     void acceptWithoutContent_isInvalid() {
-        when(assigneeResolutionService.listAssigneeCandidates()).thenReturn(ALL_ASSIGNABLE);
+        when(assigneeResolutionService.listAssigneeCandidates(CALLER)).thenReturn(ALL_ASSIGNABLE);
         userAnswers(ElicitResult.Action.ACCEPT, null);
 
-        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(context, List.of(), META);
+        JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(CALLER, context,List.of(), META);
 
         assertThat(selection).isEqualTo(new JiraAssigneeElicitation.Selection.InvalidSelection(null));
     }

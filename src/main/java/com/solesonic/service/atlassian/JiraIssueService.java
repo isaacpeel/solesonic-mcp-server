@@ -1,6 +1,8 @@
 package com.solesonic.service.atlassian;
 
+import com.solesonic.mcp.exception.atlassian.AtlassianErrorMessages;
 import com.solesonic.mcp.exception.atlassian.JiraException;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.mcp.tool.atlassian.JiraIssueTools;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
@@ -12,13 +14,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.solesonic.mcp.config.atlassian.AtlassianConstants.ATLASSIAN_API_WEB_CLIENT;
 import static com.solesonic.service.atlassian.AtlassianConstants.*;
@@ -46,13 +48,14 @@ public class JiraIssueService {
         this.jsonMapper = jsonMapper;
     }
 
-    public JiraIssue get(String issueId) {
+    public JiraIssue get(CallerIdentity callerIdentity, String issueId) {
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
 
         JiraIssue jiraIssue = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> response.bodyToMono(JiraIssue.class))
                 .block();
 
@@ -61,7 +64,7 @@ public class JiraIssueService {
         return jiraIssue;
     }
 
-    public JiraIssue create(JiraIssue jiraIssue) {
+    public JiraIssue create(CallerIdentity callerIdentity, JiraIssue jiraIssue) {
         log.info("Creating jira issue.");
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH};
 
@@ -69,6 +72,7 @@ public class JiraIssueService {
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .bodyValue(jiraIssue)
                 .exchangeToMono(response -> response.bodyToMono(String.class))
                 .block();
@@ -82,31 +86,10 @@ public class JiraIssueService {
         // Detect Jira error structure in the JSON body and surface a helpful message to tool callers
         JsonNode root = jsonMapper.readTree(jiraIssueJson);
 
-        boolean hasErrorMessages = root.has("errorMessages") && root.get("errorMessages").isArray() && !root.get("errorMessages").isEmpty();
-        boolean hasErrorsObject = root.has("errors") && root.get("errors").isObject() && !root.get("errors").isEmpty();
+        Optional<String> errorMessages = AtlassianErrorMessages.extract(root);
 
-        if (hasErrorMessages || hasErrorsObject) {
-            StringBuilder messageBuilder = new StringBuilder("Jira issue creation failed: ");
-
-            if (hasErrorMessages) {
-                for (JsonNode msgNode : root.get("errorMessages")) {
-                    if (messageBuilder.length() > 30) { // already has some content
-                        messageBuilder.append("; ");
-                    }
-                    messageBuilder.append(msgNode.asString());
-                }
-            }
-
-            if (hasErrorsObject) {
-                root.get("errors").properties().forEach(entry -> {
-                    if (messageBuilder.length() > 30) {
-                        messageBuilder.append("; ");
-                    }
-                    messageBuilder.append(entry.getKey()).append(": ").append(entry.getValue().asString());
-                });
-            }
-
-            throw new JiraException(messageBuilder.toString(), jiraIssueJson);
+        if (errorMessages.isPresent()) {
+            throw new JiraException("Jira issue creation failed: " + errorMessages.get(), jiraIssueJson);
         }
 
         JiraIssue createdJiraIssue = jsonMapper.readValue(jiraIssueJson, JiraIssue.class);
@@ -119,7 +102,7 @@ public class JiraIssueService {
         return createdJiraIssue;
     }
 
-    public void delete(String issueId) {
+    public void delete(CallerIdentity callerIdentity, String issueId) {
         log.info("Deleting jira issue.");
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueId};
@@ -128,13 +111,14 @@ public class JiraIssueService {
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> response.bodyToMono(Void.class))
                 .block();
 
         log.info("Jira issue deleted: {}", issueId);
     }
 
-    public Transitions getTransitions(String issueKey) {
+    public Transitions getTransitions(CallerIdentity callerIdentity, String issueKey) {
         log.info("Fetching available transitions for issue: {}", issueKey);
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
@@ -143,6 +127,7 @@ public class JiraIssueService {
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> response.bodyToMono(Transitions.class))
                 .block();
 
@@ -150,7 +135,7 @@ public class JiraIssueService {
         return transitions;
     }
 
-    public void transitionIssue(String issueKey, String transitionId) {
+    public void transitionIssue(CallerIdentity callerIdentity, String issueKey, String transitionId) {
         log.info("Transitioning issue {} with transition ID: {}", issueKey, transitionId);
 
         String[] basePathSegments = {EX, JIRA, cloudIdPath, REST_PATH, API_PATH, VERSION_PATH, ISSUE_PATH, issueKey, TRANSITIONS_PATH};
@@ -163,17 +148,9 @@ public class JiraIssueService {
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(basePathSegments)
                         .build())
+                .attributes(callerIdentity.requestAttributes())
                 .bodyValue(transitionPayload)
-                .exchangeToMono(response -> {
-                    if (response.statusCode().isError()) {
-                        return response.bodyToMono(String.class)
-                                .defaultIfEmpty("")
-                                .flatMap(errorBody -> Mono.error(new JiraException(
-                                        "Failed to transition issue %s: %s".formatted(issueKey, errorBody),
-                                        errorBody)));
-                    }
-                    return response.bodyToMono(Void.class);
-                })
+                .exchangeToMono(response -> response.bodyToMono(Void.class))
                 .block();
 
         log.info("Issue {} transitioned successfully", issueKey);

@@ -1,6 +1,7 @@
 package com.solesonic.mcp.service.atlassian;
 
 import com.solesonic.agent.agile.AgileQueryIntent;
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.agile.Board;
 import com.solesonic.model.atlassian.agile.BoardColumn;
 import com.solesonic.model.atlassian.agile.BoardConfiguration;
@@ -11,42 +12,34 @@ import com.solesonic.model.atlassian.agile.ColumnStatus;
 import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraAgileService;
 import com.solesonic.service.atlassian.JiraIssueService;
+import com.solesonic.testsupport.RecordingExchangeFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.mcp.annotation.context.McpSyncRequestContext;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriBuilder;
-import reactor.core.publisher.Mono;
+import tools.jackson.databind.json.JsonMapper;
 
-import java.net.URI;
 import java.util.List;
-import java.util.function.Function;
+import java.util.UUID;
 import java.util.stream.Stream;
 
+import static com.solesonic.testsupport.RecordingExchangeFunction.callerIdentityOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class JiraAgileServiceHelperTest {
 
-    @Mock
-    private WebClient webClient;
+    private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
 
-    @Mock
-    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+    private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Mock
     private JiraIssueService jiraIssueService;
@@ -63,11 +56,13 @@ class JiraAgileServiceHelperTest {
     @Mock
     private McpSyncRequestContext mcpSyncRequestContext;
 
+    private RecordingExchangeFunction backend;
     private JiraAgileService service;
 
     @BeforeEach
     void setUp() {
-        service = new JiraAgileService(webClient, jiraIssueService, chatClient);
+        backend = new RecordingExchangeFunction();
+        service = new JiraAgileService(backend.webClient(), jiraIssueService, chatClient);
         ReflectionTestUtils.setField(service, "cloudIdPath", "cloud-id");
         ReflectionTestUtils.setField(service, "jiraUrlTemplate", "https://example.atlassian.net/browse/{key}");
     }
@@ -96,20 +91,32 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_noJqlFilter_saysAllIssues() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(5));
+        respondWith(boardConfigurationWithNoColumns(), boardIssuesWithTotal(5));
 
-        String result = service.handleCountQuery(board, queryResult);
+        String result = service.handleCountQuery(CALLER, board, queryResult);
 
         assertThat(result).contains("all issues").contains("5").contains("My Board");
+    }
+
+    @Test
+    void handleCountQuery_carriesTheCallerOnTheConfigurationAndIssueCalls() {
+        Board board = new Board(1, "self", "My Board", "scrum");
+        AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
+        respondWith(boardConfigurationWithNoColumns(), boardIssuesWithTotal(5));
+
+        service.handleCountQuery(CALLER, board, queryResult);
+
+        assertThat(backend.requests()).hasSize(2);
+        assertThat(backend.requests()).allSatisfy(request -> assertThat(callerIdentityOf(request)).contains(CALLER));
     }
 
     @Test
     void handleCountQuery_withJqlFilter_includesFilter() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "status = Done", "COUNT", null, null);
-        stubBoardIssues(boardIssuesWithTotal(3));
+        respondWith(boardIssuesWithTotal(3));
 
-        String result = service.handleCountQuery(board, queryResult);
+        String result = service.handleCountQuery(CALLER, board, queryResult);
 
         assertThat(result).contains("status = Done").contains("3");
     }
@@ -118,9 +125,9 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_singleIssue_usesSingularWord() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(1));
+        respondWith(boardConfigurationWithNoColumns(), boardIssuesWithTotal(1));
 
-        String result = service.handleCountQuery(board, queryResult);
+        String result = service.handleCountQuery(CALLER, board, queryResult);
 
         assertThat(result).contains("1 issue").doesNotContain("1 issues");
     }
@@ -129,9 +136,9 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_zeroIssues_usesPlural() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardConfigurationThenIssues(boardConfigurationWithNoColumns(), boardIssuesWithTotal(0));
+        respondWith(boardConfigurationWithNoColumns(), boardIssuesWithTotal(0));
 
-        String result = service.handleCountQuery(board, queryResult);
+        String result = service.handleCountQuery(CALLER, board, queryResult);
 
         assertThat(result).contains("0 issues");
     }
@@ -140,9 +147,9 @@ class JiraAgileServiceHelperTest {
     void handleCountQuery_noExplicitScope_scopesToBoardVisibleColumns() {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(List.of(), null, null, null, "", "COUNT", null, null);
-        stubBoardConfigurationThenIssues(boardConfigurationWithColumns("1", "3", "10001"), boardIssuesWithTotal(11));
+        respondWith(boardConfigurationWithColumns("1", "3", "10001"), boardIssuesWithTotal(11));
 
-        String result = service.handleCountQuery(board, queryResult);
+        String result = service.handleCountQuery(CALLER, board, queryResult);
 
         assertThat(result).contains("status in (1, 3, 10001)").contains("11").doesNotContain("all issues");
     }
@@ -152,17 +159,14 @@ class JiraAgileServiceHelperTest {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(
                 List.of(), "currentUser()", null, null, "", "LIST", null, null);
-        stubBoardIssues(boardIssuesWithKeys("IB-1", "IB-2"));
+        respondWith(boardIssuesWithKeys("IB-1", "IB-2"));
 
-        when(jiraIssueService.get("IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
-        when(jiraIssueService.get("IB-2")).thenThrow(new RuntimeException("boom"));
+        when(jiraIssueService.get(CALLER, "IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
+        when(jiraIssueService.get(CALLER, "IB-2")).thenThrow(new RuntimeException("boom"));
 
-        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.content()).thenReturn("formatted response");
+        stubChatResponse();
 
-        String result = service.handleListQuery(mcpSyncRequestContext, board, queryResult, "list my issues");
+        String result = service.handleListQuery(CALLER, mcpSyncRequestContext, board, queryResult, "list my issues");
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClientRequestSpec).user(promptCaptor.capture());
@@ -175,20 +179,34 @@ class JiraAgileServiceHelperTest {
         Board board = new Board(1, "self", "My Board", "scrum");
         AgileQueryIntent queryResult = new AgileQueryIntent(
                 List.of(), "currentUser()", null, null, "", "LIST", null, null);
-        stubBoardIssues(boardIssuesWithKeys("IB-1"));
+        respondWith(boardIssuesWithKeys("IB-1"));
 
-        when(jiraIssueService.get("IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
+        when(jiraIssueService.get(CALLER, "IB-1")).thenReturn(JiraIssue.fields(null).key("IB-1").build());
 
-        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.content()).thenReturn("formatted response");
+        stubChatResponse();
 
-        service.handleListQuery(mcpSyncRequestContext, board, queryResult, "list my issues");
+        service.handleListQuery(CALLER, mcpSyncRequestContext, board, queryResult, "list my issues");
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClientRequestSpec).user(promptCaptor.capture());
         assertThat(promptCaptor.getValue()).doesNotContain("and are omitted below");
+    }
+
+    private void stubChatResponse() {
+        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
+        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
+        when(callResponseSpec.content()).thenReturn("formatted response");
+    }
+
+    /**
+     * Queues the Jira responses in call order. A blank-scope {@link AgileQueryIntent} triggers a
+     * board-configuration lookup before the board-issues call.
+     */
+    private void respondWith(Object... responseBodies) {
+        for (Object responseBody : responseBodies) {
+            backend.respondWithJson(jsonMapper.writeValueAsString(responseBody));
+        }
     }
 
     private BoardIssues boardIssuesWithKeys(String... keys) {
@@ -196,25 +214,6 @@ class JiraAgileServiceHelperTest {
                 .map(key -> new BoardIssue(key, "self/" + key, key))
                 .toList();
         return new BoardIssues(null, 0, issues.size(), issues.size(), issues);
-    }
-
-    /**
-     * A blank-scope {@link AgileQueryIntent} triggers a board-configuration lookup before the
-     * board-issues call. Stub the two responses in call order.
-     */
-    private void stubBoardConfigurationThenIssues(BoardConfiguration configuration, BoardIssues boardIssues) {
-        doReturn(requestHeadersUriSpec).when(webClient).get();
-        doReturn(requestHeadersSpec).when(requestHeadersUriSpec)
-                .uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
-        doReturn(Mono.just(configuration), Mono.just(boardIssues))
-                .when(requestHeadersSpec).exchangeToMono(ArgumentMatchers.any());
-    }
-
-    private void stubBoardIssues(BoardIssues boardIssues) {
-        doReturn(requestHeadersUriSpec).when(webClient).get();
-        doReturn(requestHeadersSpec).when(requestHeadersUriSpec)
-                .uri(ArgumentMatchers.<Function<UriBuilder, URI>>any());
-        doReturn(Mono.just(boardIssues)).when(requestHeadersSpec).exchangeToMono(ArgumentMatchers.any());
     }
 
     private BoardIssues boardIssuesWithTotal(int total) {
@@ -227,7 +226,7 @@ class JiraAgileServiceHelperTest {
 
     @SuppressWarnings("all")
     private BoardConfiguration boardConfigurationWithColumns(String... statusIds) {
-        List<ColumnStatus> statuses = List.of(statusIds).stream()
+        List<ColumnStatus> statuses = Stream.of(statusIds)
                 .map(statusId -> new ColumnStatus(statusId, "self/" + statusId))
                 .toList();
         BoardColumn column = new BoardColumn("Column", statuses);
