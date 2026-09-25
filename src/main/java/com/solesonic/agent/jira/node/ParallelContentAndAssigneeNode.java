@@ -47,8 +47,7 @@ public class ParallelContentAndAssigneeNode implements AsyncNodeAction<JiraState
         try {
             log.info("Fanning out: generating story content and resolving the assignee concurrently");
 
-            CompletableFuture<Map<String, Object>> assigneeFuture =
-                    CompletableFuture.supplyAsync(() -> resolveAssigneeNode.apply(state).join());
+            CompletableFuture<Map<String, Object>> assigneeFuture = CompletableFuture.supplyAsync(() -> resolveAssigneeNode.apply(state).join());
 
             CompletableFuture<Map<String, Object>> contentFuture = generateDetailedDescriptionNode.apply(state)
                     .thenCompose(descriptionUpdate -> {

@@ -108,6 +108,28 @@ class JiraIssueServiceTest {
 
         assertEquals("acc-1", jiraIssue.fields().assignee().accountId());
         assertEquals("Login page", jiraIssue.fields().summary());
+        assertEquals(3, jiraIssue.fields().description().content().size());
+    }
+
+    @Test
+    void convert_withABlankSummary_isRefused() {
+        AssigneeLookupResult assignee = new AssigneeLookupResult(true, "acc-1", "RESOLVED", "Bob");
+        JiraIssueCreatePayload payload = new JiraIssueCreatePayload(" ", "Build it", List.of("It works"), assignee);
+
+        JiraException exception = assertThrows(JiraException.class, () -> service.convert(payload));
+
+        assertTrue(exception.getMessage().contains("without a summary"));
+        verifyNoInteractions(webClient);
+    }
+
+    @Test
+    void convert_withNoAcceptanceCriteria_omitsTheBulletListSection() {
+        AssigneeLookupResult assignee = new AssigneeLookupResult(true, "acc-1", "RESOLVED", "Bob");
+        JiraIssueCreatePayload payload = new JiraIssueCreatePayload("Login page", "Build it", List.of(), assignee);
+
+        JiraIssue jiraIssue = service.convert(payload);
+
+        assertEquals(1, jiraIssue.fields().description().content().size());
     }
 
     @Test

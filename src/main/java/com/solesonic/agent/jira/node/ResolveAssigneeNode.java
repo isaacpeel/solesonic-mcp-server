@@ -31,9 +31,11 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
 
     @Override
     public CompletableFuture<Map<String, Object>> apply(JiraState jiraState) {
+        log.info("Resolve Assignee Node: apply");
+
         try {
-            String userMessage = jiraState.userMessage().orElseThrow(() ->
-                    new IllegalStateException("userMessage is required"));
+            String userMessage = jiraState.userMessage()
+                    .orElseThrow(() -> new IllegalStateException("userMessage is required"));
 
             log.info("Resolving assignee for: {}", userMessage);
 
@@ -47,14 +49,13 @@ public class ResolveAssigneeNode implements AsyncNodeAction<JiraState> {
                     updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, false);
                 }
                 case AssigneeResolution.Ambiguous ambiguous -> {
-                    log.info("Assignee not resolved: {} users match \"{}\"; the user will choose between them",
-                            ambiguous.candidates().size(), ambiguous.searchTerm());
+                    log.info("Assignee not resolved: {} users match: {}; the user will choose between them", ambiguous.candidates().size(), ambiguous.searchTerm());
+
                     updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
                     updates.put(JiraState.ASSIGNEE_CANDIDATES, ambiguous.candidates());
                 }
                 case AssigneeResolution.NotFound notFound -> {
-                    log.info("Assignee not resolved: nobody matches \"{}\"; the user will pick from every assignable user",
-                            notFound.searchTerm());
+                    log.info("Assignee not resolved: nobody matches:{}; the user will pick from every assignable user", notFound.searchTerm());
                     updates.put(JiraState.ASSIGNEE_NOT_RESOLVED, true);
                 }
                 case AssigneeResolution.NotRequested _ -> {

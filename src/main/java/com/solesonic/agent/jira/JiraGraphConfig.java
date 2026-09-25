@@ -1,10 +1,13 @@
 package com.solesonic.agent.jira;
 
 import com.solesonic.agent.jira.node.AssembleJiraPayloadNode;
+import com.solesonic.agent.jira.node.AwaitAssigneeSelectionNode;
 import com.solesonic.agent.jira.node.ParallelContentAndAssigneeNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
+import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,22 +18,29 @@ import static org.bsc.langgraph4j.GraphDefinition.START;
 public class JiraGraphConfig {
 
     public static final String GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE = "generateContentAndResolveAssignee";
+    public static final String AWAIT_ASSIGNEE_SELECTION = "awaitAssigneeSelection";
     public static final String ASSEMBLE_PAYLOAD = "assemblePayload";
 
     @Bean
     public CompiledGraph<JiraState> createJiraGraph(
             ParallelContentAndAssigneeNode parallelContentAndAssigneeNode,
-            AssembleJiraPayloadNode assembleJiraPayloadNode
+            AwaitAssigneeSelectionNode awaitAssigneeSelectionNode,
+            AssembleJiraPayloadNode assembleJiraPayloadNode,
+            MemorySaver jiraAssigneeCheckpointSaver
     ) throws GraphStateException {
 
         return new StateGraph<>(JiraState::new)
                 .addNode(GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE, parallelContentAndAssigneeNode)
+                .addNode(AWAIT_ASSIGNEE_SELECTION, awaitAssigneeSelectionNode)
                 .addNode(ASSEMBLE_PAYLOAD, assembleJiraPayloadNode)
 
                 .addEdge(START, GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE)
-                .addEdge(GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE, ASSEMBLE_PAYLOAD)
+                .addEdge(GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE, AWAIT_ASSIGNEE_SELECTION)
+                .addEdge(AWAIT_ASSIGNEE_SELECTION, ASSEMBLE_PAYLOAD)
                 .addEdge(ASSEMBLE_PAYLOAD, END)
 
-                .compile();
+                .compile(CompileConfig.builder()
+                        .checkpointSaver(jiraAssigneeCheckpointSaver)
+                        .build());
     }
 }

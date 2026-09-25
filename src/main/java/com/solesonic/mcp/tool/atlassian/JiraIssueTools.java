@@ -4,14 +4,16 @@ import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.agent.jira.JiraGraphConfig;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeCandidate;
-import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
 import com.solesonic.model.atlassian.jira.JiraIssue;
 import com.solesonic.service.atlassian.JiraIssueService;
 import com.solesonic.mcp.tool.McpConfirmations;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import org.bsc.langgraph4j.CompiledGraph;
+import org.bsc.langgraph4j.GraphInput;
+import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.RunnableConfig;
+import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -48,16 +50,19 @@ public class JiraIssueTools {
     private final JiraIssueService jiraIssueService;
     private final CompiledGraph<JiraState> jiraCreateGraph;
     private final JiraAssigneeElicitation jiraAssigneeElicitation;
+    private final MemorySaver jiraAssigneeCheckpointSaver;
 
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
     public JiraIssueTools(JiraIssueService jiraIssueService,
                           CompiledGraph<JiraState> jiraCreateGraph,
-                          JiraAssigneeElicitation jiraAssigneeElicitation) {
+                          JiraAssigneeElicitation jiraAssigneeElicitation,
+                          MemorySaver jiraAssigneeCheckpointSaver) {
         this.jiraIssueService = jiraIssueService;
         this.jiraCreateGraph = jiraCreateGraph;
         this.jiraAssigneeElicitation = jiraAssigneeElicitation;
+        this.jiraAssigneeCheckpointSaver = jiraAssigneeCheckpointSaver;
     }
 
     public record CreateJiraRequest(String summary, String description, List<String> acceptanceCriteria, String assigneeId) {
@@ -128,24 +133,92 @@ public class JiraIssueTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "A natural language description of the story to create, including any relevant context such as the desired assignee.") String userMessage
     ) {
+        log.info("Create jira tool called.");
         String conversationId = extractConversationId(mcpSyncRequestContext);
 
         ProgressReporter progressReporter = new ProgressReporter(mcpSyncRequestContext);
         progressReporter.emit(5, "Starting Jira story workflow…");
 
-        Map<String, Object> graphInput = Map.of(
-                JiraState.USER_MESSAGE, userMessage,
-                JiraState.CONVERSATION_ID, conversationId
-        );
+        RunnableConfig config = RunnableConfig.builder()
+                .threadId(conversationId)
+                .build();
 
-        AtomicReference<JiraState> finalStateRef = new AtomicReference<>();
+        boolean resumingInFlightRequest = jiraAssigneeCheckpointSaver.get(config).isPresent();
 
-        jiraCreateGraph.stream(graphInput, RunnableConfig.builder().build())
+        GraphInput input = resumingInFlightRequest
+                ? GraphInput.resume(Map.of())
+                : GraphInput.args(Map.of(
+                        JiraState.USER_MESSAGE, userMessage,
+                        JiraState.CONVERSATION_ID, conversationId
+                ));
+
+        NodeOutput<JiraState> output = runGraph(input, config, progressReporter);
+
+        if (!output.isEND()) {
+            progressReporter.emit(80, "Waiting for an assignee to be chosen…");
+
+            JiraState pausedState = output.state();
+            List<AssigneeCandidate> matchingCandidates = pausedState.assigneeCandidates().orElse(List.of());
+
+            JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(
+                    mcpSyncRequestContext, matchingCandidates, Map.of(CHAT_ID, conversationId));
+
+            switch (selection) {
+                case JiraAssigneeElicitation.Selection.Selected selected -> {
+                    Map<String, Object> resumeData = Map.of(
+                            JiraState.ASSIGNEE_LOOKUP_RESULT, selected.assigneeLookupResult(),
+                            JiraState.ASSIGNEE_NOT_RESOLVED, false
+                    );
+                    output = runGraph(GraphInput.resume(resumeData), config, progressReporter);
+                }
+                case JiraAssigneeElicitation.Selection.Declined _ -> {
+                    releaseCheckpoint(config);
+                    return "Story not created: Jira requires an assignee and none was selected.";
+                }
+                case JiraAssigneeElicitation.Selection.Cancelled _ -> {
+                    releaseCheckpoint(config);
+                    return "Story creation cancelled.";
+                }
+                case JiraAssigneeElicitation.Selection.NoCandidates _ -> {
+                    releaseCheckpoint(config);
+                    return "Story not created: Jira returned no assignable users for the project, and Jira requires an assignee.";
+                }
+                case JiraAssigneeElicitation.Selection.InvalidSelection _ -> {
+                    releaseCheckpoint(config);
+                    return "Story not created: the selected assignee is not an assignable Jira user.";
+                }
+            }
+        }
+
+        JiraState finalState = output.state();
+
+        JiraIssueCreatePayload payload = finalState.finalPayload().orElseThrow(
+                () -> new IllegalStateException("Graph completed without assembling a Jira payload"));
+
+        JiraIssue createdIssue = jiraIssueService.create(jiraIssueService.convert(payload));
+        String issueKey = createdIssue.key();
+
+        log.info("Jira story created: {}", issueKey);
+
+        return "Created Jira story %s: %s".formatted(issueKey, jiraUrlTemplate.replace("{key}", issueKey));
+    }
+
+    /**
+     * Streams the graph to completion (either a fresh run or a resume), reporting progress along
+     * the way, and returns the last emitted output. That output is either the natural end of the
+     * graph or, per {@link NodeOutput#isEND()}, the point where {@code AwaitAssigneeSelectionNode}
+     * paused it.
+     */
+    private NodeOutput<JiraState> runGraph(GraphInput input, RunnableConfig config, ProgressReporter progressReporter) {
+        AtomicReference<NodeOutput<JiraState>> finalOutputRef = new AtomicReference<>();
+
+        jiraCreateGraph.stream(input, config)
                 .forEachAsync(output -> {
-                    finalStateRef.set(output.state());
+                    finalOutputRef.set(output);
 
                     int progressPercent = switch (output.node()) {
                         case JiraGraphConfig.GENERATE_CONTENT_AND_RESOLVE_ASSIGNEE -> 60;
+                        case JiraGraphConfig.AWAIT_ASSIGNEE_SELECTION              -> 80;
                         case JiraGraphConfig.ASSEMBLE_PAYLOAD                      -> 90;
                         case END                                                   -> 100;
                         default                                                    -> 10;
@@ -163,52 +236,20 @@ public class JiraIssueTools {
                 })
                 .join();
 
-        JiraState finalState = finalStateRef.get();
-
-        JiraIssueCreatePayload payload = finalState.finalPayload().orElseThrow(
-                () -> new IllegalStateException("Graph completed without assembling a Jira payload"));
-
-        if (finalState.assigneeNotResolved().orElse(false)) {
-            progressReporter.emit(80, "Waiting for an assignee to be chosen…");
-
-            List<AssigneeCandidate> matchingCandidates = finalState.assigneeCandidates().orElse(List.of());
-
-            JiraAssigneeElicitation.Selection selection = jiraAssigneeElicitation.selectAssignee(
-                    mcpSyncRequestContext, matchingCandidates, Map.of(CHAT_ID, conversationId));
-
-            switch (selection) {
-                case JiraAssigneeElicitation.Selection.Selected selected ->
-                        payload = withAssignee(payload, selected.assigneeLookupResult());
-                case JiraAssigneeElicitation.Selection.Declined _ -> {
-                    return "Story not created: Jira requires an assignee and none was selected.";
-                }
-                case JiraAssigneeElicitation.Selection.Cancelled _ -> {
-                    return "Story creation cancelled.";
-                }
-                case JiraAssigneeElicitation.Selection.NoCandidates _ -> {
-                    return "Story not created: Jira returned no assignable users for the project, and Jira requires an assignee.";
-                }
-                case JiraAssigneeElicitation.Selection.InvalidSelection _ -> {
-                    return "Story not created: the selected assignee is not an assignable Jira user.";
-                }
-            }
-        }
-
-        JiraIssue createdIssue = jiraIssueService.create(jiraIssueService.convert(payload));
-        String issueKey = createdIssue.key();
-
-        log.info("Jira story created: {}", issueKey);
-
-        return "Created Jira story %s: %s".formatted(issueKey, jiraUrlTemplate.replace("{key}", issueKey));
+        return finalOutputRef.get();
     }
 
-    private static JiraIssueCreatePayload withAssignee(JiraIssueCreatePayload payload, AssigneeLookupResult assigneeLookupResult) {
-        return new JiraIssueCreatePayload(
-                payload.summary(),
-                payload.description(),
-                payload.acceptanceCriteria(),
-                assigneeLookupResult
-        );
+    /**
+     * Discards the checkpoint for a conversation that ended without an assignee, so a later,
+     * unrelated story request in the same conversation doesn't resume this abandoned attempt's
+     * already-generated content.
+     */
+    private void releaseCheckpoint(RunnableConfig config) {
+        try {
+            jiraAssigneeCheckpointSaver.release(config);
+        } catch (Exception exception) {
+            log.warn("Failed to release the Jira story checkpoint for this conversation", exception);
+        }
     }
 
     private static String extractConversationId(McpSyncRequestContext mcpSyncRequestContext) {

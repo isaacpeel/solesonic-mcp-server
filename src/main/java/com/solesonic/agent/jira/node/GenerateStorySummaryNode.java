@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -30,9 +29,6 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
 
     private static final String INPUT = "input";
 
-    private static final double SUMMARY_TEMPERATURE = 0.2;
-    private static final int SUMMARY_MAX_TOKENS = 32;
-
     private final ChatClient chatClient;
     private final PromptTemplate summaryPromptTemplate;
 
@@ -46,16 +42,13 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
     @Override
     public CompletableFuture<Map<String, Object>> apply(JiraState state) {
         try {
-            String detailedDescription = state.detailedDescription().orElseThrow(() ->
-                    new IllegalStateException("detailedDescription is required"));
+            String detailedDescription = state.detailedDescription().orElseThrow(() -> new IllegalStateException("detailedDescription is required"));
 
             log.info("Generating story summary");
 
             Prompt summaryPrompt = summaryPromptTemplate.create(Map.of(INPUT, detailedDescription));
+
             String summary = chatClient.prompt(summaryPrompt)
-                    .options(OpenAiChatOptions.builder()
-                            .temperature(SUMMARY_TEMPERATURE)
-                            .maxTokens(SUMMARY_MAX_TOKENS))
                     .call()
                     .content();
 

@@ -192,6 +192,11 @@ public class JiraIssueService {
                     .formatted(jiraIssueCreatePayload.summary()));
         }
 
+        if (jiraIssueCreatePayload.summary() == null || jiraIssueCreatePayload.summary().isBlank()) {
+            log.warn("Refusing to build a Jira story without a summary");
+            throw new JiraException("Cannot create a Jira story without a summary; the generated title was empty.");
+        }
+
         JiraIssueTools.CreateJiraRequest createJiraRequest = new JiraIssueTools.CreateJiraRequest(
                 jiraIssueCreatePayload.summary(),
                 jiraIssueCreatePayload.description(),
@@ -202,43 +207,57 @@ public class JiraIssueService {
                 .type(TEXT)
                 .build();
 
-        List<TextContent> acceptanceCriteria = new ArrayList<>();
-
-        createJiraRequest.acceptanceCriteria().forEach(ac -> {
-            TextContent acceptanceCriteriaItemTextContent = TextContent.type(TEXT)
-                    .text(ac)
-                    .build();
-
-            TextContent acceptanceCriteriaItemContent = TextContent.type(PARAGRAPH)
-                    .content(List.of(acceptanceCriteriaItemTextContent))
-                    .build();
-
-            TextContent listItemContent = TextContent.type(LIST_ITEM)
-                    .content(List.of(acceptanceCriteriaItemContent))
-                    .build();
-
-            acceptanceCriteria.add(listItemContent);
-        });
-
-        Content bulletList = Content
-                .content(acceptanceCriteria)
-                .type(BULLET_LIST)
-                .build();
-
         Content descriptionContent = Content.content(List.of(descriptionText))
                 .type(PARAGRAPH)
                 .build();
 
-        TextContent acceptanceCriteriaHeader = TextContent.text(ACCEPTANCE_CRITERIA)
-                .type(TEXT)
-                .build();
+        List<Content> documentContent = new ArrayList<>();
+        documentContent.add(descriptionContent);
 
-        Content acceptanceCriteriaContent = Content
-                .content(List.of(acceptanceCriteriaHeader))
-                .type(PARAGRAPH)
-                .build();
+        List<String> acceptanceCriteriaLines = createJiraRequest.acceptanceCriteria();
 
-        Description description = Description.content(List.of(descriptionContent, acceptanceCriteriaContent, bulletList))
+        if (acceptanceCriteriaLines != null && !acceptanceCriteriaLines.isEmpty()) {
+            List<TextContent> acceptanceCriteria = new ArrayList<>();
+
+            acceptanceCriteriaLines.forEach(ac -> {
+                TextContent acceptanceCriteriaItemTextContent = TextContent.type(TEXT)
+                        .text(ac)
+                        .build();
+
+                TextContent acceptanceCriteriaItemContent = TextContent.type(PARAGRAPH)
+                        .content(List.of(acceptanceCriteriaItemTextContent))
+                        .build();
+
+                TextContent listItemContent = TextContent.type(LIST_ITEM)
+                        .content(List.of(acceptanceCriteriaItemContent))
+                        .build();
+
+                acceptanceCriteria.add(listItemContent);
+            });
+
+            TextContent acceptanceCriteriaHeader = TextContent.text(ACCEPTANCE_CRITERIA)
+                    .type(TEXT)
+                    .build();
+
+            Content acceptanceCriteriaContent = Content
+                    .content(List.of(acceptanceCriteriaHeader))
+                    .type(PARAGRAPH)
+                    .build();
+
+            Content bulletList = Content
+                    .content(acceptanceCriteria)
+                    .type(BULLET_LIST)
+                    .build();
+
+            documentContent.add(acceptanceCriteriaContent);
+            documentContent.add(bulletList);
+        } else {
+            // An empty bulletList is invalid Atlassian Document Format, so the section is omitted
+            // entirely rather than sent empty.
+            log.warn("No acceptance criteria were generated; the Jira description will omit that section");
+        }
+
+        Description description = Description.content(documentContent)
                 .type(DOC)
                 .version(1)
                 .build();

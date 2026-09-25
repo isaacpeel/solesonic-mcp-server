@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -39,8 +38,6 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
             numbering, or bullet points.
             """;
 
-    private static final int ACCEPTANCE_CRITERIA_MAX_TOKENS = 400;
-
     private final ChatClient chatClient;
     private final PromptTemplate acceptanceCriteriaPromptTemplate;
 
@@ -69,7 +66,6 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
             Prompt acceptanceCriteriaPrompt = acceptanceCriteriaPromptTemplate.create(templateInputs);
 
             String content = chatClient.prompt(acceptanceCriteriaPrompt)
-                    .options(OpenAiChatOptions.builder().maxTokens(ACCEPTANCE_CRITERIA_MAX_TOKENS))
                     .call()
                     .content();
 
