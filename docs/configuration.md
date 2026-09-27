@@ -17,6 +17,12 @@ Key properties (environment variables in parentheses)
   - spring.ai.mcp.server.name=solesonic-mcp-server
   - spring.ai.mcp.server.version=1.0.0
   - spring.ai.mcp.server.type=sync
+- MCP server session timeouts
+  - spring.ai.mcp.server.request-timeout=600s
+    - Bounds server-initiated requests (elicitation, sampling, roots). Does not affect tool execution or inbound client requests.
+    - Spring AI defaults to 20s, which is shorter than a human takes to answer a confirmation prompt. The late answer then comes back as HTTP 500 on POST /mcp — see ./elicitation.md.
+    - Keep it in application.properties so every profile inherits it, not in a single profile.
+  - spring.ai.mcp.server.streamable-http.keep-alive-interval=600s
 - Web Search (Tavily)
   - websearch.provider=tavily
   - tavily.api.key=(${TAVILY_API_KEY})
@@ -32,11 +38,32 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.timeout-seconds=180
   - comfyui.generation.poll-interval-millis=1000
   - comfyui.generation.expected-seconds=12
-  - comfyui.workflow.flux-schnell=classpath:comfyui/flux1-schnell.json
+  - comfyui.generation.release-memory-delay-millis=300000
+  - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
+- Database (PostgreSQL)
+  - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server
+  - spring.datasource.username=(${DATABASE_USERNAME})
+  - spring.datasource.password=(${DATABASE_PASSWORD})
+  - spring.jpa.hibernate.ddl-auto=validate   # Flyway owns the schema
+  - spring.flyway.enabled=true
 - Jira tools
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
   - solesonic.llm.jira.cloud.id.path=(${JIRA_CLOUD_ID_PATH})
+  - solesonic.llm.jira.assignee.page-size=100
+    - Assignable users requested per page. A name search reads one page. The `create_jira_story` assignee picker pages through every assignable user, so this sets the request size, not a limit on the list. See ./elicitation.md.
+- Gmail
+  - google.api.uri=https://gmail.googleapis.com
+
+- Graph checkpoints (Redis)
+  - Every LangGraph4j graph checkpoints to the same Redis server as `spring.data.redis.*`, through a separate Redisson client that connects lazily on the first checkpoint.
+  - All keys live under `mcp:checkpoint:`. A run's keys are deleted when it finishes; only a run paused for user input (the `create_jira_story` assignee picker) keeps its checkpoint until the user answers.
+  - solesonic.checkpoint.ttl=24h — a backstop expiry for checkpoints of runs abandoned mid-flight (for example, a crash). It does not bound normal runs.
+
+- Google Token Broker (external service)
+  - google.token.broker.uri=(${GOOGLE_TOKEN_BROKER_URL}) — the full endpoint path, e.g. https://api.example.com/broker/google/token
+  - Reuses the atlassian-token-broker client credentials registration below; there are no separate Google client-id/secret properties. The service account behind that client needs the `token-mint-gmail` role.
+
 - Atlassian Token Broker (external service)
   - atlassian.token.broker.uri=(${ATLASSIAN_TOKEN_BROKER_URL})
   - spring.security.oauth2.client.provider.atlassian-token-broker.token-uri=(${ATLASSIAN_TOKEN_BROKER_ISSUER_URI})
@@ -58,6 +85,9 @@ Examples
   - export TAVILY_API_KEY=<your-tavily-api-key>
   - export TAVILY_API_ENDPOINT=https://api.tavily.com/search
   - export COMFYUI_API_URI=https://comfy.izzy-bot.com
+  - export DATABASE_URL=jdbc:postgresql://localhost:5433/solesonic-mcp-server
+  - export DATABASE_USERNAME=solesonic-mcp
+  - export DATABASE_PASSWORD=<change-me>
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
@@ -70,5 +100,6 @@ Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
 - Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
-- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization. The workflow resource is also parsed and validated at startup, so a bad re-export fails fast rather than on the first tool call. See Image Generation: ./image-generation.md
+- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization.
+- A reachable database is required at startup: Flyway runs the migrations and the workflow table is read once during initialization. Individual **rows**, however, are tolerant — a malformed workflow row is logged and skipped rather than failing the context, because rows are inserted by hand and one bad paste should not take every unrelated tool down. See Image Generation: ./image-generation.md
 - Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.

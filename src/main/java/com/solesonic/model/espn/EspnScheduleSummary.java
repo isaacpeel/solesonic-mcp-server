@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings("unused")
 public record EspnScheduleSummary(List<EspnEvent> games) implements Serializable {
 
     public boolean hasGames() {

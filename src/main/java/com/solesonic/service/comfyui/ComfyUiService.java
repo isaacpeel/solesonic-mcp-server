@@ -2,6 +2,7 @@ package com.solesonic.service.comfyui;
 
 import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ComfyFreeRequest;
 import com.solesonic.model.comfyui.ComfyHistoryEntry;
 import com.solesonic.model.comfyui.ComfyImageReference;
 import com.solesonic.model.comfyui.ComfyNodeOutput;
@@ -17,15 +18,18 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.COMFY_UI_WEB_CLIENT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FREE_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.HISTORY_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.OUTPUT_TYPE;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.PROMPT_ENDPOINT;
@@ -54,30 +58,39 @@ public class ComfyUiService {
     private static final int PROGRESS_COMPLETE = 100;
 
     private final WebClient webClient;
-    private final ComfyWorkflowTemplate comfyWorkflowTemplate;
     private final long generationTimeoutSeconds;
     private final long pollIntervalMillis;
     private final double expectedSeconds;
+    private final Duration releaseMemoryDelay;
+
+    private Disposable pendingMemoryRelease;
 
     public ComfyUiService(
             @Qualifier(COMFY_UI_WEB_CLIENT) WebClient webClient,
-            ComfyWorkflowTemplate comfyWorkflowTemplate,
             @Value("${comfyui.generation.timeout-seconds}") long generationTimeoutSeconds,
             @Value("${comfyui.generation.poll-interval-millis}") long pollIntervalMillis,
-            @Value("${comfyui.generation.expected-seconds}") double expectedSeconds
+            @Value("${comfyui.generation.expected-seconds}") double expectedSeconds,
+            @Value("${comfyui.generation.release-memory-delay-millis}") long releaseMemoryDelayMillis
     ) {
         this.webClient = webClient;
-        this.comfyWorkflowTemplate = comfyWorkflowTemplate;
         this.generationTimeoutSeconds = generationTimeoutSeconds;
         this.pollIntervalMillis = pollIntervalMillis;
         this.expectedSeconds = expectedSeconds;
+        this.releaseMemoryDelay = Duration.ofMillis(releaseMemoryDelayMillis);
     }
 
-    public GeneratedImage generate(ImageGenerationRequest imageGenerationRequest, ProgressReporter progressReporter) {
-        log.info("Generating {}x{} image with {} steps at seed {}",
+    /**
+     * The workflow arrives per call rather than as a constructor dependency: each stored workflow is
+     * its own MCP tool, so which template to patch is a property of the invocation.
+     */
+    public GeneratedImage generate(
+            ComfyWorkflowTemplate comfyWorkflowTemplate,
+            ImageGenerationRequest imageGenerationRequest,
+            ProgressReporter progressReporter
+    ) {
+        log.info("Generating {}x{} image at seed {}",
                 imageGenerationRequest.width(),
                 imageGenerationRequest.height(),
-                imageGenerationRequest.steps(),
                 imageGenerationRequest.seed());
 
         long startNanos = System.nanoTime();
@@ -96,6 +109,8 @@ public class ComfyUiService {
 
         String base64Png = Base64.getEncoder().encodeToString(download(imageReference));
 
+        scheduleReleaseMemory();
+
         double elapsedSeconds = elapsedSeconds(startNanos);
 
         progressReporter.emit(PROGRESS_COMPLETE, "Generated %d×%d in %.1fs (seed %d)"
@@ -111,6 +126,48 @@ public class ComfyUiService {
                 .base64Png(base64Png)
                 .elapsedSeconds(elapsedSeconds)
                 .build();
+    }
+
+    /**
+     * Debounces {@link #releaseMemory()}: each call cancels whatever release was previously
+     * pending and schedules a new one {@code releaseMemoryDelay} out, so back-to-back generations
+     * never force ComfyUI to reload the model between requests — {@code /free} only fires once
+     * {@code releaseMemoryDelay} has passed since the *last* generation.
+     *
+     * <p>{@code synchronized} because {@code generate()} can run concurrently for different
+     * requests: cancelling the previous timer and installing the new one must happen as one
+     * atomic step, otherwise two racing calls can interleave such that the earlier call's timer
+     * survives instead of the later one's.
+     */
+    private synchronized void scheduleReleaseMemory() {
+        if (pendingMemoryRelease != null) {
+            pendingMemoryRelease.dispose();
+        }
+
+        pendingMemoryRelease = Mono.delay(releaseMemoryDelay)
+                .then(Mono.fromRunnable(this::releaseMemory))
+                .subscribe();
+    }
+
+    /**
+     * Fire-and-forget: ComfyUI keeps the generated model resident in VRAM between requests, so this
+     * releases it now that the image is safely in hand. A failure here must never fail {@code
+     * generate()} — the image was already produced successfully — so the response is neither
+     * blocked on nor propagated, only logged.
+     */
+    private void releaseMemory() {
+        webClient.post()
+                .uri(FREE_ENDPOINT)
+                .bodyValue(new ComfyFreeRequest(true, true))
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
+                        .defaultIfEmpty("")
+                        .flatMap(body -> Mono.error(new ComfyUiException(
+                                "ComfyUI /free failed with status " + clientResponse.statusCode(), body))))
+                .bodyToMono(Void.class)
+                .doOnError(error -> log.warn("ComfyUI /free call failed, memory was not released", error))
+                .onErrorComplete()
+                .subscribe();
     }
 
     /**

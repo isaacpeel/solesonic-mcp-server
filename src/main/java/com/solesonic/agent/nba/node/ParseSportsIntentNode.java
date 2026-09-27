@@ -5,6 +5,7 @@ import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.SportsEntityExtraction;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,8 @@ import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(ParseSportsIntentNode.class);
+
+    private static final String OPERATION = "Parsing the sports query intent";
 
     @Value("classpath:prompt/sports/sports-entity-prompt.st")
     private Resource entityPromptResource;
@@ -92,7 +95,8 @@ public class ParseSportsIntentNode implements AsyncNodeAction<SportsState> {
                     SportsState.CURRENT_DATE_TIME, currentDateTime
             ));
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to parse sports query intent", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

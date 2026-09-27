@@ -12,22 +12,11 @@ import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTaskPushNotificationConfig
 import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTaskPushNotificationConfigsResponse;
 import org.a2aproject.sdk.server.ServerCallContext;
 import org.a2aproject.sdk.server.requesthandlers.RequestHandler;
-import org.a2aproject.sdk.spec.A2AError;
-import org.a2aproject.sdk.spec.InternalError;
-import org.a2aproject.sdk.spec.InvalidParamsError;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.Callable;
-import java.util.function.Function;
-
 @Service
 public class PushNotificationService {
-
-    private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
 
     public static final String PUSH_NOTIFICATION_CONFIG_SET = "CreateTaskPushNotificationConfig";
     public static final String PUSH_NOTIFICATION_CONFIG_GET = "GetTaskPushNotificationConfig";
@@ -36,17 +25,20 @@ public class PushNotificationService {
 
     private final AgentRequestHandlerRegistry agentRequestHandlerRegistry;
     private final ServerCallContextFactory serverCallContextFactory;
+    private final A2ARpcExecutor a2aRpcExecutor;
 
     public PushNotificationService(AgentRequestHandlerRegistry agentRequestHandlerRegistry,
-                                   ServerCallContextFactory serverCallContextFactory) {
+                                   ServerCallContextFactory serverCallContextFactory,
+                                   A2ARpcExecutor a2aRpcExecutor) {
         this.agentRequestHandlerRegistry = agentRequestHandlerRegistry;
         this.serverCallContextFactory = serverCallContextFactory;
+        this.a2aRpcExecutor = a2aRpcExecutor;
     }
 
     public ResponseEntity<CreateTaskPushNotificationConfigResponse> setPushConfig(String agentId, CreateTaskPushNotificationConfigRequest request) {
         RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
-        return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_SET,
+        return a2aRpcExecutor.execute(request.getId(), PUSH_NOTIFICATION_CONFIG_SET,
                 () -> new CreateTaskPushNotificationConfigResponse(request.getId(), requestHandler.onCreateTaskPushNotificationConfig(request.getParams(), context)),
                 error -> new CreateTaskPushNotificationConfigResponse(request.getId(), error));
     }
@@ -54,7 +46,7 @@ public class PushNotificationService {
     public ResponseEntity<GetTaskPushNotificationConfigResponse> getPushConfig(String agentId, GetTaskPushNotificationConfigRequest request) {
         RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
-        return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_GET,
+        return a2aRpcExecutor.execute(request.getId(), PUSH_NOTIFICATION_CONFIG_GET,
                 () -> new GetTaskPushNotificationConfigResponse(request.getId(), requestHandler.onGetTaskPushNotificationConfig(request.getParams(), context)),
                 error -> new GetTaskPushNotificationConfigResponse(request.getId(), error));
     }
@@ -62,7 +54,7 @@ public class PushNotificationService {
     public ResponseEntity<ListTaskPushNotificationConfigsResponse> listPushConfigs(String agentId, ListTaskPushNotificationConfigsRequest request) {
         RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
-        return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_LIST,
+        return a2aRpcExecutor.execute(request.getId(), PUSH_NOTIFICATION_CONFIG_LIST,
                 () -> new ListTaskPushNotificationConfigsResponse(request.getId(), requestHandler.onListTaskPushNotificationConfigs(request.getParams(), context)),
                 error -> new ListTaskPushNotificationConfigsResponse(request.getId(), error));
     }
@@ -70,35 +62,11 @@ public class PushNotificationService {
     public ResponseEntity<DeleteTaskPushNotificationConfigResponse> deletePushConfig(String agentId, DeleteTaskPushNotificationConfigRequest request) {
         RequestHandler requestHandler = agentRequestHandlerRegistry.getHandler(agentId);
         ServerCallContext context = serverCallContextFactory.create();
-        return executeRpc(request.getId(), PUSH_NOTIFICATION_CONFIG_DELETE,
+        return a2aRpcExecutor.execute(request.getId(), PUSH_NOTIFICATION_CONFIG_DELETE,
                 () -> {
                     requestHandler.onDeleteTaskPushNotificationConfig(request.getParams(), context);
                     return new DeleteTaskPushNotificationConfigResponse(request.getId());
                 },
                 error -> new DeleteTaskPushNotificationConfigResponse(request.getId(), error));
-    }
-
-    private <T> ResponseEntity<T> executeRpc(
-            Object id,
-            String methodName,
-            Callable<T> successBody,
-            Function<A2AError, T> errorBody) {
-        try {
-            return jsonResponse(successBody.call());
-        } catch (A2AError a2aError) {
-            return jsonResponse(errorBody.apply(a2aError));
-        } catch (IllegalArgumentException invalidParams) {
-            return jsonResponse(errorBody.apply(
-                    new InvalidParamsError("Invalid params: " + invalidParams.getMessage())));
-        } catch (Exception unexpected) {
-            log.error("Unexpected error handling {}: id={}", methodName, id, unexpected);
-            return jsonResponse(errorBody.apply(new InternalError("Internal error")));
-        }
-    }
-
-    private static <T> ResponseEntity<T> jsonResponse(T body) {
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body);
     }
 }

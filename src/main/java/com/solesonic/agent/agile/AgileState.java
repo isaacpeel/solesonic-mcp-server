@@ -1,14 +1,14 @@
 package com.solesonic.agent.agile;
 
+import com.solesonic.agent.state.IdentifiedAgentState;
 import com.solesonic.model.atlassian.agile.Board;
-import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 @SuppressWarnings("unused")
-public class AgileState extends AgentState {
+public class AgileState extends IdentifiedAgentState {
 
     public static final String USER_MESSAGE = "userMessage";
     public static final String CONVERSATION_ID = "conversationId";

@@ -1,6 +1,7 @@
 package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,8 @@ import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateDetailedDescriptionNode.class);
+
+    private static final String OPERATION = "Generating the detailed description";
 
     private static final String INPUT = "input";
 
@@ -64,7 +67,7 @@ public class GenerateDetailedDescriptionNode implements AsyncNodeAction<JiraStat
             return completedFuture(Map.of(JiraState.DETAILED_DESCRIPTION, detailedDescription));
         } catch (Exception exception) {
             log.error("Failed to generate detailed description", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

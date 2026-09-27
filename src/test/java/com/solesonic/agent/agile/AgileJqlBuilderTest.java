@@ -3,6 +3,7 @@ package com.solesonic.agent.agile;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -104,5 +105,45 @@ class AgileJqlBuilderTest {
 
         assertThat(AgileJqlBuilder.build(intent))
                 .isEqualTo("key = IB-123 AND assignee = currentUser() AND reporter = \"jane@example.com\" AND created <= \"-7d\" AND (issuetype = Bug)");
+    }
+
+    @Test
+    void noExplicitScope_fallsBackToBoardVisibleStatuses() {
+        AgileQueryIntent intent = new AgileQueryIntent(
+                List.of(), null, null, null, "", "COUNT", 0, null);
+
+        String result = AgileJqlBuilder.build(intent, () -> List.of("1", "3", "10001"));
+
+        assertThat(result).isEqualTo("status in (1, 3, 10001)");
+    }
+
+    @Test
+    void noExplicitScope_emptyBoardVisibleStatuses_returnsEmptyString() {
+        AgileQueryIntent intent = new AgileQueryIntent(
+                List.of(), null, null, null, "", "COUNT", 0, null);
+
+        String result = AgileJqlBuilder.build(intent, List::of);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void explicitScope_neverInvokesBoardVisibleStatusesSupplier() {
+        AgileQueryIntent intent = new AgileQueryIntent(
+                List.of("IB-123"), null, null, null, "", "COUNT", 0, null);
+
+        Supplier<List<String>> supplier = () -> {
+            throw new AssertionError("boardVisibleStatusIds supplier should not be invoked when scope is explicit");
+        };
+
+        assertThat(AgileJqlBuilder.build(intent, supplier)).isEqualTo("key = IB-123");
+    }
+
+    @Test
+    void explicitScope_withNullBoardVisibleStatuses_stillReturnsExplicitClause() {
+        AgileQueryIntent intent = new AgileQueryIntent(
+                List.of("IB-123"), null, null, null, "", "COUNT", 0, null);
+
+        assertThat(AgileJqlBuilder.build(intent, () -> null)).isEqualTo("key = IB-123");
     }
 }

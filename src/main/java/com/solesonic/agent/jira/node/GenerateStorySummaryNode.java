@@ -1,6 +1,7 @@
 package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,8 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateStorySummaryNode.class);
 
+    private static final String OPERATION = "Generating the story summary";
+
     private static final String INPUT = "input";
 
     private final ChatClient chatClient;
@@ -39,19 +42,21 @@ public class GenerateStorySummaryNode implements AsyncNodeAction<JiraState> {
     @Override
     public CompletableFuture<Map<String, Object>> apply(JiraState state) {
         try {
-            String detailedDescription = state.detailedDescription().orElseThrow(() ->
-                    new IllegalStateException("detailedDescription is required"));
+            String detailedDescription = state.detailedDescription().orElseThrow(() -> new IllegalStateException("detailedDescription is required"));
 
             log.info("Generating story summary");
 
             Prompt summaryPrompt = summaryPromptTemplate.create(Map.of(INPUT, detailedDescription));
-            String summary = chatClient.prompt(summaryPrompt).call().content();
+
+            String summary = chatClient.prompt(summaryPrompt)
+                    .call()
+                    .content();
 
             assert summary != null;
             return completedFuture(Map.of(JiraState.STORY_SUMMARY, summary));
         } catch (Exception exception) {
             log.error("Failed to generate story summary", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

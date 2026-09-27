@@ -1,9 +1,13 @@
 package com.solesonic.a2a.executor;
 
 import com.solesonic.a2a.config.A2ARedisConfiguration;
+import com.solesonic.agent.checkpoint.GraphRunner;
+import com.solesonic.agent.checkpoint.GraphThread;
 import com.solesonic.agent.nba.NbaOrchestratorGraphConfig;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.node.SynthesisOutputEmitter;
+import com.solesonic.mcp.security.identity.CallerIdentity;
+import org.a2aproject.sdk.server.ServerCallContext;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
 import org.a2aproject.sdk.server.agentexecution.RequestContext;
 import org.a2aproject.sdk.server.tasks.AgentEmitter;
@@ -15,6 +19,8 @@ import org.a2aproject.sdk.spec.Task;
 import org.a2aproject.sdk.spec.TextPart;
 import org.apache.commons.lang3.StringUtils;
 import org.bsc.langgraph4j.CompiledGraph;
+import org.bsc.langgraph4j.GraphInput;
+import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -25,9 +31,11 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.bsc.langgraph4j.GraphDefinition.END;
 import static org.bsc.langgraph4j.GraphDefinition.START;
@@ -51,14 +59,17 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
     private final CompiledGraph<SportsState> nbaOrchestratorGraph;
     private final ChatMemory chatMemory;
     private final TaskStore taskStore;
+    private final GraphRunner graphRunner;
 
     public NbaOrchestratorExecutor(
             @Qualifier("nbaOrchestratorGraph") CompiledGraph<SportsState> nbaOrchestratorGraph,
             @Qualifier(A2ARedisConfiguration.SPORTS_CHAT_MEMORY) ChatMemory chatMemory,
-            TaskStore taskStore) {
+            TaskStore taskStore,
+            GraphRunner graphRunner) {
         this.nbaOrchestratorGraph = nbaOrchestratorGraph;
         this.chatMemory = chatMemory;
         this.taskStore = taskStore;
+        this.graphRunner = graphRunner;
     }
 
     @Override
@@ -79,42 +90,43 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
 
         SynthesisOutputEmitter emitter = SynthesisOutputEmitter.fromTaskUpdater(agentEmitter);
 
-        Map<String, Object> input = Map.of(
-                SportsState.USER_MESSAGE, userMessage,
-                SportsState.CONVERSATION_ID, conversationId
-        );
+        // The NBA graph calls no per-user APIs, so it runs without a caller when security is disabled.
+        Optional<CallerIdentity> callerIdentity = callerIdentity(requestContext);
 
-        RunnableConfig runnableConfig = RunnableConfig.builder()
+        Map<String, Object> input = new HashMap<>();
+        input.put(SportsState.USER_MESSAGE, userMessage);
+        input.put(SportsState.CONVERSATION_ID, conversationId);
+        callerIdentity.ifPresent(caller -> input.put(SportsState.CALLER_IDENTITY, caller));
+
+        GraphThread graphThread = callerIdentity
+                .map(caller -> GraphThread.run(NbaOrchestratorGraphConfig.GRAPH_NAME, caller))
+                .orElseGet(() -> new GraphThread(NbaOrchestratorGraphConfig.GRAPH_NAME, UUID.randomUUID().toString()));
+
+        RunnableConfig runnableConfig = graphThread.runnableConfigBuilder()
                 .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, emitter)
                 .addMetadata(TASK_UPDATER_KEY, agentEmitter)
                 .build();
 
-        AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
-
         try {
-            nbaOrchestratorGraph.stream(input, runnableConfig)
-                    .forEachAsync(output -> {
-                        finalStateRef.set(output.state());
+            NodeOutput<SportsState> finalOutput = graphRunner.run(nbaOrchestratorGraph, GraphInput.args(input), runnableConfig, output -> {
+                String nodeName = output.node();
 
-                        String nodeName = output.node();
+                log.debug("Orchestrator node output: {}", nodeName);
 
-                        log.debug("Orchestrator node output: {}", nodeName);
+                if (END.equals(nodeName) || START.equals(nodeName)) {
+                    return;
+                }
 
-                        if (END.equals(nodeName) || START.equals(nodeName)) {
-                            return;
-                        }
+                String progressMessage = NODE_PROGRESS_MESSAGES.get(nodeName);
 
-                        String progressMessage = NODE_PROGRESS_MESSAGES.get(nodeName);
+                if (progressMessage == null) {
+                    return;
+                }
 
-                        if (progressMessage == null) {
-                            return;
-                        }
+                emitter.emitProgress(progressMessage);
+            });
 
-                        emitter.emitProgress(progressMessage);
-                    })
-                    .join();
-
-            SportsState finalState = finalStateRef.get();
+            SportsState finalState = finalOutput == null ? null : finalOutput.state();
 
             if (finalState != null && finalState.finalAnalysis().isPresent()) {
                 String finalAnalysis = finalState.finalAnalysis().get();
@@ -140,6 +152,21 @@ public class NbaOrchestratorExecutor implements AgentExecutor {
     @Override
     public void cancel(@NonNull RequestContext context, AgentEmitter agentEmitter) throws A2AError {
         agentEmitter.cancel();
+    }
+
+    private static Optional<CallerIdentity> callerIdentity(RequestContext requestContext) {
+        ServerCallContext callContext = requestContext.getCallContext();
+
+        if (callContext == null || !callContext.getUser().isAuthenticated()) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(CallerIdentity.of(callContext.getUser().getUsername()));
+        } catch (IllegalArgumentException invalidSubject) {
+            log.warn("A2A caller subject is not a user id; running the NBA graph without a caller identity", invalidSubject);
+            return Optional.empty();
+        }
     }
 
     public static String extractTextFromMessage(Message message) {

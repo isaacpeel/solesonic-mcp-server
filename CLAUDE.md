@@ -9,7 +9,7 @@ If a run configuration doesn't exist, create one.
 
 JDK 25 + Netty requires `--enable-native-access=ALL-UNNAMED`. Surefire already sets it in `pom.xml`; add it as a VM option in IntelliJ run configurations and when running the jar directly.
 
-Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.0, A2A Java SDK 1.0.0.Final, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + A2A task store) and Ollama (`qwen3.5:9b`, `granite4.1:3b`, pulled `WHEN_MISSING`).
+Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.1, A2A Java SDK 1.0.0.Final, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + A2A task store) and the OpenAI API (`OPENAI_API_KEY`; models selected per chat client in `agent/config/*ChatClientConfig`).
 
 ## Architecture
 
@@ -47,7 +47,11 @@ Both endpoints on `/a2a/{agentName}` are POST; content negotiation on `produces`
 
 OAuth2 Resource Server (JWT). `AuthoritiesService` maps the `groups` claim to `GROUP_<NAME>` and the `roles` claim to `ROLE_<NAME>` (uppercased); scopes become `SCOPE_*`. `/.well-known/oauth-protected-resource` and `/a2a/**/.well-known/agent-card.json` are public; everything else authenticates. The whole `MpcSecurityConfig` is gated on `solesonic.agent.security.enabled` (`MpcSecurityDisabledConfig` is the alternative).
 
-`SecurityContextHolder` is set to `MODE_INHERITABLETHREADLOCAL` because Atlassian calls happen on graph/async threads: `AtlassianRequestAuthorizationFilter` is a WebClient `ExchangeFilterFunction` that reads the JWT subject off the security context, exchanges it for a short-lived Atlassian token via the token broker, and injects the `Authorization` header. Breaking context propagation breaks all Jira/Confluence tooling.
+Outbound per-user calls never read `SecurityContextHolder` — graph walks run on `ForkJoinPool` threads that don't inherit it. Entry points (`@McpTool` methods, A2A executors) capture `CallerIdentity.requireCurrent()` once; graphs carry it as `IdentifiedAgentState.CALLER_IDENTITY` (every state extends that base); every Atlassian/Gmail service method takes it as its first parameter and sets `.attributes(callerIdentity.requestAttributes())`. `AtlassianRequestAuthorizationFilter` / `GoogleRequestAuthorizationFilter` read it from the request attribute, broker a fresh token, and fail loudly if it's missing. `AtlassianErrorResponseFilter` turns non-2xx Atlassian responses into `JiraException`s (services use `exchangeToMono`, which bypasses default status handlers).
+
+### Graph checkpoints
+
+Every graph compiles with the shared `graphCompileConfig` (`agent/checkpoint/CheckpointConfig`): a Redis `RedisSaver` (Redisson, keys under `mcp:checkpoint:`, Jackson 3 state serializer with an allow-listed type registry) wrapped in `CleaningCheckpointSaver`, which deletes a thread's keys on release. Entry points run graphs only through `GraphRunner` (discards checkpoints on failure) with a `GraphThread` config: `GraphThread.conversation(...)` for graphs that pause and resume (Jira create), `GraphThread.run(...)` for one-shot graphs. Code that runs sub-graphs by hand uses `GraphThread.childConfig(...)`. To add a graph: a `GRAPH_NAME` constant, `.compile(graphCompileConfig)`, and runs through `GraphRunner`.
 
 ### Configuration
 

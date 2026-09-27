@@ -2,152 +2,172 @@ package com.solesonic.service.comfyui;
 
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
 import com.solesonic.model.comfyui.ImageGenerationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.CLASS_TYPE_CLIP_TEXT_ENCODE;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.CLASS_TYPE_EMPTY_SD3_LATENT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.CLASS_TYPE_K_SAMPLER;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FIELD_CLASS_TYPE;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FIELD_INPUTS;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FIELD_META;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FIELD_TITLE;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_HEIGHT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_NOISE_SEED;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_SEED;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_STEPS;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_TEXT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_WIDTH;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.NODE_TITLE_LATENT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.NODE_TITLE_POSITIVE_PROMPT;
-import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.NODE_TITLE_SAMPLER;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_HEIGHT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_PROMPT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_SEED;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_WIDTH;
 
 /**
- * Owns the ComfyUI API-format workflow graph. This is the entire blast radius of "ComfyUI is a node
- * graph" — nothing else in the codebase knows what a node is.
+ * One stored workflow, parsed and ready to patch. This is the entire blast radius of "ComfyUI is a
+ * node graph" — nothing else in the codebase knows what a node is.
  *
- * <p>Nodes are bound by {@code _meta.title} rather than by node id: ids are assigned by the ComfyUI
- * editor and shift on every re-export, and this graph contains two {@code CLIPTextEncode} nodes, so
- * an id shift that landed the prompt on the negative node would produce a perfectly successful
- * generation of the wrong image with no error anywhere.
+ * <p>Values are bound by <em>token</em>: the stored document carries literal strings such as
+ * {@code __PROMPT__} wherever a caller-supplied value belongs, and this class replaces them with
+ * correctly typed JSON. Node ids and {@code _meta.title} values are therefore irrelevant, so a stock
+ * API-format export works unmodified once its author drops tokens in. Everything not tokenised —
+ * steps, cfg, sampler, scheduler, checkpoint — is left exactly as stored, which is what makes a row
+ * a preset rather than a set of knobs.
+ *
+ * <p>Instances are immutable and safe to share: {@link #build} always patches a deep copy.
  */
-@Component
-public class ComfyWorkflowTemplate {
+public final class ComfyWorkflowTemplate {
 
-    private static final Logger log = LoggerFactory.getLogger(ComfyWorkflowTemplate.class);
+    private static final Set<String> KNOWN_TOKENS = Set.of(TOKEN_PROMPT, TOKEN_SEED, TOKEN_WIDTH, TOKEN_HEIGHT);
 
     private final ObjectNode template;
-    private final String positivePromptNodeId;
-    private final String samplerNodeId;
-    private final String latentNodeId;
-    private final String seedInputKey;
+    private final Set<String> tokens;
 
-    public ComfyWorkflowTemplate(
-            @Value("${comfyui.workflow.flux-schnell}") Resource workflowResource,
-            JsonMapper jsonMapper
-    ) {
-        this.template = readTemplate(workflowResource, jsonMapper);
+    private ComfyWorkflowTemplate(ObjectNode template, Set<String> tokens) {
+        this.template = template;
+        this.tokens = tokens;
+    }
 
-        this.positivePromptNodeId = resolveNodeId(NODE_TITLE_POSITIVE_PROMPT, CLASS_TYPE_CLIP_TEXT_ENCODE);
-        this.samplerNodeId = resolveNodeId(NODE_TITLE_SAMPLER, CLASS_TYPE_K_SAMPLER);
-        this.latentNodeId = resolveNodeId(NODE_TITLE_LATENT, CLASS_TYPE_EMPTY_SD3_LATENT);
-        this.seedInputKey = resolveSeedInputKey(this.samplerNodeId);
+    /**
+     * Parses one stored workflow, recording which tokens it actually carries.
+     *
+     * @throws ComfyUiException if the document is not a JSON object or carries no {@link
+     *                          com.solesonic.mcp.config.comfyui.ComfyUiConstants#TOKEN_PROMPT}
+     */
+    public static ComfyWorkflowTemplate parse(String workflowJson, JsonMapper jsonMapper) {
+        JsonNode parsed;
 
-        log.info("ComfyUI workflow loaded from {}. Prompt node: {}, sampler node: {} (seed key '{}'), latent node: {}",
-                workflowResource.getDescription(), positivePromptNodeId, samplerNodeId, seedInputKey, latentNodeId);
+        try {
+            parsed = jsonMapper.readTree(workflowJson);
+        } catch (JacksonException jacksonException) {
+            throw new ComfyUiException("ComfyUI workflow is not valid JSON", jacksonException);
+        }
+
+        if (!(parsed instanceof ObjectNode objectNode)) {
+            throw new ComfyUiException("ComfyUI workflow is not a JSON object");
+        }
+
+        Set<String> tokens = Set.copyOf(collectTokens(objectNode, new HashSet<>()));
+
+        if (!tokens.contains(TOKEN_PROMPT)) {
+            throw new ComfyUiException("ComfyUI workflow has no " + TOKEN_PROMPT + " token, so it cannot accept a prompt");
+        }
+
+        return new ComfyWorkflowTemplate(objectNode, tokens);
+    }
+
+    /**
+     * Whether the stored document carries the given token. Drives the tool's input schema: a
+     * workflow without {@link com.solesonic.mcp.config.comfyui.ComfyUiConstants#TOKEN_WIDTH} does not
+     * advertise a {@code width} parameter, so a client is never offered a knob that would be
+     * silently ignored.
+     */
+    public boolean hasToken(String token) {
+        return tokens.contains(token);
     }
 
     /**
      * Returns a patched copy of the workflow. The cached template is never mutated.
      */
-    public ObjectNode build(ImageGenerationRequest request) {
+    public ObjectNode build(ImageGenerationRequest imageGenerationRequest) {
         ObjectNode workflow = template.deepCopy();
 
-        inputsOf(workflow, positivePromptNodeId).put(INPUT_TEXT, request.prompt());
-
-        ObjectNode samplerInputs = inputsOf(workflow, samplerNodeId);
-        samplerInputs.put(seedInputKey, request.seed());
-        samplerInputs.put(INPUT_STEPS, request.steps());
-
-        ObjectNode latentInputs = inputsOf(workflow, latentNodeId);
-        latentInputs.put(INPUT_WIDTH, request.width());
-        latentInputs.put(INPUT_HEIGHT, request.height());
+        substitute(workflow, imageGenerationRequest);
 
         return workflow;
     }
 
-    private ObjectNode readTemplate(Resource workflowResource, JsonMapper jsonMapper) {
-        JsonNode parsed;
-
-        try (InputStream inputStream = workflowResource.getInputStream()) {
-            parsed = jsonMapper.readTree(inputStream);
-        } catch (IOException ioException) {
-            throw new ComfyUiException("Unable to read ComfyUI workflow resource: " + workflowResource.getDescription(), ioException);
-        }
-
-        if (!(parsed instanceof ObjectNode objectNode)) {
-            throw new ComfyUiException("ComfyUI workflow resource is not a JSON object: " + workflowResource.getDescription());
-        }
-
-        return objectNode;
-    }
-
-    private String resolveNodeId(String title, String expectedClassType) {
-        for (Map.Entry<String, JsonNode> node : template.properties()) {
-            JsonNode candidate = node.getValue();
-            String candidateTitle = candidate.path(FIELD_META).path(FIELD_TITLE).asString(null);
-
-            if (!title.equals(candidateTitle)) {
-                continue;
+    private static Set<String> collectTokens(JsonNode node, Set<String> found) {
+        if (node instanceof ObjectNode objectNode) {
+            for (Map.Entry<String, JsonNode> property : objectNode.properties()) {
+                collectTokens(property.getValue(), found);
             }
 
-            String candidateClassType = candidate.path(FIELD_CLASS_TYPE).asString(null);
-
-            if (!expectedClassType.equals(candidateClassType)) {
-                throw new ComfyUiException("ComfyUI workflow node titled '" + title + "' has class_type '"
-                        + candidateClassType + "', expected '" + expectedClassType + "'");
-            }
-
-            if (!candidate.path(FIELD_INPUTS).isObject()) {
-                throw new ComfyUiException("ComfyUI workflow node titled '" + title + "' has no inputs object");
-            }
-
-            return node.getKey();
+            return found;
         }
 
-        throw new ComfyUiException("ComfyUI workflow has no node titled '" + title + "'");
+        if (node instanceof ArrayNode arrayNode) {
+            for (JsonNode element : arrayNode.values()) {
+                collectTokens(element, found);
+            }
+
+            return found;
+        }
+
+        if (node.isString() && KNOWN_TOKENS.contains(node.stringValue())) {
+            found.add(node.stringValue());
+        }
+
+        return found;
     }
 
     /**
-     * This workflow's {@code KSampler} uses {@code inputs.seed}; other Flux templates use
-     * {@code RandomNoise} with {@code inputs.noise_seed}. Accept whichever key is already present.
+     * Walks the whole document rather than a known set of node ids, so a token is honoured wherever
+     * its author put it.
      */
-    private String resolveSeedInputKey(String nodeId) {
-        JsonNode inputs = template.path(nodeId).path(FIELD_INPUTS);
+    private void substitute(JsonNode node, ImageGenerationRequest imageGenerationRequest) {
+        if (node instanceof ObjectNode objectNode) {
+            for (Map.Entry<String, JsonNode> property : List.copyOf(objectNode.properties())) {
+                JsonNode replacement = replacementFor(property.getValue(), imageGenerationRequest);
 
-        if (inputs.has(INPUT_SEED)) {
-            return INPUT_SEED;
+                if (replacement == null) {
+                    substitute(property.getValue(), imageGenerationRequest);
+                } else {
+                    objectNode.set(property.getKey(), replacement);
+                }
+            }
+
+            return;
         }
 
-        if (inputs.has(INPUT_NOISE_SEED)) {
-            return INPUT_NOISE_SEED;
-        }
+        if (node instanceof ArrayNode arrayNode) {
+            for (int index = 0; index < arrayNode.size(); index++) {
+                JsonNode element = arrayNode.get(index);
+                JsonNode replacement = replacementFor(element, imageGenerationRequest);
 
-        throw new ComfyUiException("ComfyUI workflow sampler node '" + nodeId + "' has neither '"
-                + INPUT_SEED + "' nor '" + INPUT_NOISE_SEED + "' input");
+                if (replacement == null) {
+                    substitute(element, imageGenerationRequest);
+                } else {
+                    arrayNode.set(index, replacement);
+                }
+            }
+        }
     }
 
-    private ObjectNode inputsOf(ObjectNode workflow, String nodeId) {
-        return (ObjectNode) workflow.get(nodeId).get(FIELD_INPUTS);
+    /**
+     * Replacements are typed, not textual: a seed lands as a JSON number, never as the string
+     * {@code "__SEED__"}, so ComfyUI receives exactly the shape it would have received from a
+     * hand-edited workflow.
+     */
+    private JsonNode replacementFor(JsonNode node, ImageGenerationRequest imageGenerationRequest) {
+        if (!node.isString()) {
+            return null;
+        }
+
+        JsonNodeFactory jsonNodeFactory = JsonNodeFactory.instance;
+
+        return switch (node.stringValue()) {
+            case TOKEN_PROMPT -> jsonNodeFactory.stringNode(imageGenerationRequest.prompt());
+            case TOKEN_SEED -> jsonNodeFactory.numberNode(imageGenerationRequest.seed());
+            case TOKEN_WIDTH -> jsonNodeFactory.numberNode(imageGenerationRequest.width());
+            case TOKEN_HEIGHT -> jsonNodeFactory.numberNode(imageGenerationRequest.height());
+            default -> null;
+        };
     }
 }

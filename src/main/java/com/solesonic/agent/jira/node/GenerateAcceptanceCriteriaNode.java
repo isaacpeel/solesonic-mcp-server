@@ -1,19 +1,19 @@
 package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.converter.ListOutputConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,9 +27,16 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
 
     private static final Logger log = LoggerFactory.getLogger(GenerateAcceptanceCriteriaNode.class);
 
+    private static final String OPERATION = "Generating acceptance criteria";
+
     private static final String USER_REQUEST = "user_request";
     private static final String USER_STORY = "user_story";
     private static final String FORMAT = "format";
+
+    private static final String FORMAT_INSTRUCTIONS = """
+            Respond with each acceptance criterion on its own line, without any leading or trailing text,
+            numbering, or bullet points.
+            """;
 
     private final ChatClient chatClient;
     private final PromptTemplate acceptanceCriteriaPromptTemplate;
@@ -46,29 +53,32 @@ public class GenerateAcceptanceCriteriaNode implements AsyncNodeAction<JiraState
         try {
             String userMessage = state.userMessage().orElseThrow(() ->
                     new IllegalStateException("userMessage is required"));
-            String storySummary = state.storySummary().orElseThrow(() ->
-                    new IllegalStateException("storySummary is required"));
+            String detailedDescription = state.detailedDescription().orElseThrow(() ->
+                    new IllegalStateException("detailedDescription is required"));
 
             log.info("Generating acceptance criteria");
 
-            ListOutputConverter listConverter = new ListOutputConverter(new DefaultConversionService());
-
             Map<String, Object> templateInputs = Map.of(
                     USER_REQUEST, userMessage,
-                    USER_STORY, storySummary,
-                    FORMAT, listConverter.getFormat());
+                    USER_STORY, detailedDescription,
+                    FORMAT, FORMAT_INSTRUCTIONS);
 
             Prompt acceptanceCriteriaPrompt = acceptanceCriteriaPromptTemplate.create(templateInputs);
 
-            List<String> acceptanceCriteria = chatClient.prompt(acceptanceCriteriaPrompt)
+            String content = chatClient.prompt(acceptanceCriteriaPrompt)
                     .call()
-                    .entity(listConverter);
+                    .content();
 
-            assert acceptanceCriteria != null;
+            assert content != null;
+            List<String> acceptanceCriteria = Arrays.stream(content.split("\n"))
+                    .map(String::strip)
+                    .filter(line -> !line.isEmpty())
+                    .toList();
+
             return completedFuture(Map.of(JiraState.ACCEPTANCE_CRITERIA, acceptanceCriteria));
         } catch (Exception exception) {
             log.error("Failed to generate acceptance criteria", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

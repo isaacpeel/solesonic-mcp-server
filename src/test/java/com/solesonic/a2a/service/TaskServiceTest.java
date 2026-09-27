@@ -38,7 +38,7 @@ class TaskServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TaskService(agentRequestHandlerRegistry, serverCallContextFactory);
+        service = new TaskService(agentRequestHandlerRegistry, serverCallContextFactory, new A2ARpcExecutor());
         when(agentRequestHandlerRegistry.getHandler("agent-id")).thenReturn(requestHandler);
         when(serverCallContextFactory.create()).thenReturn(serverCallContext);
     }

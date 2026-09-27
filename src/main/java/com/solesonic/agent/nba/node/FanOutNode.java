@@ -1,9 +1,12 @@
 package com.solesonic.agent.nba.node;
 
+import com.solesonic.agent.checkpoint.GraphRunner;
+import com.solesonic.agent.checkpoint.GraphThread;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
 import org.bsc.langgraph4j.CompiledGraph;
+import org.bsc.langgraph4j.GraphInput;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;
 import org.slf4j.Logger;
@@ -17,7 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.solesonic.agent.nba.model.SportsQuestionType.COACHING;
 import static com.solesonic.agent.nba.model.SportsQuestionType.DRAFT;
@@ -56,6 +58,7 @@ public class FanOutNode implements AsyncNodeActionWithConfig<SportsState> {
     );
 
     private final Map<String, CompiledGraph<SportsState>> subGraphsByName;
+    private final GraphRunner graphRunner;
 
     public FanOutNode(
             @Qualifier("nbaScheduleGraph")    CompiledGraph<SportsState> nbaScheduleGraph,
@@ -63,8 +66,10 @@ public class FanOutNode implements AsyncNodeActionWithConfig<SportsState> {
             @Qualifier("nbaNewsGraph")        CompiledGraph<SportsState> nbaNewsGraph,
             @Qualifier("nbaStatsGraph")       CompiledGraph<SportsState> nbaStatsGraph,
             @Qualifier("nbaGamePreviewGraph") CompiledGraph<SportsState> nbaGamePreviewGraph,
-            @Qualifier("nbaPlayerGraph")      CompiledGraph<SportsState> nbaPlayerGraph
+            @Qualifier("nbaPlayerGraph")      CompiledGraph<SportsState> nbaPlayerGraph,
+            GraphRunner graphRunner
     ) {
+        this.graphRunner = graphRunner;
         this.subGraphsByName = Map.of(
                 "schedule",    nbaScheduleGraph,
                 "standings",   nbaStandingsGraph,
@@ -95,27 +100,24 @@ public class FanOutNode implements AsyncNodeActionWithConfig<SportsState> {
             return CompletableFuture.completedFuture(Map.of());
         }
 
-        // Suppress streaming during fan-out — each sub-graph's FINAL_ANALYSIS is collected directly
-        RunnableConfig noOpConfig = RunnableConfig.builder(parentConfig)
-                .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, SynthesisOutputEmitter.noOp())
-                .build();
-
-        Map<String, Object> inputState = state.data();
+        GraphInput subGraphInput = GraphInput.args(state.data());
 
         List<CompletableFuture<Map.Entry<String, String>>> futures = new ArrayList<>();
 
         for (String subGraphName : targetSubGraphNames) {
             CompiledGraph<SportsState> subGraph = subGraphsByName.get(subGraphName);
 
-            AtomicReference<SportsState> finalStateRef = new AtomicReference<>();
+            // Each branch checkpoints on its own child thread so concurrent sub-graphs never share one.
+            // Streaming is suppressed during fan-out — each sub-graph's FINAL_ANALYSIS is collected directly.
+            RunnableConfig subGraphConfig = GraphThread.childConfig(parentConfig, subGraphName)
+                    .addMetadata(SynthesisOutputEmitter.CONFIG_KEY, SynthesisOutputEmitter.noOp())
+                    .build();
 
-            CompletableFuture<Map.Entry<String, String>> future = subGraph
-                    .stream(inputState, noOpConfig)
-                    .forEachAsync(output -> finalStateRef.set(output.state()))
-                    .thenApply(ignored -> {
-                        SportsState finalState = finalStateRef.get();
-                        String analysis = finalState != null
-                                ? finalState.finalAnalysis().orElse("No analysis produced.")
+            CompletableFuture<Map.Entry<String, String>> future = graphRunner
+                    .runAsync(subGraph, subGraphInput, subGraphConfig, _ -> {})
+                    .thenApply(finalOutput -> {
+                        String analysis = finalOutput != null
+                                ? finalOutput.state().finalAnalysis().orElse("No analysis produced.")
                                 : "No analysis produced.";
                         return Map.entry(subGraphName, analysis);
                     })

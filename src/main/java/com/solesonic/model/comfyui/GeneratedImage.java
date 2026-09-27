@@ -8,7 +8,6 @@ public record GeneratedImage(
         String base64Png,
         int width,
         int height,
-        int steps,
         long seed,
         double elapsedSeconds
 ) {
@@ -25,14 +24,12 @@ public record GeneratedImage(
         private String base64Png;
         private final int width;
         private final int height;
-        private final int steps;
         private final long seed;
         private double elapsedSeconds;
 
         public Builder(final ImageGenerationRequest imageGenerationRequest) {
             this.width = imageGenerationRequest.width();
             this.height = imageGenerationRequest.height();
-            this.steps = imageGenerationRequest.steps();
             this.seed = imageGenerationRequest.seed();
         }
 
@@ -47,7 +44,7 @@ public record GeneratedImage(
         }
 
         public GeneratedImage build() {
-            return new GeneratedImage(base64Png, width, height, steps, seed, elapsedSeconds);
+            return new GeneratedImage(base64Png, width, height, seed, elapsedSeconds);
         }
     }
 }

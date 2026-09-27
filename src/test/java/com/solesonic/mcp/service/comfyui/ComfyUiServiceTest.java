@@ -19,11 +19,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,6 +59,8 @@ class ComfyUiServiceTest {
     private final Deque<String> promptResponses = new ArrayDeque<>();
     private final Deque<String> historyResponses = new ArrayDeque<>();
     private final AtomicInteger historyCallCount = new AtomicInteger();
+    private final AtomicInteger freeCallCount = new AtomicInteger();
+    private boolean freeEndpointErrors;
 
     private final List<Integer> capturedPercents = new ArrayList<>();
     private final List<String> capturedMessages = new ArrayList<>();
@@ -66,8 +72,7 @@ class ComfyUiServiceTest {
     @BeforeEach
     void setUp() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        comfyWorkflowTemplate = new ComfyWorkflowTemplate(
-                new ClassPathResource("comfyui/flux1-schnell-test.json"), jsonMapper);
+        comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(readFixture(), jsonMapper);
 
         webClient = WebClient.builder()
                 .baseUrl("http://comfy.test")
@@ -85,12 +90,11 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_COMPLETE);
 
-        GeneratedImage generatedImage = service(180).generate(request(), progressReporter);
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
         assertThat(generatedImage.width()).isEqualTo(1024);
         assertThat(generatedImage.height()).isEqualTo(1024);
-        assertThat(generatedImage.steps()).isEqualTo(4);
         assertThat(generatedImage.seed()).isEqualTo(42L);
         assertThat(generatedImage.elapsedSeconds()).isPositive();
 
@@ -106,7 +110,7 @@ class ComfyUiServiceTest {
     void generate_nodeErrorsOnHttp200_throws() {
         promptResponses.add(PROMPT_WITH_NODE_ERRORS);
 
-        Throwable thrown = catchThrowable(() -> service(180).generate(request(), progressReporter));
+        Throwable thrown = catchThrowable(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter));
 
         assertThat(thrown).isInstanceOf(ComfyUiException.class).hasMessageContaining("node errors");
         assertThat(((ComfyUiException) thrown).getRawResponse()).contains("required input is missing");
@@ -120,7 +124,7 @@ class ComfyUiServiceTest {
         historyResponses.add(HISTORY_PENDING);
         historyResponses.add(HISTORY_COMPLETE);
 
-        GeneratedImage generatedImage = service(180).generate(request(), progressReporter);
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
         assertThat(historyCallCount).hasValue(3);
@@ -132,7 +136,7 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_PENDING);
 
-        assertThatThrownBy(() -> service(0).generate(request(), progressReporter))
+        assertThatThrownBy(() -> service(0).generate(comfyWorkflowTemplate, request(), progressReporter))
                 .isInstanceOf(ComfyUiException.class)
                 .hasMessageContaining(PROMPT_ID)
                 .hasMessageContaining("did not finish");
@@ -143,17 +147,84 @@ class ComfyUiServiceTest {
         promptResponses.add(PROMPT_ACCEPTED);
         historyResponses.add(HISTORY_FAILED);
 
-        assertThatThrownBy(() -> service(180).generate(request(), progressReporter))
+        assertThatThrownBy(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter))
                 .isInstanceOf(ComfyUiException.class)
                 .hasMessageContaining("failed during execution");
     }
 
+    @Test
+    void generate_happyPath_releasesMemoryAfterDownload() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        awaitFreeCallCount(1);
+    }
+
+    /**
+     * The {@code /free} call is fire-and-forget: a failure there must never surface to the caller,
+     * since it would otherwise turn a successful generation into a reported failure.
+     */
+    @Test
+    void generate_freeEndpointErrors_stillReturnsImage() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        freeEndpointErrors = true;
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        awaitFreeCallCount(1);
+    }
+
+    /**
+     * {@code /free} is debounced: a generation that lands before the previous release delay
+     * elapses must cancel and reschedule it, rather than letting both fire.
+     */
+    @Test
+    void generate_calledTwiceQuickly_releasesMemoryOnlyOnceAfterLastCall() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        ComfyUiService comfyUiService = service(180);
+        comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
+        comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        awaitFreeCallCount(1);
+    }
+
     private ComfyUiService service(long generationTimeoutSeconds) {
-        return new ComfyUiService(webClient, comfyWorkflowTemplate, generationTimeoutSeconds, 1L, 12.0);
+        return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0, 50L);
+    }
+
+    /**
+     * The release delay is real (50ms in tests, per {@code application-test.properties}), so
+     * asserting on it requires polling rather than a synchronous check.
+     */
+    @SuppressWarnings("all")
+    private void awaitFreeCallCount(int expected) {
+        long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+
+        while (freeCallCount.get() != expected && System.nanoTime() < deadlineNanos) {
+            Thread.onSpinWait();
+        }
+
+        assertThat(freeCallCount).hasValue(expected);
     }
 
     private ImageGenerationRequest request() {
-        return new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 4, 42L);
+        return new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 42L);
+    }
+
+    private String readFixture() {
+        try (InputStream inputStream = new ClassPathResource("comfyui/flux1-schnell-test.json").getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ioException) {
+            throw new IllegalStateException("Unable to read the ComfyUI workflow fixture", ioException);
+        }
     }
 
     /**
@@ -178,6 +249,11 @@ class ComfyUiServiceTest {
                 return Mono.just(binaryResponse());
             }
 
+            if (path.startsWith("/free")) {
+                freeCallCount.incrementAndGet();
+                return Mono.just(freeEndpointErrors ? errorResponse() : jsonResponse("{}"));
+            }
+
             return Mono.error(new IllegalStateException("Unexpected ComfyUI request path: " + path));
         };
     }
@@ -186,6 +262,13 @@ class ComfyUiServiceTest {
         return ClientResponse.create(HttpStatus.OK)
                 .header(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .body(body == null ? "{}" : body)
+                .build();
+    }
+
+    private ClientResponse errorResponse() {
+        return ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR)
+                .header(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body("{}")
                 .build();
     }
 

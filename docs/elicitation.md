@@ -71,6 +71,49 @@ Best Practices
 - Keep `userMessage` updates concise; include only new answers or decisions per turn.
 - Use Web Search tools sparingly during elicitation to validate assumptions or gather references.
 
+Interactive confirmations (MCP elicitation protocol)
+- Separate from the prompt above: destructive tools pause mid-call and ask the user to confirm via `McpConfirmations.confirm(...)`, which issues an MCP `elicitation/create` request over the open Streamable HTTP session and blocks until the user answers.
+- Callers branch on `ElicitResult.Action` (`ACCEPT` / `DECLINE` / `CANCEL`). Call sites: `JiraIssueTools.deleteJiraIssue`, and the pagination and bulk-transition paths in `JiraAgileService`.
+- The confirmation carries a `chatId` in the request `_meta` so the answer can be correlated back to the originating conversation on the client side.
+
+Assignee picker (`create_jira_story`)
+- Jira rejects issues without an assignee, so when the story workflow cannot settle one, `JiraAssigneeElicitation` asks the user to choose via `McpConfirmations.elicit(...)` before the issue is created.
+- It asks in two cases:
+  - Nobody matched, or the request named nobody (the assignee lookup prompt returns `NONE`): every assignable user in the project is offered. The list is read page by page (`solesonic.llm.jira.assignee.page-size` per request) until Jira returns a short page, so it isn't cut off.
+  - The search matched more than one user: only those matches are offered.
+- Schema: a single required string property whose choices use the titled-enum form:
+  ```
+  {
+    "type": "object",
+    "properties": {
+      "assigneeAccountId": {
+        "type": "string",
+        "title": "Assignee",
+        "oneOf": [ { "const": "<accountId>", "title": "<displayName>" } ]
+      }
+    },
+    "required": ["assigneeAccountId"]
+  }
+  ```
+- Outcomes. The story is created only on a valid `ACCEPT`:
+  - `ACCEPT` with an offered account id: the story is created with that assignee.
+  - `DECLINE`, `CANCEL`, an account id that was not offered, or no assignable users: nothing is created and the tool returns a message saying why.
+- As a final guard, `JiraIssueService.convert(...)` throws a `JiraException` for a payload with no assignee id, so no caller can send an unassigned issue to Jira.
+- Logging:
+  - `AssigneeResolutionService` logs the extracted search term, the match count, and a WARN (with the abbreviated request) for an empty, ambiguous, or missing assignee.
+  - `JiraAssigneeElicitation` logs what was offered and what the user chose, with the `chatId`.
+
+Request timeout — why this matters
+- `spring.ai.mcp.server.request-timeout` (in `application.properties`, currently `600s`) bounds every **server-initiated** request, elicitation included. It does not affect tool execution or inbound client requests.
+- Spring AI defaults this to **20 seconds**. That default is far too short for a prompt a human has to read and answer, and the failure mode is not a clean timeout:
+  1. The timeout fires and the MCP session discards the pending response sink for that request id.
+  2. The user answers a moment later; the client POSTs the JSON-RPC response to `/mcp`.
+  3. The server no longer recognises the request id and answers **HTTP 500** (`Unexpected response for unknown id …`).
+  4. The client has already resolved its own future, so the user sees the interaction as complete while the server never applied the answer.
+- Symptom to look for on the client side: `McpClientSession` logging `Failed to send response to the server` with a 500 from `POST /mcp`, milliseconds after the elicitation resolved.
+- Keep this setting in `application.properties` rather than a single profile — configuring it only in `local` is what let production run on the 20 second default.
+- A confirmation that fails for any reason (timeout, or a client that does not advertise elicitation support) is logged with its `chatId` and rethrown as an `McpToolFailureException` naming the prompt, so the calling model gets an actionable message instead of a bare reactor timeout.
+
 See also
 - Prompts: ./prompts.md
 - Web Search: ./web-search.md

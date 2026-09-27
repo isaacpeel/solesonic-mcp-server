@@ -2,6 +2,7 @@ package com.solesonic.agent.jira.node;
 
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class AssembleJiraPayloadNode implements AsyncNodeAction<JiraState> {
 
     private static final Logger log = LoggerFactory.getLogger(AssembleJiraPayloadNode.class);
+
+    private static final String OPERATION = "Assembling the Jira issue payload";
 
     @Override
     public CompletableFuture<Map<String, Object>> apply(JiraState jiraState) {
@@ -46,7 +49,7 @@ public class AssembleJiraPayloadNode implements AsyncNodeAction<JiraState> {
             return completedFuture(Map.of(JiraState.FINAL_PAYLOAD, payload));
         } catch (Exception exception) {
             log.error("Failed to assemble Jira payload", exception);
-            return failedFuture(exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

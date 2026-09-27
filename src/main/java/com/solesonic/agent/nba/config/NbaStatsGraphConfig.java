@@ -4,6 +4,7 @@ import com.solesonic.agent.nba.NbaAgentGraphConfig;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.node.SearchStatisticsNode;
 import com.solesonic.agent.nba.node.SynthesizeSportsAnalysisNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
@@ -19,7 +20,8 @@ public class NbaStatsGraphConfig {
     @Bean
     public CompiledGraph<SportsState> nbaStatsGraph(
             SearchStatisticsNode searchStatisticsNode,
-            SynthesizeSportsAnalysisNode synthesizeSportsAnalysisNode
+            SynthesizeSportsAnalysisNode synthesizeSportsAnalysisNode,
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         return new StateGraph<>(SportsState::new)
@@ -28,6 +30,6 @@ public class NbaStatsGraphConfig {
                 .addEdge(START, NbaAgentGraphConfig.SEARCH_STATS)
                 .addEdge(NbaAgentGraphConfig.SEARCH_STATS, NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS)
                 .addEdge(NbaAgentGraphConfig.SYNTHESIZE_ANALYSIS, END)
-                .compile();
+                .compile(graphCompileConfig);
     }
 }

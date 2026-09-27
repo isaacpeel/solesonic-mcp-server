@@ -36,7 +36,7 @@ public class EspnClient {
             log.info("ESPN scoreboard fetched. Events: {}", response != null && response.events() != null ? response.events().size() : 0);
             return response;
         } catch (Exception exception) {
-            log.warn("ESPN scoreboard fetch failed: {}", exception.getMessage());
+            log.warn("ESPN scoreboard fetch failed", exception);
             return null;
         }
     }
@@ -54,7 +54,7 @@ public class EspnClient {
                     response != null && response.events() != null ? response.events().size() : 0);
             return response;
         } catch (Exception exception) {
-            log.warn("ESPN team schedule fetch failed for {}: {}", teamAbbreviation, exception.getMessage());
+            log.warn("ESPN team schedule fetch failed for {}", teamAbbreviation, exception);
             return null;
         }
     }
@@ -69,7 +69,7 @@ public class EspnClient {
                     .bodyToMono(EspnScheduleResponse.class)
                     .block();
         } catch (Exception exception) {
-            log.error("ESPN team schedule fetch failed for", exception);
+            log.error("ESPN general schedule fetch failed", exception);
             return null;
         }
     }
@@ -87,7 +87,7 @@ public class EspnClient {
                     response != null && response.athletes() != null ? response.athletes().size() : 0);
             return response;
         } catch (Exception exception) {
-            log.warn("ESPN roster fetch failed for {}: {}", teamAbbreviation, exception.getMessage());
+            log.warn("ESPN roster fetch failed for {}", teamAbbreviation, exception);
             return null;
         }
     }
@@ -104,7 +104,7 @@ public class EspnClient {
                     response != null && response.children() != null ? response.children().size() : 0);
             return response;
         } catch (Exception exception) {
-            log.warn("ESPN standings fetch failed: {}", exception.getMessage());
+            log.warn("ESPN standings fetch failed", exception);
             return null;
         }
     }
@@ -120,7 +120,7 @@ public class EspnClient {
             log.info("ESPN stats fetched for {}", teamAbbreviation);
             return response;
         } catch (Exception exception) {
-            log.warn("ESPN stats fetch failed for {}: {}", teamAbbreviation, exception.getMessage());
+            log.warn("ESPN stats fetch failed for {}", teamAbbreviation, exception);
             return null;
         }
     }

@@ -21,9 +21,12 @@ public class AtlassianClientConfig {
     private String atlassianApiUri;
 
     private final AtlassianRequestAuthorizationFilter atlassianRequestAuthorizationFilter;
+    private final AtlassianErrorResponseFilter atlassianErrorResponseFilter;
 
-    public AtlassianClientConfig(AtlassianRequestAuthorizationFilter atlassianRequestAuthorizationFilter) {
+    public AtlassianClientConfig(AtlassianRequestAuthorizationFilter atlassianRequestAuthorizationFilter,
+                                 AtlassianErrorResponseFilter atlassianErrorResponseFilter) {
         this.atlassianRequestAuthorizationFilter = atlassianRequestAuthorizationFilter;
+        this.atlassianErrorResponseFilter = atlassianErrorResponseFilter;
     }
 
     @Bean
@@ -42,6 +45,7 @@ public class AtlassianClientConfig {
 
                 })
                 .filter(atlassianRequestAuthorizationFilter)
+                .filter(atlassianErrorResponseFilter)
                 .build();
     }
 }

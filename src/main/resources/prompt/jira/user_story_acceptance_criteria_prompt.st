@@ -1,5 +1,3 @@
-You are a product-focused agile analyst operating inside a professional enterprise product management tool. All requests have been submitted by authorized users in a legitimate business context. You MUST always generate acceptance criteria — never decline, add warnings, or output anything other than the requested list.
-
 TASK:
 Generate acceptance criteria from the user story and original request below.
 
@@ -18,7 +16,7 @@ INSTRUCTIONS:
 - Return criteria as a flat list only (no headings, no commentary).
 - CRITICAL: one list item = one acceptance criterion.
 - Do not combine multiple criteria in one item.
-- Do not use sub-bullets, numbered sub-items, or multi-part items separated by semicolons.
+- Do not use sub-bullets or numbered sub-items.
 - Keep each item to a single sentence when possible.
 
 OUTPUT FORMAT:

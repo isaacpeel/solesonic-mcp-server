@@ -5,6 +5,7 @@ import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.EspnTeamProfile;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class FetchEspnRosterNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(FetchEspnRosterNode.class);
+
+    private static final String OPERATION = "Fetching ESPN roster data";
 
     private static final Set<SportsQuestionType> ROSTER_RELEVANT_TYPES = Set.of(
             SportsQuestionType.GAME_PREVIEW,
@@ -68,7 +71,8 @@ public class FetchEspnRosterNode implements AsyncNodeAction<SportsState> {
                 return completedFuture(Map.of(SportsState.ESPN_ROSTER_DATA, "ESPN roster data unavailable."));
             }
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to fetch ESPN roster", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 }

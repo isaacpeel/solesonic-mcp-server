@@ -1,5 +1,6 @@
 package com.solesonic.service.atlassian;
 
+import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.agile.BoardIssues;
 import com.solesonic.model.atlassian.jira.IssueStatus;
 import com.solesonic.model.atlassian.jira.JiraIssue;
@@ -32,7 +33,7 @@ public class JiraAgileBoardService {
         this.jiraIssueService = jiraIssueService;
     }
 
-    public List<JiraIssue> findByStaus(List<IssueStatus> issueStatuses, String boardId) {
+    public List<JiraIssue> findByStaus(CallerIdentity callerIdentity, List<IssueStatus> issueStatuses, String boardId) {
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId};
 
         String statuses = issueStatuses.stream()
@@ -44,6 +45,7 @@ public class JiraAgileBoardService {
         BoardIssues boardIssues = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(base).queryParam(JQL, jql).build())
+                .attributes(callerIdentity.requestAttributes())
                 .exchangeToMono(response -> response.bodyToMono(BoardIssues.class))
                 .block();
 
@@ -53,7 +55,7 @@ public class JiraAgileBoardService {
 
         boardIssues.issues()
                 .forEach(boardIssue -> {
-                    JiraIssue jiraIssue = jiraIssueService.get(boardIssue.key());
+                    JiraIssue jiraIssue = jiraIssueService.get(callerIdentity, boardIssue.key());
                     jiraIssues.add(jiraIssue);
                 });
 

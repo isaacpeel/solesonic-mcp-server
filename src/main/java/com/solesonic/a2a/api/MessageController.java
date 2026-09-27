@@ -18,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/a2a")
@@ -41,10 +42,10 @@ public class MessageController {
         SendMessageRequest request;
         try {
             request = (SendMessageRequest) JSONRPCUtils.parseRequestBody(body, null);
-        } catch (IdJsonMappingException e) {
-            return ResponseEntity.ok(new SendMessageResponse(e.getId(), new InvalidParamsError(e.getMessage())));
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.ok(new SendMessageResponse(null, new InvalidRequestError(e.getMessage())));
+        } catch (IdJsonMappingException idJsonMappingException) {
+            return ResponseEntity.ok(new SendMessageResponse(idJsonMappingException.getId(), new InvalidParamsError(idJsonMappingException.getMessage())));
+        } catch (JsonProcessingException jsonProcessingException) {
+            return ResponseEntity.ok(new SendMessageResponse(null, new InvalidRequestError(jsonProcessingException.getMessage())));
         }
 
         return taskService.send(agentName, request);
@@ -58,10 +59,10 @@ public class MessageController {
         SendStreamingMessageRequest request;
         try {
             request = (SendStreamingMessageRequest) JSONRPCUtils.parseRequestBody(body, null);
-        } catch (IdJsonMappingException e) {
-            return streamingA2AService.sseError(e.getId(), new InvalidParamsError(e.getMessage()));
-        } catch (JsonProcessingException e) {
-            return streamingA2AService.sseError(null, new InvalidRequestError(e.getMessage()));
+        } catch (IdJsonMappingException idJsonMappingException) {
+            return streamingA2AService.sseError(idJsonMappingException.getId(), new InvalidParamsError(idJsonMappingException.getMessage()));
+        } catch (JsonProcessingException jsonProcessingException) {
+            return streamingA2AService.sseError(null, new InvalidRequestError(jsonProcessingException.getMessage()));
         }
 
         log.info("Sending streaming request with id: {}", request.getId());
@@ -73,5 +74,16 @@ public class MessageController {
         log.error("Async timeout exception", asyncRequestTimeoutException);
 
         return ResponseEntity.noContent().build();
+    }
+
+    // Re-throws ResponseStatusException so Spring's own resolver keeps its status (e.g. 404 for an unknown agent) instead of flattening it to a 500.
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Void> handleUnexpectedError(RuntimeException runtimeException) {
+        if (runtimeException instanceof ResponseStatusException responseStatusException) {
+            throw responseStatusException;
+        }
+
+        log.error("Unexpected error handling A2A request", runtimeException);
+        return ResponseEntity.internalServerError().build();
     }
 }

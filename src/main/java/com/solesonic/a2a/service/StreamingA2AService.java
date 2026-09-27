@@ -91,6 +91,7 @@ public class StreamingA2AService {
                                 sseEmitter.send(SseEmitter.event()
                                         .data(streamingResponse, MediaType.APPLICATION_JSON));
                             } catch (Exception sendError) {
+                                log.error("Failed to send SSE event", sendError);
                                 sseEmitter.completeWithError(sendError);
                             }
                         },
@@ -114,6 +115,7 @@ public class StreamingA2AService {
                     .data(messageResponse, MediaType.APPLICATION_JSON));
 
         } catch (Exception serializationError) {
+            log.error("Failed to serialize SSE error", serializationError);
             sseEmitter.completeWithError(serializationError);
         }
 

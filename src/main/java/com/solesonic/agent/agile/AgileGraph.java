@@ -3,6 +3,7 @@ package com.solesonic.agent.agile;
 import com.solesonic.agent.agile.node.AssessOperationScopeNode;
 import com.solesonic.agent.agile.node.ListBoardsNode;
 import com.solesonic.agent.agile.node.ParseAgileIntentNode;
+import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
@@ -24,6 +25,8 @@ import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 @Configuration
 public class AgileGraph {
 
+    public static final String GRAPH_NAME = "agile";
+
     public static final String PARSE_AND_FETCH = "parseAndFetch";
     public static final String ASSESS_SCOPE = "assessOperationScope";
     public static final String ROUTE_TRANSITION = "transition";
@@ -33,7 +36,8 @@ public class AgileGraph {
     public CompiledGraph<AgileState> agileResearchGraph(
             ParseAgileIntentNode parseAgileIntentNode,
             ListBoardsNode listBoardsNode,
-            AssessOperationScopeNode assessOperationScopeNode
+            AssessOperationScopeNode assessOperationScopeNode,
+            CompileConfig graphCompileConfig
     ) throws GraphStateException {
 
         List<AsyncNodeActionWithConfig<AgileState>> parallelActions = List.of(
@@ -56,7 +60,7 @@ public class AgileGraph {
                         ))
 
                 .addEdge(ASSESS_SCOPE, END)
-                .compile();
+                .compile(graphCompileConfig);
     }
 
     private static String routeByQueryType(AgileState state) {

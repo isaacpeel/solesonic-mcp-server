@@ -6,6 +6,7 @@ import com.solesonic.service.tavily.TavilySearchService;
 import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
+import com.solesonic.mcp.exception.ToolFailures;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 public class SearchStatisticsNode implements AsyncNodeAction<SportsState> {
 
     private static final Logger log = LoggerFactory.getLogger(SearchStatisticsNode.class);
+
+    private static final String OPERATION = "Searching for NBA statistics";
 
     private static final List<String> STATS_DOMAINS = List.of(
             "basketball-reference.com", "statmuse.com", "espn.com", "nba.com"
@@ -81,14 +84,15 @@ public class SearchStatisticsNode implements AsyncNodeAction<SportsState> {
                     summary.append(formatSearchResults(response));
                     summary.append("\n");
                 } catch (Exception exception) {
-                    log.warn("Statistics search failed for query '{}': {}", query, exception.getMessage());
+                    log.warn("Statistics search failed for query '{}'", query, exception);
                     summary.append("=== Stats: ").append(query).append(" ===\nSearch unavailable.\n\n");
                 }
             }
 
             return completedFuture(Map.of(SportsState.STATISTICS_SEARCH_SUMMARY, summary.toString()));
         } catch (Exception exception) {
-            return failedFuture(exception);
+            log.error("Failed to search NBA statistics", exception);
+            return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
 
