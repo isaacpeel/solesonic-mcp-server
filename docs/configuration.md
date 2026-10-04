@@ -39,6 +39,7 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.poll-interval-millis=1000
   - comfyui.generation.expected-seconds=12
   - comfyui.generation.release-memory-delay-millis=300000
+  - comfyui.reference-image.max-bytes=10MB   # largest decoded reference image accepted
   - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
 - Database (PostgreSQL)
   - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server

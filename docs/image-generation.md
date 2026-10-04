@@ -11,10 +11,13 @@ Tool shape
 
 Each workflow tool is named by its row's `tool_name` column, titled by `name`, and described by `description` — the text a model reads when deciding which workflow to use, so it is worth writing carefully.
 
+Every workflow tool also carries `_meta: {"solesonic/kind": "image-generation"}`. That tag — not the tool's name — is how a client such as the Solesonic LLM API finds the image tools in the catalog, so a row can be named anything.
+
 - Input:
   - `prompt` (string, required) — subject, style, lighting, composition. Longer and more specific is better.
   - `width` (integer, optional) — only advertised if the workflow contains `__WIDTH__`. Defaults to `1024`.
   - `height` (integer, optional) — only advertised if the workflow contains `__HEIGHT__`. Defaults to `1024`.
+  - `reference_images` (array, optional) — only advertised if the row has a `reference_workflow_json`. See [Reference images](#reference-images).
 - Output: a `CallToolResult` with two content blocks:
   1. `ImageContent` — base64-encoded PNG, `mimeType` `image/png`
   2. `TextContent` — workflow name, size, seed, and elapsed seconds
@@ -87,6 +90,71 @@ INSERT INTO comfy_workflow (name, tool_name, description, workflow_json) VALUES 
 
 `tool_name` must match `^[a-zA-Z0-9_-]+$` and is unique. It is what the client calls, so treat it as an identifier.
 
+Reference images
+
+Any row can optionally accept 1–3 caller-supplied images that guide the result (img2img, Kontext-style editing). Without images a tool behaves exactly as before.
+
+A single ComfyUI graph cannot be both text-to-image and image-guided — a `LoadImage` node with no image fails validation, and image guidance means different wiring (a `VAEEncode` feeding the sampler, or `ReferenceLatent` conditioning), not one extra input. Each row therefore carries **two graphs of the same preset**:
+
+| Column | Used when |
+|---|---|
+| `workflow_json` | no images supplied (unchanged) |
+| `reference_workflow_json` (nullable, `V2` migration) | images supplied |
+
+A row opts in by filling `reference_workflow_json`. Rows with `NULL` there do not advertise `reference_images`, by the same rule as `__WIDTH__`: never offer a knob that would be ignored.
+
+The variant carries one token per image, as the `image` input of a `LoadImage` node:
+
+| Token | Replaced with |
+|---|---|
+| `__REFERENCE_IMAGE_1__` … `__REFERENCE_IMAGE_3__` | the uploaded file's name (string), e.g. `mcp-server/mcp-<uuid>.png` |
+
+All the other tokens work in the variant too, and `__PROMPT__` is required there as well.
+
+Tool shape when a variant exists:
+
+```
+reference_images: array, minItems = maxItems = N (the variant's slot count)
+  items: { data: string (base64; a data: URI prefix is tolerated),
+           mimeType: "image/png" | "image/jpeg" | "image/webp" }
+```
+
+- A graph is fixed, so a variant with N slots takes **exactly N** images, or none. Any other count is an error result before ComfyUI is called: `This workflow takes exactly 2 reference images; 1 supplied.` `minItems`/`maxItems` carry N so a client can read it without parsing prose.
+- Order matters: image 1 fills `__REFERENCE_IMAGE_1__`.
+- Write the row's `description` so it says what the images are *for* ("restyles the attached photo"), because a model picks the tool from that text.
+
+Validation, per image, before anything else happens:
+- at most 3 images; each must be an object with `data` and `mimeType`;
+- `mimeType` on the png/jpeg/webp allow-list, **and** the decoded bytes must carry that format's magic number — the declared type is not trusted;
+- decoded size at most `comfyui.reference-image.max-bytes` (default `10MB`), checked from the encoded length before decoding;
+- base64 only. There is no URL input, so there is no SSRF surface.
+
+Errors come back as `isError` results whose text names the image's position and the problem, never the data. Neither the image data nor the raw `arguments` map is logged.
+
+Startup validation of a variant is separate from its row: a variant that is not valid JSON, has no `__PROMPT__`, has no reference token, has slots that are not contiguous from 1, or has more than 3 slots is **dropped with a warning while the row's text-only tool still registers**. Conversely, a `workflow_json` that carries reference tokens skips the whole row — that graph could never run on the no-image path.
+
+ComfyUI mechanics: a `LoadImage` node takes a file name already in ComfyUI's `input/` directory, never bytes. When images are supplied each one is uploaded first with `POST /upload/image` (multipart: `image`, `type=input`, `subfolder=mcp-server`, `overwrite=false`), and the name ComfyUI returns is what gets substituted. Progress gains an "Uploading reference images" step at 3%.
+
+Samples (to be re-exported from your own ComfyUI editor — node names cannot be verified from here):
+- `src/main/resources/comfyui/flux1-schnell-img2img.json` — `LoadImage → ImageScale(__WIDTH__, __HEIGHT__) → VAEEncode → KSampler.latent_image`, `denoise` baked at `0.6`. One slot.
+- `src/main/resources/comfyui/flux1-kontext-reference.json` — FLUX.1 Kontext: `LoadImage → FluxKontextImageScale → VAEEncode → ReferenceLatent` conditioning. One slot.
+- `scripts/comfy-workflow-set-reference.sql` — sets the img2img variant on the `generate_image` row.
+
+```
+{
+  "jsonrpc": "2.0",
+  "id": "3",
+  "method": "tools/call",
+  "params": {
+    "name": "generate_image",
+    "arguments": {
+      "prompt": "the same scene as a watercolor painting",
+      "reference_images": [ { "data": "iVBORw0KGgo…", "mimeType": "image/png" } ]
+    }
+  }
+}
+```
+
 Validation and startup behaviour
 
 Each row is parsed and validated independently at startup. A row is **skipped with a warning** — not fatal — if it:
@@ -131,6 +199,7 @@ Configuration
 | `comfyui.generation.poll-interval-millis` | `1000` | Delay between history polls |
 | `comfyui.generation.expected-seconds` | `12` | Drives the progress ramp |
 | `comfyui.generation.release-memory-delay-millis` | `300000` | Delay before calling `/free` after the last generation |
+| `comfyui.reference-image.max-bytes` | `10MB` | Largest decoded size accepted per reference image |
 | `spring.datasource.url` | `${DATABASE_URL}` | Postgres holding `comfy_workflow` |
 
 Environment variables
@@ -180,6 +249,10 @@ Troubleshooting
 | 403 Forbidden | Missing `ROLE_MCP-GENERATE-IMAGE` | Add the `mcp-generate-image` role in the IdP |
 | Startup fails on the datasource | Postgres unreachable | Verify `DATABASE_URL`; an unreachable database is fatal, unlike a bad row |
 | Connection failures within 30s | ComfyUI unreachable | `curl https://<comfyui-host>/system_stats` from the server host |
+| Tool has no `reference_images` parameter | `reference_workflow_json` is NULL, or the variant was dropped | Check the startup log for `Ignoring the reference variant` |
+| "This workflow takes exactly N reference images" | The caller sent a different count than the variant's slots | Send exactly N, or none |
+| "content does not match its declared type" | The bytes are not the format `mimeType` claims | Send the real type; GIF is not accepted |
+| "ComfyUI image upload failed with status …" | ComfyUI could not decode or store the file | Check the ComfyUI log; check disk space in `input/` |
 
 Operational notes
 - After each generation, the service schedules a call to `/free` (unloading the model and releasing VRAM) `comfyui.generation.release-memory-delay-millis` later. A generation that lands before that delay elapses cancels and reschedules it, so `/free` fires at most once — always that delay after the *last* generation — instead of forcing a reload between back-to-back requests.
@@ -187,6 +260,8 @@ Operational notes
 - A 1024×1024 PNG is roughly 2MB once base64-encoded. The ComfyUI WebClient raises its in-memory codec limit to 32MB so there is headroom if larger sizes are ever enabled.
 - Workflows are read from the database **once at startup**. Editing a row has no effect until the server restarts.
 - Workflow tools are built as `SyncToolSpecification`s rather than `@McpTool` methods, so `@PreAuthorize` cannot sit on the handler — a lambda is not a bean method and would not be proxied. Authorization is enforced by routing every call through `WorkflowImageGenerationService`. Calling `ComfyUiService` directly from a handler would silently bypass the role check.
+- Reference image uploads accumulate in ComfyUI's `input/mcp-server/` directory: ComfyUI has no API to delete an input. Every file is named `mcp-<uuid>.<ext>` so the directory can be pruned by age (e.g. a daily `find input/mcp-server -mtime +1 -delete`) without touching anything else.
+- A request carrying three 10MB images is roughly 40MB of JSON. Tomcat places no limit on a JSON body, but a reverse proxy in front of this server (`client_max_body_size` in nginx) must allow it.
 - The ComfyUI origin has no authentication of its own. `@PreAuthorize` protects this server's surface only — see Deployment for origin hardening.
 
 See also

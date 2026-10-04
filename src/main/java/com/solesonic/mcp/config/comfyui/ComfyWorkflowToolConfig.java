@@ -21,8 +21,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.META_KIND;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.META_KIND_IMAGE_GENERATION;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_JPEG;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_PNG;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_WEBP;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_HEIGHT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_WIDTH;
+import static com.solesonic.mcp.tool.comfyui.ReferenceImageArguments.FIELD_DATA;
+import static com.solesonic.mcp.tool.comfyui.ReferenceImageArguments.FIELD_MIME_TYPE;
+import static com.solesonic.mcp.tool.comfyui.ReferenceImageArguments.PARAM_REFERENCE_IMAGES;
 
 /**
  * Turns every stored workflow into an MCP tool at startup, so choosing a tool is how a client
@@ -50,6 +58,11 @@ public class ComfyWorkflowToolConfig {
     private static final String TYPE_OBJECT = "object";
     private static final String TYPE_STRING = "string";
     private static final String TYPE_INTEGER = "integer";
+    private static final String TYPE_ARRAY = "array";
+    private static final String SCHEMA_ITEMS = "items";
+    private static final String SCHEMA_MIN_ITEMS = "minItems";
+    private static final String SCHEMA_MAX_ITEMS = "maxItems";
+    private static final String SCHEMA_ENUM = "enum";
 
     private static final String PROMPT_DESCRIPTION = """
             Describe the image to generate. Include subject, style, lighting, and composition.
@@ -61,6 +74,11 @@ public class ComfyWorkflowToolConfig {
 
     private static final String HEIGHT_DESCRIPTION =
             "Image height in pixels. Defaults to " + ImageGenerationRequest.DEFAULT_HEIGHT + " when omitted.";
+
+    private static final String DATA_DESCRIPTION =
+            "Base64-encoded image bytes. A data URI prefix (data:image/png;base64,) is tolerated.";
+
+    private static final String MIME_TYPE_DESCRIPTION = "The image format; must match the bytes.";
 
     @Bean
     public List<SyncToolSpecification> comfyWorkflowToolSpecifications(
@@ -83,6 +101,7 @@ public class ComfyWorkflowToolConfig {
         Tool tool = Tool.builder(registeredComfyWorkflow.toolName(), inputSchema(registeredComfyWorkflow))
                 .title(registeredComfyWorkflow.name())
                 .description(registeredComfyWorkflow.description())
+                .meta(Map.of(META_KIND, META_KIND_IMAGE_GENERATION))
                 .build();
 
         return SyncToolSpecification.builder()
@@ -109,6 +128,10 @@ public class ComfyWorkflowToolConfig {
             properties.put(PARAM_HEIGHT, Map.of(SCHEMA_TYPE, TYPE_INTEGER, SCHEMA_DESCRIPTION, HEIGHT_DESCRIPTION));
         }
 
+        if (registeredComfyWorkflow.referenceImageSlots() > 0) {
+            properties.put(PARAM_REFERENCE_IMAGES, referenceImagesSchema(registeredComfyWorkflow.referenceImageSlots()));
+        }
+
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put(SCHEMA_TYPE, TYPE_OBJECT);
         schema.put(SCHEMA_PROPERTIES, properties);
@@ -119,9 +142,44 @@ public class ComfyWorkflowToolConfig {
     }
 
     /**
+     * {@code minItems} and {@code maxItems} both equal the slot count: the graph is fixed, so the
+     * workflow takes exactly that many images or none, and a client can read the number from the
+     * schema rather than from prose. Advertised only for rows with a reference variant.
+     */
+    private Map<String, Object> referenceImagesSchema(int slots) {
+        Map<String, Object> itemProperties = new LinkedHashMap<>();
+        itemProperties.put(FIELD_DATA, Map.of(SCHEMA_TYPE, TYPE_STRING, SCHEMA_DESCRIPTION, DATA_DESCRIPTION));
+        itemProperties.put(FIELD_MIME_TYPE, Map.of(
+                SCHEMA_TYPE, TYPE_STRING,
+                SCHEMA_DESCRIPTION, MIME_TYPE_DESCRIPTION,
+                SCHEMA_ENUM, List.of(MIME_TYPE_PNG, MIME_TYPE_JPEG, MIME_TYPE_WEBP)));
+
+        Map<String, Object> items = new LinkedHashMap<>();
+        items.put(SCHEMA_TYPE, TYPE_OBJECT);
+        items.put(SCHEMA_PROPERTIES, itemProperties);
+        items.put(SCHEMA_REQUIRED, List.of(FIELD_DATA, FIELD_MIME_TYPE));
+        items.put(SCHEMA_ADDITIONAL_PROPERTIES, false);
+
+        Map<String, Object> referenceImages = new LinkedHashMap<>();
+        referenceImages.put(SCHEMA_TYPE, TYPE_ARRAY);
+        referenceImages.put(SCHEMA_DESCRIPTION, """
+                Optional images that guide the result. When supplied, exactly %d must be given; order \
+                matters (image 1 fills slot 1). Omit to generate from the prompt alone.""".formatted(slots));
+        referenceImages.put(SCHEMA_MIN_ITEMS, slots);
+        referenceImages.put(SCHEMA_MAX_ITEMS, slots);
+        referenceImages.put(SCHEMA_ITEMS, items);
+
+        return referenceImages;
+    }
+
+    /**
      * Rebuilds the {@link McpSyncRequestContext} that the annotation-driven path would have injected,
      * so progress notifications keep working exactly as they did for the old {@code generate_image}
      * tool. The request carries the progress token, so both halves are required.
+     *
+     * <p>The raw {@code reference_images} value is handed on undecoded: decoding happens inside
+     * {@link WorkflowImageGenerationService}, behind its role check. The raw arguments map is never
+     * logged: it carries the image data.
      */
     private CallToolResult handle(
             RegisteredComfyWorkflow registeredComfyWorkflow,
@@ -141,8 +199,8 @@ public class ComfyWorkflowToolConfig {
                 intArgument(arguments, PARAM_WIDTH, ImageGenerationRequest.DEFAULT_WIDTH),
                 intArgument(arguments, PARAM_HEIGHT, ImageGenerationRequest.DEFAULT_HEIGHT));
 
-        return workflowImageGenerationService.generate(
-                registeredComfyWorkflow, imageGenerationRequest, new ProgressReporter(mcpSyncRequestContext));
+        return workflowImageGenerationService.generate(registeredComfyWorkflow, imageGenerationRequest,
+                arguments.get(PARAM_REFERENCE_IMAGES), new ProgressReporter(mcpSyncRequestContext));
     }
 
     private String stringArgument(Map<String, Object> arguments) {

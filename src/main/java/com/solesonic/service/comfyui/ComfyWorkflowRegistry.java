@@ -20,7 +20,9 @@ import java.util.regex.Pattern;
  *
  * <p>Rows are validated independently and a bad row is skipped with a warning rather than failing
  * the context. Rows are typed in by hand, so one malformed paste must not be able to stop the server
- * booting and take every unrelated tool down with it.
+ * booting and take every unrelated tool down with it. The same holds one level down: a row's
+ * reference variant is validated on its own, and a bad one is dropped while the row's text-only
+ * tool still registers.
  */
 @Component
 public class ComfyWorkflowRegistry {
@@ -84,11 +86,55 @@ public class ComfyWorkflowRegistry {
         try {
             ComfyWorkflowTemplate template = ComfyWorkflowTemplate.parse(row.getWorkflowJson(), jsonMapper);
 
+            //A LoadImage node with no image fails ComfyUI validation, so a text-only graph that loads
+            //images could never succeed on the path that supplies none.
+            if (template.referenceImageSlots() > 0) {
+                log.warn("Skipping ComfyUI workflow '{}': workflow_json carries reference image tokens; "
+                        + "the image-guided graph belongs in reference_workflow_json", row.getToolName());
+
+                return null;
+            }
+
+            ComfyWorkflowTemplate referenceTemplate = referenceVariant(row);
+
             log.info("Registering ComfyUI workflow tool '{}' ({})", row.getToolName(), row.getName());
 
-            return new RegisteredComfyWorkflow(row.getToolName(), row.getName(), row.getDescription(), template);
+            return new RegisteredComfyWorkflow(row.getToolName(), row.getName(), row.getDescription(), template,
+                    referenceTemplate);
         } catch (ComfyUiException comfyUiException) {
             log.warn("Skipping ComfyUI workflow '{}': {}", row.getToolName(), comfyUiException.getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * @return the parsed image-guided variant, or {@code null} if the row has none or it is unusable
+     */
+    private ComfyWorkflowTemplate referenceVariant(ComfyWorkflow row) {
+        String referenceWorkflowJson = row.getReferenceWorkflowJson();
+
+        if (referenceWorkflowJson == null || referenceWorkflowJson.isBlank()) {
+            return null;
+        }
+
+        try {
+            ComfyWorkflowTemplate referenceTemplate = ComfyWorkflowTemplate.parse(referenceWorkflowJson, jsonMapper);
+
+            if (referenceTemplate.referenceImageSlots() == 0) {
+                log.warn("Ignoring the reference variant of ComfyUI workflow '{}': it has no __REFERENCE_IMAGE_1__ token",
+                        row.getToolName());
+
+                return null;
+            }
+
+            log.info("ComfyUI workflow tool '{}' accepts {} reference image(s)",
+                    row.getToolName(), referenceTemplate.referenceImageSlots());
+
+            return referenceTemplate;
+        } catch (ComfyUiException comfyUiException) {
+            log.warn("Ignoring the reference variant of ComfyUI workflow '{}': {}",
+                    row.getToolName(), comfyUiException.getMessage());
 
             return null;
         }

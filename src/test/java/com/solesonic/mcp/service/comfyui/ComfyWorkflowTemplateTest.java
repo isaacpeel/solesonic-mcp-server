@@ -12,6 +12,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_HEIGHT;
@@ -206,6 +207,119 @@ class ComfyWorkflowTemplateTest {
 
         assertThat(inputs(workflow, "aardvark").get("text").asString()).isEqualTo("a prompt");
         assertThat(inputs(workflow, "banana").get("seed").asLong()).isEqualTo(7L);
+    }
+
+    @Test
+    void parse_aTextOnlyWorkflowHasNoReferenceSlots() {
+        ComfyWorkflowTemplate comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(fixture(), jsonMapper);
+
+        assertThat(comfyWorkflowTemplate.referenceImageSlots()).isZero();
+    }
+
+    @Test
+    void parse_countsContiguousReferenceSlots() {
+        ComfyWorkflowTemplate comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_1__", "__REFERENCE_IMAGE_2__"), jsonMapper);
+
+        assertThat(comfyWorkflowTemplate.referenceImageSlots()).isEqualTo(2);
+    }
+
+    /**
+     * A gap means an image the caller supplies would land nowhere, or a {@code LoadImage} node would
+     * be left holding a token ComfyUI cannot resolve.
+     */
+    @Test
+    void parse_failsWhenReferenceSlotsAreNotContiguousFromOne() {
+        assertThatThrownBy(() -> ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_1__", "__REFERENCE_IMAGE_3__"), jsonMapper))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("contiguous");
+
+        assertThatThrownBy(() -> ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_2__"), jsonMapper))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("contiguous");
+    }
+
+    @Test
+    void parse_failsWhenMoreThanThreeReferenceSlotsAreDeclared() {
+        assertThatThrownBy(() -> ComfyWorkflowTemplate.parse(referenceWorkflow(
+                "__REFERENCE_IMAGE_1__", "__REFERENCE_IMAGE_2__", "__REFERENCE_IMAGE_3__", "__REFERENCE_IMAGE_4__"),
+                jsonMapper))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("at most 3");
+    }
+
+    @Test
+    void build_substitutesUploadedFilenamesIntoTheirSlotsAsStrings() {
+        ComfyWorkflowTemplate comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_1__", "__REFERENCE_IMAGE_2__"), jsonMapper);
+
+        ObjectNode workflow = comfyWorkflowTemplate.build(
+                new ImageGenerationRequest("a prompt", 1024, 1024, 7L),
+                List.of("mcp-server/mcp-first.png", "mcp-server/mcp-second.jpg"));
+
+        assertThat(inputs(workflow, "load1").get("image").asString()).isEqualTo("mcp-server/mcp-first.png");
+        assertThat(inputs(workflow, "load2").get("image").asString()).isEqualTo("mcp-server/mcp-second.jpg");
+        assertThat(text(workflow, "6")).isEqualTo("a prompt");
+        assertThat(inputs(workflow, "31").get("seed").asLong()).isEqualTo(7L);
+    }
+
+    @Test
+    void build_failsWhenTheFilenameCountDiffersFromTheSlots() {
+        ComfyWorkflowTemplate comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_1__", "__REFERENCE_IMAGE_2__"), jsonMapper);
+
+        assertThatThrownBy(() -> comfyWorkflowTemplate.build(
+                new ImageGenerationRequest("a prompt", 1024, 1024, 7L), List.of("only-one.png")))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("2");
+    }
+
+    @Test
+    void build_referenceVariantDoesNotMutateTheCachedTemplate() {
+        ComfyWorkflowTemplate comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(
+                referenceWorkflow("__REFERENCE_IMAGE_1__"), jsonMapper);
+
+        comfyWorkflowTemplate.build(new ImageGenerationRequest("first", 1024, 1024, 1L), List.of("first.png"));
+        ObjectNode second = comfyWorkflowTemplate.build(
+                new ImageGenerationRequest("second", 1024, 1024, 2L), List.of("second.png"));
+
+        assertThat(inputs(second, "load1").get("image").asString()).isEqualTo("second.png");
+    }
+
+    /**
+     * The shipped samples are what an operator pastes into reference_workflow_json, so they must at
+     * least register as one-slot variants.
+     */
+    @Test
+    void parse_theShippedReferenceSamplesAreOneSlotVariants() {
+        assertThat(ComfyWorkflowTemplate.parse(resource("comfyui/flux1-schnell-img2img.json"), jsonMapper)
+                .referenceImageSlots()).isEqualTo(1);
+        assertThat(ComfyWorkflowTemplate.parse(resource("comfyui/flux1-kontext-reference.json"), jsonMapper)
+                .referenceImageSlots()).isEqualTo(1);
+    }
+
+    private String resource(String path) {
+        try (InputStream inputStream = new ClassPathResource(path).getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ioException) {
+            throw new IllegalStateException("Unable to read " + path, ioException);
+        }
+    }
+
+    private String referenceWorkflow(String... imageTokens) {
+        ObjectNode workflow = jsonMapper.createObjectNode();
+        workflow.putObject("6").putObject("inputs").put("text", "__PROMPT__");
+        workflow.putObject("31").putObject("inputs").put("seed", "__SEED__");
+
+        for (int index = 0; index < imageTokens.length; index++) {
+            ObjectNode loadImage = workflow.putObject("load" + (index + 1));
+            loadImage.put("class_type", "LoadImage");
+            loadImage.putObject("inputs").put("image", imageTokens[index]);
+        }
+
+        return jsonMapper.writeValueAsString(workflow);
     }
 
     private String mutatedFixture(Consumer<ObjectNode> mutation) {

@@ -70,6 +70,11 @@
       "name": "comfyui.generation.release-memory-delay-millis",
       "type": "java.lang.Long",
       "description": "How long to wait after the last generation before calling ComfyUI's /free endpoint; reset by every new generation."
+    },
+    {
+      "name": "comfyui.reference-image.max-bytes",
+      "type": "org.springframework.util.unit.DataSize",
+      "description": "Largest decoded size accepted for each caller-supplied reference image."
     }
   ]
 }

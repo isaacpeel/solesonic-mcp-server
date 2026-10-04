@@ -32,6 +32,11 @@ class ComfyWorkflowRegistryTest {
             {"6": {"inputs": {"text": "__PROMPT__"}},
              "27": {"inputs": {"width": 1024, "height": 1024}}}""";
 
+    private static final String ONE_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "31": {"inputs": {"seed": "__SEED__", "denoise": 0.6}},
+             "40": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_1__"}}}""";
+
     @Mock
     private ComfyWorkflowRepository comfyWorkflowRepository;
 
@@ -98,6 +103,70 @@ class ComfyWorkflowRegistryTest {
         comfyWorkflowRegistry.loadWorkflows();
 
         assertThat(comfyWorkflowRegistry.registeredWorkflows()).isEmpty();
+    }
+
+    @Test
+    void loadWorkflows_registersAValidReferenceVariantWithItsSlotCount() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
+                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, ONE_SLOT_VARIANT)));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        assertThat(registered.referenceVariant()).isPresent();
+        assertThat(registered.referenceImageSlots()).isEqualTo(1);
+    }
+
+    @Test
+    void loadWorkflows_aRowWithoutAVariantAcceptsNoReferenceImages() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
+                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, null)));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        assertThat(registered.referenceVariant()).isEmpty();
+        assertThat(registered.referenceImageSlots()).isZero();
+    }
+
+    /**
+     * A broken variant must not take a working text-only tool down with it.
+     */
+    @Test
+    void loadWorkflows_anInvalidVariantIsDroppedButTheBaseToolStillRegisters() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
+                row("malformed_variant", "Malformed", VALID_WORKFLOW, "{\"6\": "),
+                row("variant_without_images", "No images", VALID_WORKFLOW, VALID_WORKFLOW),
+                row("variant_with_gap", "Gap", VALID_WORKFLOW, """
+                        {"6": {"inputs": {"text": "__PROMPT__"}},
+                         "8": {"inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""")));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        assertThat(comfyWorkflowRegistry.registeredWorkflows())
+                .hasSize(3)
+                .allSatisfy(registered -> assertThat(registered.referenceVariant()).isEmpty());
+    }
+
+    /**
+     * A {@code LoadImage} node with no image fails ComfyUI validation, so a text-only graph carrying
+     * a reference token could never succeed on the path that supplies no images.
+     */
+    @Test
+    void loadWorkflows_skipsARowWhoseBaseWorkflowCarriesReferenceTokens() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
+                .thenReturn(List.of(row("base_needs_images", "Wrong column", ONE_SLOT_VARIANT, null)));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        assertThat(comfyWorkflowRegistry.registeredWorkflows()).isEmpty();
+    }
+
+    private ComfyWorkflow row(String toolName, String name, String workflowJson, String referenceWorkflowJson) {
+        ComfyWorkflow comfyWorkflow = row(toolName, name, workflowJson);
+        comfyWorkflow.setReferenceWorkflowJson(referenceWorkflowJson);
+
+        return comfyWorkflow;
     }
 
     private ComfyWorkflow row(String toolName, String name, String workflowJson) {

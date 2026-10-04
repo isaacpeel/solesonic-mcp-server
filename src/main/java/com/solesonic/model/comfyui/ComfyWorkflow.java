@@ -40,6 +40,13 @@ public class ComfyWorkflow {
     @Column(name = "workflow_json", nullable = false)
     private String workflowJson;
 
+    /**
+     * The image-guided variant of the same preset, used only when a caller supplies reference
+     * images. Null means the row's tool does not accept them.
+     */
+    @Column(name = "reference_workflow_json")
+    private String referenceWorkflowJson;
+
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
@@ -81,6 +88,14 @@ public class ComfyWorkflow {
 
     public void setWorkflowJson(String workflowJson) {
         this.workflowJson = workflowJson;
+    }
+
+    public String getReferenceWorkflowJson() {
+        return referenceWorkflowJson;
+    }
+
+    public void setReferenceWorkflowJson(String referenceWorkflowJson) {
+        this.referenceWorkflowJson = referenceWorkflowJson;
     }
 
     public boolean isEnabled() {

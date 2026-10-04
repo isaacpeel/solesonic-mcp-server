@@ -1,5 +1,6 @@
 package com.solesonic.model.comfyui;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -8,12 +9,16 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>Only values a caller can vary per invocation live here. Everything else about a generation —
  * steps, cfg, sampler, scheduler, checkpoint — is baked into the stored workflow, because the choice
  * of workflow <em>is</em> the choice of those values.
+ *
+ * <p>An empty {@code referenceImages} selects the row's text-only graph; a non-empty one selects
+ * its reference variant.
  */
 public record ImageGenerationRequest(
         String prompt,
         int width,
         int height,
-        long seed
+        long seed,
+        List<ReferenceImage> referenceImages
 ) {
     /**
      * Defaults for the optional {@code width} and {@code height} tool parameters. These live in code
@@ -21,6 +26,10 @@ public record ImageGenerationRequest(
      */
     public static final int DEFAULT_WIDTH = 1024;
     public static final int DEFAULT_HEIGHT = 1024;
+
+    public ImageGenerationRequest {
+        referenceImages = referenceImages == null ? List.of() : List.copyOf(referenceImages);
+    }
 
     /**
      * Builds a request from a prompt alone: the default dimensions plus a fresh random seed, so
@@ -36,6 +45,14 @@ public record ImageGenerationRequest(
      * deliberately.
      */
     public ImageGenerationRequest(String prompt, int width, int height) {
-        this(prompt, width, height, ThreadLocalRandom.current().nextLong(0, Long.MAX_VALUE));
+        this(prompt, width, height, List.of());
+    }
+
+    public ImageGenerationRequest(String prompt, int width, int height, List<ReferenceImage> referenceImages) {
+        this(prompt, width, height, ThreadLocalRandom.current().nextLong(0, Long.MAX_VALUE), referenceImages);
+    }
+
+    public ImageGenerationRequest(String prompt, int width, int height, long seed) {
+        this(prompt, width, height, seed, List.of());
     }
 }

@@ -94,7 +94,8 @@ Categories
     - Description: Generates an image from a text prompt using a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs. Each tool carries its row's `description`, which is what a model reads when choosing between workflows.
     - Auth: ROLE_MCP-GENERATE-IMAGE (all workflow tools)
     - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional> } — `width` and `height` appear only if the stored workflow tokenises them, and default to 1024. Steps, cfg, sampler, and the checkpoint are baked into the stored workflow, so choosing a tool is how you choose them.
-    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the workflow name, size, seed, and elapsed time
+    - Optional `reference_images` (exactly N `{data, mimeType}` base64 images) on rows that define an image-guided variant
+    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the workflow name, size, seed, and elapsed time (and `Reference images: n` when used)
   - Details, including the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
 
 - Date and Time Tools

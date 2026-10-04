@@ -9,21 +9,28 @@ import com.solesonic.model.comfyui.ComfyNodeOutput;
 import com.solesonic.model.comfyui.ComfyPromptRequest;
 import com.solesonic.model.comfyui.ComfyPromptResponse;
 import com.solesonic.model.comfyui.GeneratedImage;
+import com.solesonic.model.comfyui.ComfyUploadResponse;
 import com.solesonic.model.comfyui.ImageGenerationRequest;
+import com.solesonic.model.comfyui.ReferenceImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +38,17 @@ import java.util.concurrent.TimeUnit;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.COMFY_UI_WEB_CLIENT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.FREE_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.HISTORY_ENDPOINT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.INPUT_TYPE;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_JPEG;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_WEBP;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.OUTPUT_TYPE;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_ENDPOINT;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_FIELD_IMAGE;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_FIELD_OVERWRITE;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_FIELD_SUBFOLDER;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_FIELD_TYPE;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_FILENAME_PREFIX;
+import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.UPLOAD_SUBFOLDER;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.PROMPT_ENDPOINT;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.QUERY_PARAM_FILENAME;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.QUERY_PARAM_SUBFOLDER;
@@ -51,6 +68,7 @@ public class ComfyUiService {
     private static final ParameterizedTypeReference<Map<String, ComfyHistoryEntry>> HISTORY_TYPE =
             new ParameterizedTypeReference<>() {};
 
+    private static final int PROGRESS_UPLOADING = 3;
     private static final int PROGRESS_SUBMITTING = 5;
     private static final int PROGRESS_QUEUED = 15;
     private static final int PROGRESS_GENERATING_CEILING = 85;
@@ -93,11 +111,20 @@ public class ComfyUiService {
                 imageGenerationRequest.height(),
                 imageGenerationRequest.seed());
 
+        List<ReferenceImage> referenceImages = imageGenerationRequest.referenceImages();
+
+        if (referenceImages.size() != comfyWorkflowTemplate.referenceImageSlots()) {
+            throw new ComfyUiException("ComfyUI workflow takes %d reference image(s); %d supplied"
+                    .formatted(comfyWorkflowTemplate.referenceImageSlots(), referenceImages.size()));
+        }
+
         long startNanos = System.nanoTime();
+
+        List<String> referenceImageValues = uploadReferenceImages(referenceImages, progressReporter);
 
         progressReporter.emit(PROGRESS_SUBMITTING, "Sending prompt to ComfyUI");
 
-        ObjectNode workflow = comfyWorkflowTemplate.build(imageGenerationRequest);
+        ObjectNode workflow = comfyWorkflowTemplate.build(imageGenerationRequest, referenceImageValues);
 
         String promptId = submit(workflow);
 
@@ -168,6 +195,67 @@ public class ComfyUiService {
                 .doOnError(error -> log.warn("ComfyUI /free call failed, memory was not released", error))
                 .onErrorComplete()
                 .subscribe();
+    }
+
+    /**
+     * A {@code LoadImage} node takes the name of a file already in ComfyUI's {@code input/}
+     * directory, never bytes, so each image is uploaded first and the name ComfyUI reports back —
+     * which may differ from the one sent — is what the workflow is given.
+     *
+     * <p>Names are unique per call and never overwrite, so concurrent generations cannot load each
+     * other's images.
+     */
+    private List<String> uploadReferenceImages(List<ReferenceImage> referenceImages, ProgressReporter progressReporter) {
+        if (referenceImages.isEmpty()) {
+            return List.of();
+        }
+
+        progressReporter.emit(PROGRESS_UPLOADING, "Uploading reference images");
+
+        List<String> referenceImageValues = new ArrayList<>(referenceImages.size());
+
+        for (ReferenceImage referenceImage : referenceImages) {
+            referenceImageValues.add(upload(referenceImage));
+        }
+
+        return List.copyOf(referenceImageValues);
+    }
+
+    private String upload(ReferenceImage referenceImage) {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part(UPLOAD_FIELD_IMAGE, referenceImage.bytes())
+                .filename(UPLOAD_FILENAME_PREFIX + UUID.randomUUID() + "." + extension(referenceImage.mimeType()))
+                .contentType(MediaType.parseMediaType(referenceImage.mimeType()));
+        multipartBodyBuilder.part(UPLOAD_FIELD_TYPE, INPUT_TYPE);
+        multipartBodyBuilder.part(UPLOAD_FIELD_SUBFOLDER, UPLOAD_SUBFOLDER);
+        multipartBodyBuilder.part(UPLOAD_FIELD_OVERWRITE, Boolean.FALSE.toString());
+
+        ComfyUploadResponse comfyUploadResponse = webClient.post()
+                .uri(UPLOAD_ENDPOINT)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
+                        .defaultIfEmpty("")
+                        .flatMap(body -> Mono.error(new ComfyUiException(
+                                "ComfyUI image upload failed with status "
+                                        + clientResponse.statusCode(), body))))
+                .bodyToMono(ComfyUploadResponse.class)
+                .block();
+
+        if (comfyUploadResponse == null || comfyUploadResponse.name() == null) {
+            throw new ComfyUiException("ComfyUI returned no file name for an image upload");
+        }
+
+        return comfyUploadResponse.loadImageValue();
+    }
+
+    private static String extension(String mimeType) {
+        return switch (mimeType) {
+            case MIME_TYPE_JPEG -> "jpg";
+            case MIME_TYPE_WEBP -> "webp";
+            default -> "png";
+        };
     }
 
     /**

@@ -4,6 +4,7 @@ import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
 import com.solesonic.model.comfyui.GeneratedImage;
 import com.solesonic.model.comfyui.ImageGenerationRequest;
+import com.solesonic.model.comfyui.ReferenceImage;
 import com.solesonic.service.comfyui.ComfyUiService;
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,8 +13,11 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.client.reactive.MockClientHttpRequest;
+import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFunction;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -27,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -55,6 +60,24 @@ class ComfyUiServiceTest {
 
     private static final String HISTORY_FAILED = """
             {"abc-123":{"outputs":{},"status":{"status_str":"error","completed":true}}}""";
+
+    private static final String UPLOAD_ACCEPTED_FIRST = """
+            {"name":"mcp-first.png","subfolder":"mcp-server","type":"input"}""";
+
+    private static final String UPLOAD_ACCEPTED_SECOND = """
+            {"name":"mcp-second.png","subfolder":"mcp-server","type":"input"}""";
+
+    private static final String TWO_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "31": {"inputs": {"seed": "__SEED__"}},
+             "40": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_1__"}},
+             "41": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""";
+
+    private final Deque<String> uploadResponses = new ArrayDeque<>();
+    private final List<String> requestPaths = new CopyOnWriteArrayList<>();
+    private final List<String> uploadBodies = new ArrayList<>();
+    private final List<String> promptBodies = new ArrayList<>();
+    private boolean uploadErrors;
 
     private final Deque<String> promptResponses = new ArrayDeque<>();
     private final Deque<String> historyResponses = new ArrayDeque<>();
@@ -196,6 +219,90 @@ class ComfyUiServiceTest {
         awaitFreeCallCount(1);
     }
 
+    @Test
+    void generate_withoutReferenceImages_neverUploads() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(requestPaths).noneMatch(path -> path.startsWith("/upload"));
+    }
+
+    /**
+     * A {@code LoadImage} node names a file that must already exist in ComfyUI's input directory, so
+     * every upload has to land before the workflow that refers to it is submitted.
+     */
+    @Test
+    void generate_withReferenceImages_uploadsEachBeforeSubmittingTheVariantGraph() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        uploadResponses.add(UPLOAD_ACCEPTED_FIRST);
+        uploadResponses.add(UPLOAD_ACCEPTED_SECOND);
+
+        ComfyWorkflowTemplate variant = ComfyWorkflowTemplate.parse(TWO_SLOT_VARIANT, JsonMapper.builder().build());
+
+        service(180).generate(variant, referenceRequest(2), progressReporter);
+
+        List<String> callOrder = requestPaths.stream()
+                .filter(path -> path.startsWith("/upload") || path.startsWith("/prompt"))
+                .toList();
+        assertThat(callOrder).containsExactly("/upload/image", "/upload/image", "/prompt");
+
+        assertThat(uploadBodies).hasSize(2).allSatisfy(body -> {
+            assertThat(body).contains("name=\"image\"; filename=\"mcp-");
+            assertThat(body).contains("name=\"type\"").contains("input");
+            assertThat(body).contains("name=\"subfolder\"").contains("mcp-server");
+            assertThat(body).contains("Content-Type: image/png");
+        });
+
+        String submitted = promptBodies.getFirst();
+        assertThat(submitted).contains("\"image\":\"mcp-server/mcp-first.png\"");
+        assertThat(submitted).contains("\"image\":\"mcp-server/mcp-second.png\"");
+        assertThat(submitted).doesNotContain("__REFERENCE_IMAGE_");
+        assertThat(capturedMessages).contains("Uploading reference images");
+    }
+
+    @Test
+    void generate_uploadRejected_throwsWithoutSubmitting() {
+        uploadErrors = true;
+
+        ComfyWorkflowTemplate variant = ComfyWorkflowTemplate.parse(TWO_SLOT_VARIANT, JsonMapper.builder().build());
+
+        assertThatThrownBy(() -> service(180).generate(variant, referenceRequest(2), progressReporter))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("upload");
+
+        assertThat(requestPaths).noneMatch(path -> path.startsWith("/prompt"));
+    }
+
+    @Test
+    void generate_imageCountDiffersFromTheTemplateSlots_throwsBeforeAnyCall() {
+        ComfyWorkflowTemplate variant = ComfyWorkflowTemplate.parse(TWO_SLOT_VARIANT, JsonMapper.builder().build());
+
+        assertThatThrownBy(() -> service(180).generate(variant, referenceRequest(1), progressReporter))
+                .isInstanceOf(ComfyUiException.class);
+
+        assertThat(requestPaths).isEmpty();
+    }
+
+    private ImageGenerationRequest referenceRequest(int imageCount) {
+        List<ReferenceImage> referenceImages = new ArrayList<>();
+
+        for (int index = 0; index < imageCount; index++) {
+            referenceImages.add(new ReferenceImage(PNG_BYTES, "image/png"));
+        }
+
+        return new ImageGenerationRequest("make it a watercolor", 1024, 1024, 42L, referenceImages);
+    }
+
+    private String bodyOf(ClientRequest clientRequest) {
+        MockClientHttpRequest mockClientHttpRequest = new MockClientHttpRequest(clientRequest.method(), clientRequest.url());
+        clientRequest.writeTo(mockClientHttpRequest, ExchangeStrategies.withDefaults()).block();
+
+        return mockClientHttpRequest.getBodyAsString().block();
+    }
+
     private ComfyUiService service(long generationTimeoutSeconds) {
         return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0, 50L);
     }
@@ -234,8 +341,15 @@ class ComfyUiServiceTest {
     private ExchangeFunction dispatchingExchangeFunction() {
         return clientRequest -> {
             String path = clientRequest.url().getPath();
+            requestPaths.add(path);
+
+            if (path.startsWith("/upload")) {
+                uploadBodies.add(bodyOf(clientRequest));
+                return Mono.just(uploadErrors ? badRequestResponse() : jsonResponse(uploadResponses.poll()));
+            }
 
             if (path.startsWith("/prompt")) {
+                promptBodies.add(bodyOf(clientRequest));
                 return Mono.just(jsonResponse(promptResponses.poll()));
             }
 
@@ -269,6 +383,13 @@ class ComfyUiServiceTest {
         return ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR)
                 .header(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .body("{}")
+                .build();
+    }
+
+    private ClientResponse badRequestResponse() {
+        return ClientResponse.create(HttpStatus.BAD_REQUEST)
+                .header(CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                .body("Invalid image file")
                 .build();
     }
 

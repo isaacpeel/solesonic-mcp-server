@@ -2,15 +2,33 @@ package com.solesonic.model.comfyui;
 
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
 
+import java.util.Optional;
+
 /**
  * A stored workflow that survived validation and will be exposed as an MCP tool. Pairs the row's
  * identity — the columns a client sees when choosing a tool — with its parsed, ready-to-patch
- * template.
+ * template, and with its image-guided variant when the row has a valid one.
  */
 public record RegisteredComfyWorkflow(
         String toolName,
         String name,
         String description,
-        ComfyWorkflowTemplate template
+        ComfyWorkflowTemplate template,
+        ComfyWorkflowTemplate referenceTemplate
 ) {
+
+    public RegisteredComfyWorkflow(String toolName, String name, String description, ComfyWorkflowTemplate template) {
+        this(toolName, name, description, template, null);
+    }
+
+    public Optional<ComfyWorkflowTemplate> referenceVariant() {
+        return Optional.ofNullable(referenceTemplate);
+    }
+
+    /**
+     * How many reference images the variant takes, or zero when the row accepts none.
+     */
+    public int referenceImageSlots() {
+        return referenceTemplate == null ? 0 : referenceTemplate.referenceImageSlots();
+    }
 }

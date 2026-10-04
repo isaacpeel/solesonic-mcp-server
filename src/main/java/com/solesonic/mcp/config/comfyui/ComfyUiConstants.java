@@ -10,13 +10,42 @@ public final class ComfyUiConstants {
     public static final String HISTORY_ENDPOINT = "/history/{promptId}";
     public static final String VIEW_ENDPOINT = "/view";
     public static final String FREE_ENDPOINT = "/free";
+    public static final String UPLOAD_ENDPOINT = "/upload/image";
 
     public static final String QUERY_PARAM_FILENAME = "filename";
     public static final String QUERY_PARAM_SUBFOLDER = "subfolder";
     public static final String QUERY_PARAM_TYPE = "type";
 
+    public static final String UPLOAD_FIELD_IMAGE = "image";
+    public static final String UPLOAD_FIELD_TYPE = "type";
+    public static final String UPLOAD_FIELD_OVERWRITE = "overwrite";
+    public static final String UPLOAD_FIELD_SUBFOLDER = "subfolder";
+
+    /**
+     * Every upload lands in this one subfolder of ComfyUI's {@code input/} directory, because
+     * ComfyUI has no API to delete an input and an operator pruning by hand needs one place to look.
+     */
+    public static final String UPLOAD_SUBFOLDER = "mcp-server";
+    public static final String UPLOAD_FILENAME_PREFIX = "mcp-";
+
     public static final String MIME_TYPE_PNG = "image/png";
+    public static final String MIME_TYPE_JPEG = "image/jpeg";
+    public static final String MIME_TYPE_WEBP = "image/webp";
     public static final String OUTPUT_TYPE = "output";
+    public static final String INPUT_TYPE = "input";
+
+    /**
+     * The most reference images any workflow may take. A fixed graph has exactly one
+     * {@code LoadImage} node per slot, so this also bounds the slots a variant may declare.
+     */
+    public static final int MAX_REFERENCE_IMAGES = 3;
+
+    /**
+     * Every workflow tool carries {@code _meta: {"solesonic/kind": "image-generation"}}, so a client
+     * can tell image tools from the rest of the catalog without relying on how a row was named.
+     */
+    public static final String META_KIND = "solesonic/kind";
+    public static final String META_KIND_IMAGE_GENERATION = "image-generation";
 
     /**
      * Substitution tokens. A stored workflow carries these as literal string values wherever a
@@ -31,6 +60,13 @@ public final class ComfyUiConstants {
     public static final String TOKEN_SEED = "__SEED__";
     public static final String TOKEN_WIDTH = "__WIDTH__";
     public static final String TOKEN_HEIGHT = "__HEIGHT__";
+
+    /**
+     * {@code __REFERENCE_IMAGE_1__} through {@code __REFERENCE_IMAGE_3__}: a {@code LoadImage}
+     * node's {@code image} input in a reference variant, replaced with the uploaded file's name.
+     */
+    public static final String TOKEN_REFERENCE_IMAGE_PREFIX = "__REFERENCE_IMAGE_";
+    public static final String TOKEN_SUFFIX = "__";
 
     public static final String STATUS_ERROR = "error";
 }
