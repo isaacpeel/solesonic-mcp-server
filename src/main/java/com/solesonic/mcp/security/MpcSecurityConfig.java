@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-import static com.solesonic.mcp.api.ResourceMetadataController.WELL_KNOWN_OAUTH_PROTECTED_RESOURCE;
 import static com.solesonic.model.security.SecurityEvent.AUTHENTICATION_FAILURE;
 import static com.solesonic.model.security.SecurityEvent.AUTHORIZATION_DENIED;
 import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
@@ -56,6 +55,7 @@ public class MpcSecurityConfig {
     public static final String SCOPE_ = "SCOPE_";
     public static final String SCOPE = "scope";
     public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
+    public static final String WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource";
 
     private static final List<String> ALLOWED_HEADERS = List.of(
             "Authorization",
@@ -66,9 +66,6 @@ public class MpcSecurityConfig {
             "mcp-protocol-version",
             "Mcp-Session-Id"
     );
-    public static final String OPENID = "openid";
-    public static final String PROFILE = "profile";
-    public static final String EMAIL = "email";
     public static final String MCP_PREFIX = "/mcp/**";
     public static final String AGENT_CARD_POSTFIX = "/.well-known/agent-card.json";
     public static final String AGENT_PREFIX = "/a2a/**";
@@ -84,6 +81,9 @@ public class MpcSecurityConfig {
 
     @Value("${solesonic.mcp.resource}")
     private String baseResource;
+
+    @Value("${solesonic.mcp.scopes}")
+    private List<String> scopes;
 
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
@@ -148,7 +148,6 @@ public class MpcSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authz ->
                         authz.requestMatchers(WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
-                        .requestMatchers(OPTIONS, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, MCP_PREFIX).permitAll()
                         .requestMatchers(AGENT_CARD_POSTFIX).permitAll()
                         .requestMatchers(AGENT_PREFIX).authenticated()
@@ -161,9 +160,7 @@ public class MpcSecurityConfig {
                         .protectedResourceMetadata(metadata -> metadata
                                 .protectedResourceMetadataCustomizer(builder -> builder
                                         .authorizationServer(issuerUri)
-                                        .scope(OPENID)
-                                        .scope(PROFILE)
-                                        .scope(EMAIL)
+                                        .scopes(scopeList -> scopeList.addAll(scopes))
                                 )
                         )
                 );
@@ -181,7 +178,10 @@ public class MpcSecurityConfig {
 
             response.setContentType(APPLICATION_JSON_VALUE);
             response.setStatus(SC_UNAUTHORIZED);
-            response.setHeader(WWW_AUTHENTICATE, "\"%s%s\"" .formatted(baseResource, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE));
+            // RFC 9728 challenge: MCP clients discover the resource metadata (and from it the
+            // authorization server) via resource_metadata, and take the scopes to request from scope.
+            response.setHeader(WWW_AUTHENTICATE, "Bearer resource_metadata=\"%s%s\", scope=\"%s\""
+                    .formatted(baseResource, WELL_KNOWN_OAUTH_PROTECTED_RESOURCE, String.join(" ", scopes)));
         };
     }
 

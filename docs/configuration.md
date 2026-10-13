@@ -13,6 +13,9 @@ Key properties (environment variables in parentheses)
 - Security (OAuth2 Resource Server - JWT)
   - spring.security.oauth2.resourceserver.jwt.issuer-uri=(${ISSUER_URI})
   - spring.security.oauth2.resourceserver.jwt.jwk-set-uri=(${JWK_SET_URI})
+  - solesonic.mcp.resource=(${MCP_REGISTRATION_ENDPOINT})   # base URL used in the 401 WWW-Authenticate challenge
+  - solesonic.mcp.scopes=openid,profile,email,roles,solesonic-mcp-audience,mcp-roles
+    - Advertised as `scopes_supported` in /.well-known/oauth-protected-resource and as `scope` in the 401 challenge. MCP clients that register dynamically request exactly these. See ./authorization.md.
 - MCP server identity (informational)
   - spring.ai.mcp.server.name=solesonic-mcp-server
   - spring.ai.mcp.server.version=1.0.0

@@ -10,27 +10,26 @@ The server is implemented as an OAuth 2.0 Resource Server that accepts JWTs and 
 ## Summary of how this implementation meets the MCP Authorization spec
 
 - OAuth2 Resource Server with JWT validation:
-  - Code: `src/main/java/com/solesonic/mcp/security/MpcSecurityConfig.java` lines 116–142.
+  - Code: `MpcSecurityConfig.securityFilterChain()` and `jwtDecoder()`.
   - Uses `JwtDecoder` (Nimbus) wired via `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` or issuer configuration.
   - Converts authorities from three sources: `scope` (prefixed `SCOPE_`), `groups` → `GROUP_*`, `roles` → `ROLE_*`.
-- Scope requirement for invoking MCP tools/endpoints:
-  - Required authority prefix is `SCOPE_`; typical required scope is `MCP_INVOKE` (mapped to `SCOPE_MCP_INVOKE`).
-  - See `MpcSecurityConfig.SCOPE_MCP_INVOKE` (lines 43–47) and method security in the app.
-- Standards-compliant 401 challenge with discovery pointer:
-  - On unauthorized access, returns 401 with `WWW-Authenticate` header set to `"<resource-base>/.well-known/oauth-protected-resource"`.
-  - Code: `MpcSecurityConfig.authenticationEntryPoint()` lines 144–152.
-  - CORS allows the `WWW-Authenticate` header so browsers/clients can read it.
-    - Code: `MpcSecurityConfig` lines 49–57 (ALLOWED_HEADERS includes `WWW-Authenticate`).
+- Access to individual tools is decided by roles, not scopes:
+  - Every `@McpTool` method carries `@PreAuthorize("hasAuthority('ROLE_MCP-...')")`. There is no global scope requirement on `/mcp` (see "Scopes, groups, and roles" below).
+- Standards-compliant 401 challenge with discovery pointer (RFC 9728):
+  - On unauthorized access, returns 401 with `WWW-Authenticate: Bearer resource_metadata="<resource-base>/.well-known/oauth-protected-resource", scope="<scopes>"`.
+  - Code: `MpcSecurityConfig.authenticationEntryPoint()`.
+  - CORS allows the `WWW-Authenticate` header so browsers/clients can read it (`MpcSecurityConfig.ALLOWED_HEADERS`).
 - Protected Resource Metadata endpoint (well-known):
   - Path: `/.well-known/oauth-protected-resource`.
-  - Code: `src/main/java/com/solesonic/mcp/api/ResourceMetadataController.java` lines 13–29.
-  - Returns a `ProtectedResourceMetadata` object with:
-    - `resource` → configured base resource identifier (`solesonic.mcp.resource`).
-    - `authorization_servers` → list containing the configured `issuer-uri` (e.g., AWS Cognito or other OIDC-compliant AS).
-    - `scopes_supported` → `openid`, `profile`, `email` (extend as needed).
+  - Served by Spring Security's built-in protected resource metadata filter, configured in the `.protectedResourceMetadata(...)` block of `MpcSecurityConfig.securityFilterChain()`. There is no controller.
+  - Returns:
+    - `resource` → derived from the request's base URL.
+    - `authorization_servers` → the configured `issuer-uri`.
+    - `scopes_supported` → `solesonic.mcp.scopes`.
+    - `bearer_methods_supported`, `tls_client_certificate_bound_access_tokens` → Spring Security defaults.
 - CORS and preflight support for HTTP transport (JSON-RPC over HTTP):
   - Allows methods `GET`, `POST`, `OPTIONS`; permits preflight for `/mcp/**` and well-known endpoint.
-  - Code: `MpcSecurityConfig.securityFilterChain()` lines 116–142 and CORS bean lines 100–114.
+  - Code: `MpcSecurityConfig.securityFilterChain()` and `corsConfigurationSource()`.
 
 
 ## Key endpoints and headers
@@ -38,9 +37,9 @@ The server is implemented as an OAuth 2.0 Resource Server that accepts JWTs and 
 - MCP endpoint (HTTP transport): `POST /mcp`
 - Well-known resource metadata: `GET /.well-known/oauth-protected-resource`
 - 401 Challenge header (unauthenticated request to a protected endpoint):
-  - `WWW-Authenticate: "<resource-base>/.well-known/oauth-protected-resource"`
+  - `WWW-Authenticate: Bearer resource_metadata="<resource-base>/.well-known/oauth-protected-resource", scope="<scopes>"`
 
-`<resource-base>` is taken from `solesonic.mcp.resource` (see Configuration section).
+`<resource-base>` is taken from `solesonic.mcp.resource` and `<scopes>` is `solesonic.mcp.scopes` joined with spaces (see Configuration section). MCP clients request the scopes in `scope`, falling back to `scopes_supported` from the metadata.
 
 
 ## Authorization flow (high level)
@@ -49,7 +48,7 @@ The server is implemented as an OAuth 2.0 Resource Server that accepts JWTs and 
 2) Server responds with HTTP 401 and a `WWW-Authenticate` header pointing to the well-known metadata.
 3) Client fetches `/.well-known/oauth-protected-resource` to discover the Authorization Server and scopes.
 4) Client performs Dynamic Client Registration (if not already registered) with the Authorization Server it discovered.
-5) Client obtains an access token (e.g., via OAuth 2.0/OIDC flows) with the required scope(s), typically `MCP_INVOKE`.
+5) Client obtains an access token (authorization code + PKCE) requesting the advertised scopes. The token must carry a `roles` claim with the caller's `mcp-*` roles.
 6) Client calls the MCP endpoint again with `Authorization: Bearer <access_token>` and succeeds if the token is valid and authorized.
 
 
@@ -63,6 +62,19 @@ This server supports DCR indirectly by advertising the protected resource metada
 - Metadata for DCR is exposed at `/.well-known/oauth-protected-resource`.
 - The `authorization_servers` array includes the configured OIDC issuer URI (e.g., Cognito, Okta, Keycloak).
 - Clients should consult the issuer’s OIDC configuration to locate its Dynamic Client Registration endpoint and register there.
+
+### Keycloak setup for anonymous DCR (realm `solesonic-ai`)
+
+MCP clients such as opencode register anonymously (no initial access token), so Keycloak's **anonymous access policies** apply (Clients → Client registration). Settings required for a registered client to work against this server:
+
+- **Trusted Hosts:** trusted hosts `127.0.0.1` and `localhost`; "Host sending client registration request must match" **off** (registrations come from developer machines with changing IPs); "Client URIs must match" **on**, which limits registered redirect URIs to loopback.
+- **Allowed Client Scopes:** "Allow default scopes" on. Every scope in `solesonic.mcp.scopes` is a realm default scope, so no extra entries are needed. Never allow `offline_access` or `token-exchange` here.
+- **Consent Required, Full Scope Disabled, Max Clients Limit:** left at their defaults (on, on, 200).
+- **`mcp-roles` client scope (realm default):** a *User Client Role* mapper for client `solesonic-llm-ui` writing the multivalued `roles` claim to the access token, plus a scope mapping for every `solesonic-llm-ui` `mcp-*` role. Because Full Scope Disabled applies to registered clients, roles only reach their tokens through this scope mapping. The `token-claims` scope is not used for this, because it also hard-codes `azp=solesonic-llm-ui`.
+- **`solesonic-mcp-audience` (realm default):** adds the `solesonic-mcp` audience.
+- **PKCE:** realm client policy `public-clients-pkce` (condition `client-access-type` = public) applies the `pkce-s256` profile (`pkce-enforcer` executor, auto-configure on), so registered clients cannot use `plain`.
+
+Loopback redirect URIs are the standard pattern for native clients (RFC 8252 §7.3): the authorization code can only be delivered to the machine doing the login, and PKCE makes an intercepted code useless.
 
 ### Sequence diagram: Dynamic Client Registration
 
@@ -82,7 +94,7 @@ Example response (abbreviated):
 
 ```
 HTTP/1.1 401 Unauthorized
-WWW-Authenticate: "https://api.your-domain.example/.well-known/oauth-protected-resource"
+WWW-Authenticate: Bearer resource_metadata="https://api.your-domain.example/.well-known/oauth-protected-resource", scope="openid profile email roles solesonic-mcp-audience mcp-roles"
 Content-Type: application/json
 ```
 
@@ -97,13 +109,18 @@ Example JSON response:
 ```
 {
   "resource": "https://api.your-domain.example",
+  "bearer_methods_supported": ["header"],
+  "tls_client_certificate_bound_access_tokens": true,
   "authorization_servers": [
-    "https://<your-domain>.auth.<region>.amazoncognito.com"
+    "https://auth.your-domain.example/realms/<realm>"
   ],
   "scopes_supported": [
     "openid",
     "profile",
-    "email"
+    "email",
+    "roles",
+    "solesonic-mcp-audience",
+    "mcp-roles"
   ]
 }
 ```
@@ -121,7 +138,7 @@ curl -i -X POST \
   -d '{"jsonrpc":"2.0","id":"1","method":"ping","params":{}}'
 ```
 
-A valid token with `scope` including `MCP_INVOKE` (or the server’s configured scope) is required.
+Any valid token from the configured issuer is accepted at `/mcp`; each tool then requires its `ROLE_MCP-*` authority.
 
 
 ## Configuration
@@ -134,20 +151,21 @@ These properties are used to control the authorization and discovery behavior. T
   - Direct JWKS URI for token verification (when not using issuer discovery). If set, used by the `JwtDecoder`.
 - `solesonic.mcp.resource`
   - The base resource identifier (e.g., `https://api.your-domain.example`).
-  - Used in `WWW-Authenticate` to point clients to `"<resource>/.well-known/oauth-protected-resource"` and returned as `resource` in the metadata.
+  - Used in `WWW-Authenticate` as `resource_metadata="<resource>/.well-known/oauth-protected-resource"`.
+- `solesonic.mcp.scopes`
+  - Comma-separated scopes advertised as `scopes_supported` in the metadata and as `scope` in the 401 challenge. MCP clients request exactly these, so each must be a client scope a dynamically registered client may use (see "Keycloak setup for anonymous DCR").
 - `cors.allowed.origins`
   - Origins permitted for browser-based clients.
 
 Related configuration and code references:
 
-- Well-known metadata controller: `src/main/java/com/solesonic/mcp/api/ResourceMetadataController.java` (lines 13–29)
-- Security configuration: `src/main/java/com/solesonic/mcp/security/MpcSecurityConfig.java` (lines 37–160)
-- Authorities extraction (groups/roles): `src/main/java/com/solesonic/mcp/security/AuthoritiesService.java` (lines 12–51)
+- Security configuration and resource metadata: `src/main/java/com/solesonic/mcp/security/MpcSecurityConfig.java`
+- Authorities extraction (groups/roles): `src/main/java/com/solesonic/mcp/security/AuthoritiesService.java`
 
 
 ## Scopes, groups, and roles
 
-- Scopes: The JWT `scope` claim is converted to Spring authorities with prefix `SCOPE_`. A scope of `MCP_INVOKE` becomes `SCOPE_MCP_INVOKE`.
+- Scopes: The JWT `scope` claim is converted to Spring authorities with prefix `SCOPE_` (e.g. `email` becomes `SCOPE_email`). No tool currently checks a scope authority.
 - Groups: If a token includes a `groups` claim, each value becomes `GROUP_<NAME>` authority.
 - Roles: If a token includes a `roles` claim, each value becomes `ROLE_<NAME>` authority.
 
@@ -201,7 +219,7 @@ Code references:
   - A: No. It exposes the protected-resource metadata required for clients to locate the Authorization Server and complete Dynamic Client Registration with that server.
 
 - Q: What is the minimal scope required?
-  - A: Typically `MCP_INVOKE`. You may add additional scopes if you want narrower permissions; ensure your server-side checks align with your policy.
+  - A: None is checked at `/mcp`. What matters is the `roles` claim, which in Keycloak comes from the `mcp-roles` (or `token-claims`) client scope. List the scopes clients should request in `solesonic.mcp.scopes`.
 
-- Q: How do I change the displayed issuer or resource in the metadata?
-  - A: Set `ISSUER_URI` and `solesonic.mcp.resource` in your environment or properties files.
+- Q: How do I change the displayed issuer or scopes in the metadata?
+  - A: Set `ISSUER_URI` and `solesonic.mcp.scopes` in your environment or properties files. The metadata `resource` is derived from the request URL; `solesonic.mcp.resource` sets the base URL used in the 401 challenge.
