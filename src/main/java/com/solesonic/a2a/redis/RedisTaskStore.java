@@ -2,6 +2,7 @@ package com.solesonic.a2a.redis;
 
 import com.google.gson.Gson;
 import org.a2aproject.sdk.jsonrpc.common.wrappers.ListTasksResult;
+import org.a2aproject.sdk.server.ServerCallContext;
 import org.a2aproject.sdk.server.tasks.TaskStateProvider;
 import org.a2aproject.sdk.server.tasks.TaskStore;
 import org.a2aproject.sdk.spec.Artifact;
@@ -9,6 +10,7 @@ import org.a2aproject.sdk.spec.ListTasksParams;
 import org.a2aproject.sdk.spec.Message;
 import org.a2aproject.sdk.spec.Task;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,10 +27,14 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final Gson gson;
+    private final RedisTaskAuthorizationProvider taskAuthorizationProvider;
 
-    public RedisTaskStore(StringRedisTemplate stringRedisTemplate, Gson gson) {
+    public RedisTaskStore(StringRedisTemplate stringRedisTemplate,
+                          Gson gson,
+                          RedisTaskAuthorizationProvider taskAuthorizationProvider) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.gson = gson;
+        this.taskAuthorizationProvider = taskAuthorizationProvider;
     }
 
     @Override
@@ -39,6 +45,7 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
 
         if (isTaskFinalized(task.id())) {
             stringRedisTemplate.expire(key, FINALIZED_TASK_TTL);
+            taskAuthorizationProvider.expireOwnership(task.id(), FINALIZED_TASK_TTL);
         }
     }
 
@@ -54,11 +61,16 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
     @Override
     public void delete(@NonNull String taskId) {
         stringRedisTemplate.delete(KEY_PREFIX + taskId);
+        taskAuthorizationProvider.deleteOwnership(taskId);
     }
 
+    /**
+     * Only tasks the caller owns are listed. The ownership filter runs before pagination, as the
+     * {@link TaskStore#list} contract requires, so page sizes and totals reflect what the caller can see.
+     */
     @Override
     @NonNull
-    public ListTasksResult list(@NonNull ListTasksParams listTasksParams) {
+    public ListTasksResult list(@NonNull ListTasksParams listTasksParams, @Nullable ServerCallContext context) {
         List<Task> matchingTasks = new ArrayList<>();
         ScanOptions scanOptions = ScanOptions.scanOptions().match(KEY_PREFIX + "*").build();
         try (Cursor<String> cursor = stringRedisTemplate.scan(scanOptions)) {
@@ -69,7 +81,7 @@ public class RedisTaskStore implements TaskStore, TaskStateProvider {
                     continue;
                 }
                 Task task = gson.fromJson(json, Task.class);
-                if (matchesFilters(task, listTasksParams)) {
+                if (matchesFilters(task, listTasksParams) && isReadAuthorized(taskAuthorizationProvider, context, task.id())) {
                     matchingTasks.add(task);
                 }
             }

@@ -12,7 +12,6 @@ import com.solesonic.agent.nba.model.SportsQueryIntent;
 import com.solesonic.agent.nba.model.SportsQuestionType;
 import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.agile.Board;
-import org.bsc.langgraph4j.state.AgentState;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -29,11 +28,10 @@ class JsonMapperStateSerializerTest {
 
     private static final CallerIdentity CALLER = new CallerIdentity(UUID.fromString("7d0f7a0e-4a8f-4b83-9a55-0f2f7c3c2b11"));
 
-    private final JsonMapperStateSerializer<AgentState> serializer =
-            new JsonMapperStateSerializer<>(AgentState::new, JsonMapper.builder().build());
+    private final JsonMapperStateSerializer serializer = new JsonMapperStateSerializer(JsonMapper.builder().build());
 
     private Map<String, Object> roundTrip(Map<String, Object> data) throws IOException {
-        return serializer.readDataFromString(serializer.writeDataAsString(data));
+        return serializer.readDataFromString(serializer.writeDataAsString(data)).data();
     }
 
     @Test

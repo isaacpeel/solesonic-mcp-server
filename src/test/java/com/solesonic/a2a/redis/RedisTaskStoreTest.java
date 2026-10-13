@@ -32,13 +32,16 @@ class RedisTaskStoreTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
+    @Mock
+    private RedisTaskAuthorizationProvider taskAuthorizationProvider;
+
     private final Gson gson = JsonUtil.OBJECT_MAPPER;
 
     private RedisTaskStore store;
 
     @BeforeEach
     void setUp() {
-        store = new RedisTaskStore(stringRedisTemplate, gson);
+        store = new RedisTaskStore(stringRedisTemplate, gson, taskAuthorizationProvider);
     }
 
     @Test
@@ -64,6 +67,7 @@ class RedisTaskStoreTest {
 
         verify(valueOperations).set(eq("a2a:task:task-2"), anyString());
         verify(stringRedisTemplate).expire("a2a:task:task-2", Duration.ofHours(24));
+        verify(taskAuthorizationProvider).expireOwnership("task-2", Duration.ofHours(24));
     }
 
     @Test
@@ -94,6 +98,7 @@ class RedisTaskStoreTest {
         store.delete("task-5");
 
         verify(stringRedisTemplate).delete("a2a:task:task-5");
+        verify(taskAuthorizationProvider).deleteOwnership("task-5");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.solesonic.a2a.config;
 
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
+import org.a2aproject.sdk.server.auth.TaskAuthorizationProvider;
 import org.a2aproject.sdk.server.events.MainEventBusProcessor;
 import org.a2aproject.sdk.server.events.QueueManager;
 import org.a2aproject.sdk.server.requesthandlers.DefaultRequestHandler;
@@ -28,19 +29,22 @@ public class AgentRequestHandlerRegistry {
             QueueManager queueManager,
             PushNotificationConfigStore pushNotificationConfigStore,
             MainEventBusProcessor mainEventBusProcessor,
+            TaskAuthorizationProvider taskAuthorizationProvider,
             @Qualifier(A2A_EXECUTOR) Executor a2aExecutor) {
 
         this.handlersByAgentId = agentExecutors.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(
                         Map.Entry::getKey,
-                        entry -> DefaultRequestHandler.create(
-                                entry.getValue(),
-                                taskStore,
-                                queueManager,
-                                pushNotificationConfigStore,
-                                mainEventBusProcessor,
-                                a2aExecutor,
-                                a2aExecutor)));
+                        entry -> DefaultRequestHandler.builder()
+                                .agentExecutor(entry.getValue())
+                                .taskStore(taskStore)
+                                .queueManager(queueManager)
+                                .pushConfigStore(pushNotificationConfigStore)
+                                .mainEventBusProcessor(mainEventBusProcessor)
+                                .executor(a2aExecutor)
+                                .eventConsumerExecutor(a2aExecutor)
+                                .authorizationProvider(taskAuthorizationProvider)
+                                .build()));
     }
 
     public RequestHandler getHandler(String agentId) {

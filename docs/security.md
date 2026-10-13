@@ -61,6 +61,14 @@ Caller identity on outbound calls
 - Checkpoint threads for resumable runs are scoped to caller and conversation, so one user can never resume another user's paused run
 - Non-2xx Atlassian responses surface as errors carrying the HTTP status and Atlassian's message, rather than as JSON decoding failures
 
+A2A task ownership
+- Every A2A task belongs to the caller who created it: the JWT subject is recorded in Redis under `a2a:task-owner:{taskId}` (`RedisTaskAuthorizationProvider`) when the task is first created
+- Only the owner can get, resume (send a message to), cancel or subscribe to a task, or manage its push notification configs; anyone else gets `TaskNotFoundError`, so a task's existence is not revealed
+- Listing tasks returns only the caller's own tasks; the filter runs before pagination, so page sizes and totals are per caller
+- Access fails closed: a task with no recorded owner — including any created before ownership was tracked — is denied to everyone, and an unauthenticated caller can neither create nor list tasks
+- Owner keys share their task's lifetime: they get the same 24h expiry when the task finishes and are deleted with it
+- Push notification URLs are client-supplied, so the A2A SDK's default validator rejects non-HTTPS URLs, private networks and cloud metadata endpoints (SSRF protection)
+
 Troubleshooting
 - Verify issuer-uri/jwk-set-uri matches the token’s issuer
 - Confirm your token has the required groups/scopes

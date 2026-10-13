@@ -3,6 +3,7 @@ package com.solesonic.a2a.config;
 import com.solesonic.a2a.redis.RedisEventEnqueueHookFactory;
 import com.solesonic.a2a.redis.RedisPushNotificationConfigStore;
 import com.solesonic.a2a.redis.RedisQueueManager;
+import com.solesonic.a2a.redis.RedisTaskAuthorizationProvider;
 import com.solesonic.a2a.redis.RedisTaskStore;
 import org.a2aproject.sdk.jsonrpc.common.json.JsonUtil;
 import org.a2aproject.sdk.server.config.DefaultValuesConfigProvider;
@@ -27,8 +28,14 @@ public class A2ARedisConfiguration {
     public static final String SPORTS_CHAT_MEMORY = "sportsChatMemory";
 
     @Bean
-    public RedisTaskStore redisTaskStore(StringRedisTemplate stringRedisTemplate) {
-        return new RedisTaskStore(stringRedisTemplate, JsonUtil.OBJECT_MAPPER);
+    public RedisTaskAuthorizationProvider redisTaskAuthorizationProvider(StringRedisTemplate stringRedisTemplate) {
+        return new RedisTaskAuthorizationProvider(stringRedisTemplate);
+    }
+
+    @Bean
+    public RedisTaskStore redisTaskStore(StringRedisTemplate stringRedisTemplate,
+                                         RedisTaskAuthorizationProvider redisTaskAuthorizationProvider) {
+        return new RedisTaskStore(stringRedisTemplate, JsonUtil.OBJECT_MAPPER, redisTaskAuthorizationProvider);
     }
 
     @Bean
