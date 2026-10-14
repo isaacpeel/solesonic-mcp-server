@@ -41,13 +41,6 @@ public final class ComfyUiConstants {
     public static final int MAX_REFERENCE_IMAGES = 3;
 
     /**
-     * Every workflow tool carries {@code _meta: {"solesonic/kind": "image-generation"}}, so a client
-     * can tell image tools from the rest of the catalog without relying on how a row was named.
-     */
-    public static final String META_KIND = "solesonic/kind";
-    public static final String META_KIND_IMAGE_GENERATION = "image-generation";
-
-    /**
      * Substitution tokens. A stored workflow carries these as literal string values wherever a
      * caller-supplied value belongs; {@code ComfyWorkflowTemplate} replaces them with correctly
      * typed JSON before submission, so ComfyUI never sees a token.

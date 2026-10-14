@@ -43,6 +43,10 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.expected-seconds=12
   - comfyui.generation.release-memory-delay-millis=300000
   - comfyui.reference-image.max-bytes=10MB   # largest decoded reference image accepted
+  - solesonic.image.default-workflow=generate_image   # tool_name the image router falls back to when its router's pick is missing or unknown
+  - solesonic.image.intent-workflows.new-image=generate_image,generate_special_image   # workflows offered without a photo
+  - solesonic.image.intent-workflows.restyle-photo=generate_image,generate_special_image   # workflows offered to restyle a photo
+  - solesonic.image.intent-workflows.edit-person-in-photo=person_reference_image   # workflows offered to edit the person in a photo
   - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
 - Database (PostgreSQL)
   - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server

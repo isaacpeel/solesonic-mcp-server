@@ -20,7 +20,7 @@ import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_PNG;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_WEBP;
 
 /**
- * Turns the raw {@code reference_images} tool argument into decoded, verified images.
+ * Turns the raw {@code referenceImages} tool argument into decoded, verified images.
  *
  * <p>The declared {@code mimeType} is only a claim: the decoded bytes must carry that format's
  * magic number, so a file that is not what it says never reaches ComfyUI's image loader. Sizes are
@@ -32,7 +32,7 @@ import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_WEBP;
 @Component
 public class ReferenceImageArguments {
 
-    public static final String PARAM_REFERENCE_IMAGES = "reference_images";
+    public static final String PARAM_REFERENCE_IMAGES = "referenceImages";
     public static final String FIELD_DATA = "data";
     public static final String FIELD_MIME_TYPE = "mimeType";
 
@@ -64,7 +64,7 @@ public class ReferenceImageArguments {
     }
 
     /**
-     * @param argument the {@code reference_images} value exactly as it arrived, or null when absent
+     * @param argument the {@code referenceImages} value exactly as it arrived, or null when absent
      * @return the images in caller order; empty when none were supplied
      * @throws InvalidReferenceImageException when any image is unusable
      */

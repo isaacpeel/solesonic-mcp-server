@@ -61,9 +61,9 @@ public class ComfyWorkflowRegistry {
         registeredWorkflows = List.copyOf(loaded);
 
         if (registeredWorkflows.isEmpty()) {
-            log.warn("No usable ComfyUI workflows found in comfy_workflow. No image generation tools will be registered.");
+            log.warn("No usable ComfyUI workflows found in comfy_workflow. The image router has nothing to choose from.");
         } else {
-            log.info("Loaded {} ComfyUI workflow(s): {}", registeredWorkflows.size(),
+            log.info("Loaded {} ComfyUI workflow(s) available to the image router: {}", registeredWorkflows.size(),
                     registeredWorkflows.stream().map(RegisteredComfyWorkflow::toolName).toList());
         }
     }

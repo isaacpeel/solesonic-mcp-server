@@ -2,6 +2,11 @@ package com.solesonic.agent.checkpoint;
 
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;
+import com.solesonic.agent.image.ImageIntent;
+import com.solesonic.agent.image.ImageIntentClassification;
+import com.solesonic.agent.image.ImageWorkflowSelection;
+import com.solesonic.agent.image.ImageWorkflowState;
+import com.solesonic.agent.image.WorkflowCandidate;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
@@ -49,6 +54,26 @@ class JsonMapperStateSerializerTest {
         assertThat(restored).isEqualTo(data);
         assertThat(restored.get(AgileState.CALLER_IDENTITY)).isInstanceOf(CallerIdentity.class);
         assertThat(new AgileState(restored).boards().orElseThrow().getFirst()).isInstanceOf(Board.class);
+    }
+
+    @Test
+    void imageWorkflowState_roundTripsRoutingRecords() throws IOException {
+        Map<String, Object> data = Map.of(
+                ImageWorkflowState.CALLER_IDENTITY, CALLER,
+                ImageWorkflowState.USER_PROMPT, "a lighthouse",
+                ImageWorkflowState.REFERENCE_IMAGE_COUNT, 1,
+                ImageWorkflowState.REFERENCE_IMAGE_DESCRIPTIONS, List.of("a man with glasses"),
+                ImageWorkflowState.IMAGE_INTENT, new ImageIntentClassification(ImageIntent.EDIT_PERSON_IN_PHOTO, "Moves him."),
+                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(new WorkflowCandidate("generate_image", "FLUX", "General.")),
+                ImageWorkflowState.WORKFLOW_SELECTION, new ImageWorkflowSelection("generate_image", "a lit lighthouse", "General."));
+
+        Map<String, Object> restored = roundTrip(data);
+
+        assertThat(restored).isEqualTo(data);
+        ImageWorkflowState imageWorkflowState = new ImageWorkflowState(restored);
+        assertThat(imageWorkflowState.workflowSelection().orElseThrow()).isInstanceOf(ImageWorkflowSelection.class);
+        assertThat(imageWorkflowState.candidateWorkflows().orElseThrow().getFirst()).isInstanceOf(WorkflowCandidate.class);
+        assertThat(imageWorkflowState.imageIntent().orElseThrow().intent()).isEqualTo(ImageIntent.EDIT_PERSON_IN_PHOTO);
     }
 
     @Test

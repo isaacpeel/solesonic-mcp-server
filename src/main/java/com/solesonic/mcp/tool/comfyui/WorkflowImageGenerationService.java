@@ -21,14 +21,12 @@ import java.util.List;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_PNG;
 
 /**
- * The authorization boundary for every database-backed workflow tool.
+ * The authorization boundary for running a database-backed workflow.
  *
- * <p>Workflow tools are built as {@code SyncToolSpecification}s rather than {@code @McpTool} methods,
- * and a handler lambda is not a Spring bean method, so {@code @PreAuthorize} cannot be applied to it
- * — the annotation is enforced by the method-security proxy, which only wraps bean methods. Routing
- * every call through this bean is what keeps the role check real. Calling
- * {@link ComfyUiService#generate} directly from a handler would silently bypass authorization with
- * no error anywhere to notice.
+ * <p>{@link ImageGenerationTools} carries the same role check, but this bean keeps its own so the
+ * check holds for any caller, and so reference images are only ever decoded behind it. Calling
+ * {@link ComfyUiService#generate} directly would bypass authorization with no error anywhere to
+ * notice.
  */
 @Service
 public class WorkflowImageGenerationService {
@@ -44,7 +42,7 @@ public class WorkflowImageGenerationService {
     }
 
     /**
-     * The tool handler's entry point. The raw {@code reference_images} argument is decoded here,
+     * The tool's entry point. The raw {@code referenceImages} argument is decoded here,
      * behind the role check, rather than in the handler: decoding is up to three ~13MB base64
      * strings, which a caller without the role must not be able to make this server do.
      */

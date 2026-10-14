@@ -89,14 +89,13 @@ Categories
   - Details: See Web Search docs: ./web-search.md
 
 - Image Generation Tools
-  - These tools are **defined by data, not by code**. Each enabled row in the `comfy_workflow` table is registered as one MCP tool at startup, named by its `tool_name` column, so the tool list depends on the database and the set below is not fixed. If the table is empty, no image tools are registered.
-  - One tool per stored ComfyUI workflow
-    - Description: Generates an image from a text prompt using a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs. Each tool carries its row's `description`, which is what a model reads when choosing between workflows.
-    - Auth: ROLE_MCP-GENERATE-IMAGE (all workflow tools)
-    - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional> } — `width` and `height` appear only if the stored workflow tokenises them, and default to 1024. Steps, cfg, sampler, and the checkpoint are baked into the stored workflow, so choosing a tool is how you choose them.
-    - Optional `reference_images` (exactly N `{data, mimeType}` base64 images) on rows that define an image-guided variant
-    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the workflow name, size, seed, and elapsed time (and `Reference images: n` when used)
-  - Details, including the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
+  - generate_image
+    - Description: Generates an image using a self-hosted ComfyUI instance and returns it inline as a PNG. A LangGraph4j router picks the best stored workflow (one per enabled `comfy_workflow` row) from the request, the number of attached images and their optional descriptions (classifying the intent first: new image, restyle the photo, or edit the person in it), and refines the prompt itself — so the caller passes the user's request through as written. Typically 5–15 seconds for a text-only call; calls with reference images can run a slower model and take noticeably longer. Progress notifications are emitted while the job runs.
+    - Auth: ROLE_MCP-GENERATE-IMAGE
+    - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional>, "referenceImages": [ { "data": "<base64>", "mimeType": "image/png" | "image/jpeg" | "image/webp", "description": "<what the image shows, optional>" } ] (optional, at most 3) } — `width` and `height` default to 1024 and are ignored by workflows with a fixed or photo-derived size.
+    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`), a text block with the workflow name, size, seed, and elapsed time (and `Reference images: n` when used), and a `Workflow: <tool_name>. Why: <rationale>` block naming the router's choice
+    - Replaces the per-workflow tools (one per `comfy_workflow` row) and their `_meta` `solesonic/kind` tag. Clients find this tool by name. An image `description` is used only to choose the workflow, never added to the prompt.
+  - Details, including routing, the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
 
 - Date and Time Tools
   - get_current_date
