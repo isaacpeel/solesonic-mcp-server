@@ -2,7 +2,6 @@ package com.solesonic.agent.image.node;
 
 import com.solesonic.agent.image.ImageIntent;
 import com.solesonic.agent.image.ImageIntentClassification;
-import com.solesonic.agent.image.ImageRoutingProperties;
 import com.solesonic.agent.image.ImageWorkflowSelection;
 import com.solesonic.agent.image.ImageWorkflowState;
 import com.solesonic.agent.image.WorkflowCandidate;
@@ -27,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,15 +51,17 @@ class SelectImageWorkflowNodeTest {
             {"6": {"inputs": {"text": "__PROMPT__"}},
              "40": {"inputs": {"image": "__REFERENCE_IMAGE_1__"}}}""";
 
+    private static final String TWO_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "40": {"inputs": {"image": "__REFERENCE_IMAGE_1__"}},
+             "41": {"inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""";
+
     private static final Resource TEMPLATE = new ByteArrayResource("""
             {intentGuidance}
             Workflows:
             {workflows}""".getBytes(StandardCharsets.UTF_8));
 
-    private static final ImageRoutingProperties ROUTING = new ImageRoutingProperties("generate_image", Map.of(
-            ImageIntent.NEW_IMAGE, List.of("generate_image", "generate_special_image"),
-            ImageIntent.RESTYLE_PHOTO, List.of("generate_image", "generate_special_image"),
-            ImageIntent.EDIT_PERSON_IN_PHOTO, List.of("person_reference_image")));
+    private static final Set<ImageIntent> NEW_OR_RESTYLE = Set.of(ImageIntent.NEW_IMAGE, ImageIntent.RESTYLE_PHOTO);
 
     @Mock
     private ChatClient chatClient;
@@ -74,54 +76,60 @@ class SelectImageWorkflowNodeTest {
     private ComfyWorkflowRegistry comfyWorkflowRegistry;
 
     private SelectImageWorkflowNode selectImageWorkflowNode;
+    private ComfyWorkflowTemplate baseTemplate;
+    private ComfyWorkflowTemplate oneSlotTemplate;
 
     @BeforeEach
     void setUp() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        ComfyWorkflowTemplate baseTemplate = ComfyWorkflowTemplate.parse(BASE_WORKFLOW, jsonMapper);
-        ComfyWorkflowTemplate oneSlotTemplate = ComfyWorkflowTemplate.parse(ONE_SLOT_VARIANT, jsonMapper);
+        baseTemplate = ComfyWorkflowTemplate.parse(BASE_WORKFLOW, jsonMapper);
+        oneSlotTemplate = ComfyWorkflowTemplate.parse(ONE_SLOT_VARIANT, jsonMapper);
+        ComfyWorkflowTemplate twoSlotTemplate = ComfyWorkflowTemplate.parse(TWO_SLOT_VARIANT, jsonMapper);
 
         //Lenient: the missing-prompt test fails before the registry is consulted.
         lenient().when(comfyWorkflowRegistry.registeredWorkflows()).thenReturn(List.of(
-                new RegisteredComfyWorkflow("generate_image", "FLUX", "General purpose.", baseTemplate, oneSlotTemplate),
-                new RegisteredComfyWorkflow("generate_special_image", "Special", "Photoreal people.", baseTemplate, oneSlotTemplate),
-                new RegisteredComfyWorkflow("person_reference_image", "Kontext", "Edits a person.", baseTemplate, oneSlotTemplate),
+                new RegisteredComfyWorkflow("general_workflow", "General", "General purpose.", baseTemplate,
+                        Map.of(1, oneSlotTemplate), NEW_OR_RESTYLE),
+                new RegisteredComfyWorkflow("photoreal_workflow", "Photoreal", "Photoreal people.", baseTemplate,
+                        Map.of(1, oneSlotTemplate), NEW_OR_RESTYLE),
+                new RegisteredComfyWorkflow("person_workflow", "Person", "Edits people.", baseTemplate,
+                        Map.of(1, oneSlotTemplate, 2, twoSlotTemplate), Set.of(ImageIntent.EDIT_PERSON_IN_PHOTO)),
                 new RegisteredComfyWorkflow("text_only", "Text only", "No reference images.", baseTemplate)));
 
-        selectImageWorkflowNode = new SelectImageWorkflowNode(chatClient, comfyWorkflowRegistry, ROUTING, TEMPLATE);
+        selectImageWorkflowNode = new SelectImageWorkflowNode(chatClient, comfyWorkflowRegistry, TEMPLATE);
     }
 
     /**
-     * The case that motivated the intent step: a person edit maps to one workflow, so it is chosen
+     * The case that motivated the intent step: one workflow serves person edits, so it is chosen
      * deterministically and the model never gets to pick the general workflow instead.
      */
     @Test
-    void apply_personEditIntent_selectsTheOnlyMappedWorkflowWithoutAskingTheModel() throws Exception {
+    void apply_personEditIntent_selectsTheOnlyWorkflowServingItWithoutAskingTheModel() throws Exception {
         Map<String, Object> result = selectImageWorkflowNode.apply(
                 state(1, ImageIntent.EDIT_PERSON_IN_PHOTO)).get();
 
-        assertThat(candidateToolNames(result)).containsExactly("person_reference_image");
-        assertThat(selection(result).toolName()).isEqualTo("person_reference_image");
+        assertThat(candidateToolNames(result)).containsExactly("person_workflow");
+        assertThat(selection(result).toolName()).isEqualTo("person_workflow");
         assertThat(selection(result).enhancedPrompt()).isNull();
         assertThat(selection(result).rationale()).contains(INTENT_RATIONALE);
         verifyNoInteractions(chatClient);
     }
 
     @Test
-    void apply_restyleIntent_asksTheModelToChooseAmongTheMappedWorkflowsWithTheDescriptions() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("generate_special_image", "Photoreal."));
+    void apply_restyleIntent_asksTheModelToChooseAmongTheWorkflowsServingItWithTheDescriptions() throws Exception {
+        stubChatClientReturning(new WorkflowChoice("photoreal_workflow", "Photoreal."));
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO)).get();
 
-        assertThat(candidateToolNames(result)).containsExactly("generate_image", "generate_special_image");
-        assertThat(selection(result).toolName()).isEqualTo("generate_special_image");
+        assertThat(candidateToolNames(result)).containsExactly("general_workflow", "photoreal_workflow");
+        assertThat(selection(result).toolName()).isEqualTo("photoreal_workflow");
         assertThat(selection(result).rationale()).isEqualTo(INTENT_RATIONALE + " Photoreal.");
 
         ArgumentCaptor<String> systemCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClientRequestSpec).system(systemCaptor.capture());
         assertThat(systemCaptor.getValue())
-                .contains("restyle the attached photo", "generate_image", "generate_special_image")
-                .doesNotContain("person_reference_image");
+                .contains("restyle the attached photo", "general_workflow", "photoreal_workflow")
+                .doesNotContain("person_workflow");
 
         ArgumentCaptor<String> userCaptor = ArgumentCaptor.forClass(String.class);
         verify(chatClientRequestSpec).user(userCaptor.capture());
@@ -129,40 +137,56 @@ class SelectImageWorkflowNodeTest {
     }
 
     @Test
-    void apply_newImageWithoutPhotos_offersOnlyTheMappedWorkflows() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("generate_image", "General."));
+    void apply_newImageWithoutPhotos_offersOnlyTheWorkflowsServingIt() throws Exception {
+        stubChatClientReturning(new WorkflowChoice("general_workflow", "General."));
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(0, ImageIntent.NEW_IMAGE)).get();
 
-        assertThat(candidateToolNames(result)).containsExactly("generate_image", "generate_special_image");
+        assertThat(candidateToolNames(result)).containsExactly("general_workflow", "photoreal_workflow");
     }
 
     @Test
     void apply_undecidedIntent_offersEveryWorkflowThatAcceptsTheImages() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("person_reference_image", "Person."));
+        stubChatClientReturning(new WorkflowChoice("person_workflow", "Person."));
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(1, null)).get();
 
         assertThat(candidateToolNames(result))
-                .containsExactly("generate_image", "generate_special_image", "person_reference_image");
+                .containsExactly("general_workflow", "photoreal_workflow", "person_workflow");
     }
 
+    /**
+     * The only workflow serving person edits takes no photo, so every workflow that takes one is offered.
+     */
     @Test
-    void apply_noMappedWorkflowAcceptsTheImages_offersEveryWorkflowThatDoes() throws Exception {
-        ImageRoutingProperties routing = new ImageRoutingProperties("generate_image",
-                Map.of(ImageIntent.EDIT_PERSON_IN_PHOTO, List.of("retired_workflow")));
-        stubChatClientReturning(new WorkflowChoice("generate_image", "General."));
+    void apply_noWorkflowServingTheIntentAcceptsTheImages_offersEveryWorkflowThatDoes() throws Exception {
+        when(comfyWorkflowRegistry.registeredWorkflows()).thenReturn(List.of(
+                new RegisteredComfyWorkflow("general_workflow", "General", "General purpose.", baseTemplate,
+                        Map.of(1, oneSlotTemplate), NEW_OR_RESTYLE),
+                new RegisteredComfyWorkflow("text_only_person", "Text only", "People, no photo.", baseTemplate,
+                        Map.of(), Set.of(ImageIntent.EDIT_PERSON_IN_PHOTO))));
 
-        Map<String, Object> result = new SelectImageWorkflowNode(chatClient, comfyWorkflowRegistry, routing, TEMPLATE)
-                .apply(state(1, ImageIntent.EDIT_PERSON_IN_PHOTO)).get();
+        Map<String, Object> result = selectImageWorkflowNode.apply(state(1, ImageIntent.EDIT_PERSON_IN_PHOTO)).get();
 
-        assertThat(candidateToolNames(result))
-                .containsExactly("generate_image", "generate_special_image", "person_reference_image");
+        assertThat(candidateToolNames(result)).containsExactly("general_workflow");
+    }
+
+    /**
+     * A workflow with a graph per image count is a candidate for each count it has a graph for.
+     */
+    @Test
+    void apply_personEditWithTwoPhotos_selectsTheWorkflowWithATwoImageVariant() throws Exception {
+        Map<String, Object> result = selectImageWorkflowNode.apply(
+                state(2, ImageIntent.EDIT_PERSON_IN_PHOTO)).get();
+
+        assertThat(candidateToolNames(result)).containsExactly("person_workflow");
+        assertThat(selection(result).toolName()).isEqualTo("person_workflow");
+        verifyNoInteractions(chatClient);
     }
 
     @Test
     void apply_noWorkflowAcceptsTheImages_reportsNoCandidatesWithoutAskingTheModel() throws Exception {
-        Map<String, Object> result = selectImageWorkflowNode.apply(state(2, ImageIntent.RESTYLE_PHOTO)).get();
+        Map<String, Object> result = selectImageWorkflowNode.apply(state(3, ImageIntent.RESTYLE_PHOTO)).get();
 
         assertThat(candidateToolNames(result)).isEmpty();
         assertThat(selection(result).toolName()).isNull();

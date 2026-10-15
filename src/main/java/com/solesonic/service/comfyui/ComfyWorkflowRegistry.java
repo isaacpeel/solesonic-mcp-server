@@ -2,6 +2,7 @@ package com.solesonic.service.comfyui;
 
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
 import com.solesonic.model.comfyui.ComfyWorkflow;
+import com.solesonic.model.comfyui.ComfyWorkflowReferenceVariant;
 import com.solesonic.model.comfyui.RegisteredComfyWorkflow;
 import com.solesonic.repository.comfyui.ComfyWorkflowRepository;
 import jakarta.annotation.PostConstruct;
@@ -12,7 +13,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Loads the enabled rows of {@code comfy_workflow} once at startup and parses each into a
@@ -20,9 +24,9 @@ import java.util.regex.Pattern;
  *
  * <p>Rows are validated independently and a bad row is skipped with a warning rather than failing
  * the context. Rows are typed in by hand, so one malformed paste must not be able to stop the server
- * booting and take every unrelated tool down with it. The same holds one level down: a row's
- * reference variant is validated on its own, and a bad one is dropped while the row's text-only
- * tool still registers.
+ * booting and take every unrelated tool down with it. The same holds one level down: each of a row's
+ * reference variants is validated on its own, and a bad one is dropped while the row's text-only
+ * tool and its other variants still register.
  */
 @Component
 public class ComfyWorkflowRegistry {
@@ -90,17 +94,26 @@ public class ComfyWorkflowRegistry {
             //images could never succeed on the path that supplies none.
             if (template.referenceImageSlots() > 0) {
                 log.warn("Skipping ComfyUI workflow '{}': workflow_json carries reference image tokens; "
-                        + "the image-guided graph belongs in reference_workflow_json", row.getToolName());
+                        + "image-guided graphs belong in comfy_workflow_reference_variant", row.getToolName());
 
                 return null;
             }
 
-            ComfyWorkflowTemplate referenceTemplate = referenceVariant(row);
+            Map<Integer, ComfyWorkflowTemplate> referenceVariants = referenceVariants(row);
 
             log.info("Registering ComfyUI workflow tool '{}' ({})", row.getToolName(), row.getName());
 
+            if (!referenceVariants.isEmpty()) {
+                log.info("ComfyUI workflow tool '{}' accepts {} reference image(s)", row.getToolName(),
+                        referenceVariants.keySet().stream().map(String::valueOf).collect(Collectors.joining(", ")));
+            }
+
+            if (!row.getIntents().isEmpty()) {
+                log.info("ComfyUI workflow tool '{}' serves intents {}", row.getToolName(), row.getIntents());
+            }
+
             return new RegisteredComfyWorkflow(row.getToolName(), row.getName(), row.getDescription(), template,
-                    referenceTemplate);
+                    referenceVariants, row.getIntents());
         } catch (ComfyUiException comfyUiException) {
             log.warn("Skipping ComfyUI workflow '{}': {}", row.getToolName(), comfyUiException.getMessage());
 
@@ -109,32 +122,58 @@ public class ComfyWorkflowRegistry {
     }
 
     /**
-     * @return the parsed image-guided variant, or {@code null} if the row has none or it is unusable
+     * Parses each image-guided variant on its own, so one bad variant drops only itself.
+     *
+     * @return the usable variants keyed by image count; empty if the row has none
      */
-    private ComfyWorkflowTemplate referenceVariant(ComfyWorkflow row) {
-        String referenceWorkflowJson = row.getReferenceWorkflowJson();
+    private Map<Integer, ComfyWorkflowTemplate> referenceVariants(ComfyWorkflow row) {
+        Map<Integer, ComfyWorkflowTemplate> referenceVariants = new TreeMap<>();
 
-        if (referenceWorkflowJson == null || referenceWorkflowJson.isBlank()) {
-            return null;
+        for (ComfyWorkflowReferenceVariant referenceVariant : row.getReferenceVariants()) {
+            ComfyWorkflowTemplate referenceTemplate = referenceVariant(row, referenceVariant);
+
+            if (referenceTemplate == null) {
+                continue;
+            }
+
+            if (referenceVariants.putIfAbsent(referenceVariant.imageCount(), referenceTemplate) != null) {
+                log.warn("Ignoring a duplicate {}-image reference variant of ComfyUI workflow '{}'",
+                        referenceVariant.imageCount(), row.getToolName());
+            }
         }
 
+        return referenceVariants;
+    }
+
+    /**
+     * @return the parsed variant, or {@code null} if it is unusable
+     */
+    private ComfyWorkflowTemplate referenceVariant(ComfyWorkflow row, ComfyWorkflowReferenceVariant referenceVariant) {
+        int imageCount = referenceVariant.imageCount();
+
         try {
-            ComfyWorkflowTemplate referenceTemplate = ComfyWorkflowTemplate.parse(referenceWorkflowJson, jsonMapper);
+            ComfyWorkflowTemplate referenceTemplate = ComfyWorkflowTemplate.parse(referenceVariant.workflowJson(), jsonMapper);
 
             if (referenceTemplate.referenceImageSlots() == 0) {
-                log.warn("Ignoring the reference variant of ComfyUI workflow '{}': it has no __REFERENCE_IMAGE_1__ token",
-                        row.getToolName());
+                log.warn("Ignoring the {}-image reference variant of ComfyUI workflow '{}': it has no __REFERENCE_IMAGE_1__ token",
+                        imageCount, row.getToolName());
 
                 return null;
             }
 
-            log.info("ComfyUI workflow tool '{}' accepts {} reference image(s)",
-                    row.getToolName(), referenceTemplate.referenceImageSlots());
+            //The image count picks the graph at call time, so a graph loading a different number of
+            //images would be handed the wrong number of uploads.
+            if (referenceTemplate.referenceImageSlots() != imageCount) {
+                log.warn("Ignoring the {}-image reference variant of ComfyUI workflow '{}': its graph loads {} image(s)",
+                        imageCount, row.getToolName(), referenceTemplate.referenceImageSlots());
+
+                return null;
+            }
 
             return referenceTemplate;
         } catch (ComfyUiException comfyUiException) {
-            log.warn("Ignoring the reference variant of ComfyUI workflow '{}': {}",
-                    row.getToolName(), comfyUiException.getMessage());
+            log.warn("Ignoring the {}-image reference variant of ComfyUI workflow '{}': {}",
+                    imageCount, row.getToolName(), comfyUiException.getMessage());
 
             return null;
         }

@@ -1,6 +1,5 @@
 package com.solesonic.agent.image.node;
 
-import com.solesonic.agent.image.ImageRoutingProperties;
 import com.solesonic.agent.image.ImageWorkflowSelection;
 import com.solesonic.agent.image.ImageWorkflowState;
 import com.solesonic.agent.image.WorkflowCandidate;
@@ -16,59 +15,44 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 class ResolveImageWorkflowNodeTest {
 
-    private static final String DEFAULT_WORKFLOW = "generate_image";
+    private static final WorkflowCandidate FIRST = new WorkflowCandidate("first_workflow", "First", "General.");
+    private static final WorkflowCandidate SECOND = new WorkflowCandidate("second_workflow", "Second", "People.");
 
-    private static final WorkflowCandidate GENERATE_IMAGE = new WorkflowCandidate("generate_image", "FLUX", "General.");
-    private static final WorkflowCandidate PERSON_REFERENCE = new WorkflowCandidate("person_reference_image", "Kontext", "People.");
-
-    private final ResolveImageWorkflowNode resolveImageWorkflowNode =
-            new ResolveImageWorkflowNode(new ImageRoutingProperties(DEFAULT_WORKFLOW, Map.of()));
+    private final ResolveImageWorkflowNode resolveImageWorkflowNode = new ResolveImageWorkflowNode();
 
     @Test
     void apply_validSelection_isKeptUnchanged() throws Exception {
-        ImageWorkflowSelection routerSelection = new ImageWorkflowSelection("person_reference_image", null, "Edits a person.");
+        ImageWorkflowSelection routerSelection = new ImageWorkflowSelection("second_workflow", null, "Edits a person.");
 
-        ImageWorkflowSelection resolved = resolve(List.of(GENERATE_IMAGE, PERSON_REFERENCE), routerSelection);
+        ImageWorkflowSelection resolved = resolve(List.of(FIRST, SECOND), routerSelection);
 
         assertThat(resolved).isEqualTo(routerSelection);
     }
 
     @Test
-    void apply_nullToolName_usesTheDefaultWorkflowAndSaysSo() throws Exception {
-        ImageWorkflowSelection resolved = resolve(List.of(PERSON_REFERENCE, GENERATE_IMAGE),
+    void apply_nullToolName_usesTheFirstCandidateAndSaysSo() throws Exception {
+        ImageWorkflowSelection resolved = resolve(List.of(SECOND, FIRST),
                 new ImageWorkflowSelection(null, null, "The routing model failed."));
 
-        assertThat(resolved.toolName()).isEqualTo(DEFAULT_WORKFLOW);
-        assertThat(resolved.rationale()).contains("The routing model failed.", "default workflow");
+        assertThat(resolved.toolName()).isEqualTo("second_workflow");
+        assertThat(resolved.rationale()).contains("The routing model failed.", "first candidate");
     }
 
     @Test
-    void apply_unknownToolName_usesTheDefaultWorkflowAndNamesTheRejectedPick() throws Exception {
-        ImageWorkflowSelection resolved = resolve(List.of(GENERATE_IMAGE, PERSON_REFERENCE),
+    void apply_unknownToolName_usesTheFirstCandidateAndNamesTheRejectedPick() throws Exception {
+        ImageWorkflowSelection resolved = resolve(List.of(FIRST, SECOND),
                 new ImageWorkflowSelection("made_up_workflow", null, "Guessing."));
 
-        assertThat(resolved.toolName()).isEqualTo(DEFAULT_WORKFLOW);
+        assertThat(resolved.toolName()).isEqualTo("first_workflow");
         assertThat(resolved.rationale()).contains("made_up_workflow");
-    }
-
-    /**
-     * The default may not be among the candidates, for example when the intent narrowed them to a
-     * person edit, so the first candidate is used instead.
-     */
-    @Test
-    void apply_defaultIsNotACandidate_usesTheFirstCandidate() throws Exception {
-        ImageWorkflowSelection resolved = resolve(List.of(PERSON_REFERENCE),
-                new ImageWorkflowSelection(null, null, "The routing model failed."));
-
-        assertThat(resolved.toolName()).isEqualTo("person_reference_image");
     }
 
     @Test
     void apply_noSelectionOnTheState_fallsBackRatherThanFailing() throws Exception {
         ImageWorkflowSelection resolved = selection(resolveImageWorkflowNode.apply(
-                new ImageWorkflowState(stateData(List.of(GENERATE_IMAGE)))).get());
+                new ImageWorkflowState(stateData(List.of(FIRST)))).get());
 
-        assertThat(resolved.toolName()).isEqualTo(DEFAULT_WORKFLOW);
+        assertThat(resolved.toolName()).isEqualTo("first_workflow");
     }
 
     @Test

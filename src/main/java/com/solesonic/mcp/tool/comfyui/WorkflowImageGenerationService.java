@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.MIME_TYPE_PNG;
 
@@ -86,18 +87,20 @@ public class WorkflowImageGenerationService {
         ComfyWorkflowTemplate comfyWorkflowTemplate = registeredComfyWorkflow.template();
 
         if (suppliedImages > 0) {
-            if (registeredComfyWorkflow.referenceVariant().isEmpty()) {
+            List<Integer> acceptedCounts = registeredComfyWorkflow.acceptedReferenceImageCounts();
+
+            if (acceptedCounts.isEmpty()) {
                 return error("This workflow does not accept reference images.");
             }
 
-            int slots = registeredComfyWorkflow.referenceImageSlots();
+            Optional<ComfyWorkflowTemplate> referenceVariant = registeredComfyWorkflow.referenceVariant(suppliedImages);
 
-            if (suppliedImages != slots) {
-                return error("This workflow takes exactly %d reference image%s; %d supplied."
-                        .formatted(slots, slots == 1 ? "" : "s", suppliedImages));
+            if (referenceVariant.isEmpty()) {
+                return error("This workflow takes %s; %d supplied."
+                        .formatted(describeImageCounts(acceptedCounts), suppliedImages));
             }
 
-            comfyWorkflowTemplate = registeredComfyWorkflow.referenceVariant().get();
+            comfyWorkflowTemplate = referenceVariant.get();
         }
 
         log.info("Generating image with workflow '{}' at {}x{}, seed {}, {} reference image(s)",
@@ -117,6 +120,19 @@ public class WorkflowImageGenerationService {
                 .addContent(imageContent)
                 .addTextContent(metadata(registeredComfyWorkflow, generatedImage, suppliedImages))
                 .build();
+    }
+
+    /**
+     * "2 reference images", "1 or 2 reference images", "1, 2 or 3 reference images".
+     */
+    private static String describeImageCounts(List<Integer> imageCounts) {
+        List<String> labels = imageCounts.stream().map(String::valueOf).toList();
+        String counts = labels.size() == 1
+                ? labels.getFirst()
+                : String.join(", ", labels.subList(0, labels.size() - 1)) + " or " + labels.getLast();
+        boolean singular = imageCounts.size() == 1 && imageCounts.getFirst() == 1;
+
+        return counts + (singular ? " reference image" : " reference images");
     }
 
     private static CallToolResult error(String message) {

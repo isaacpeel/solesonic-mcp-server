@@ -1,6 +1,8 @@
 package com.solesonic.mcp.service.comfyui;
 
+import com.solesonic.agent.image.ImageIntent;
 import com.solesonic.model.comfyui.ComfyWorkflow;
+import com.solesonic.model.comfyui.ComfyWorkflowReferenceVariant;
 import com.solesonic.model.comfyui.RegisteredComfyWorkflow;
 import com.solesonic.repository.comfyui.ComfyWorkflowRepository;
 import com.solesonic.service.comfyui.ComfyWorkflowRegistry;
@@ -12,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.TOKEN_HEIGHT;
@@ -36,6 +39,17 @@ class ComfyWorkflowRegistryTest {
             {"6": {"inputs": {"text": "__PROMPT__"}},
              "31": {"inputs": {"seed": "__SEED__", "denoise": 0.6}},
              "40": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_1__"}}}""";
+
+    private static final String TWO_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "40": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_1__"}},
+             "41": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""";
+
+    private static final String THREE_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "40": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_1__"}},
+             "41": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_2__"}},
+             "42": {"class_type": "LoadImage", "inputs": {"image": "__REFERENCE_IMAGE_3__"}}}""";
 
     @Mock
     private ComfyWorkflowRepository comfyWorkflowRepository;
@@ -106,27 +120,61 @@ class ComfyWorkflowRegistryTest {
     }
 
     @Test
-    void loadWorkflows_registersAValidReferenceVariantWithItsSlotCount() {
+    void loadWorkflows_registersAValidReferenceVariantUnderItsImageCount() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, ONE_SLOT_VARIANT)));
+                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, variant(1, ONE_SLOT_VARIANT))));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
-        assertThat(registered.referenceVariant()).isPresent();
-        assertThat(registered.referenceImageSlots()).isEqualTo(1);
+        assertThat(registered.referenceVariant(1)).isPresent();
+        assertThat(registered.acceptedReferenceImageCounts()).containsExactly(1);
+    }
+
+    /**
+     * One tool can take one, two or three photos: each count gets its own graph.
+     */
+    @Test
+    void loadWorkflows_registersOneVariantPerImageCount() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
+                row("person_workflow", "Person", VALID_WORKFLOW,
+                        variant(3, THREE_SLOT_VARIANT), variant(1, ONE_SLOT_VARIANT), variant(2, TWO_SLOT_VARIANT))));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        assertThat(registered.acceptedReferenceImageCounts()).containsExactly(1, 2, 3);
+        assertThat(registered.referenceVariant(2)).hasValueSatisfying(template ->
+                assertThat(template.referenceImageSlots()).isEqualTo(2));
+    }
+
+    @Test
+    void loadWorkflows_carriesTheIntentsEachRowServes() {
+        ComfyWorkflow servesPersonEdits = row("person_workflow", "Person", VALID_WORKFLOW, variant(1, ONE_SLOT_VARIANT));
+        servesPersonEdits.setIntents(Set.of(ImageIntent.EDIT_PERSON_IN_PHOTO));
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
+                .thenReturn(List.of(servesPersonEdits, row("my_workflow", "My workflow", VALID_WORKFLOW)));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow person = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        RegisteredComfyWorkflow untagged = comfyWorkflowRegistry.registeredWorkflows().getLast();
+        assertThat(person.servesIntent(ImageIntent.EDIT_PERSON_IN_PHOTO)).isTrue();
+        assertThat(person.servesIntent(ImageIntent.NEW_IMAGE)).isFalse();
+        assertThat(person.servesIntent(null)).isFalse();
+        assertThat(untagged.intents()).isEmpty();
     }
 
     @Test
     void loadWorkflows_aRowWithoutAVariantAcceptsNoReferenceImages() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, null)));
+                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW)));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
-        assertThat(registered.referenceVariant()).isEmpty();
-        assertThat(registered.referenceImageSlots()).isZero();
+        assertThat(registered.acceptedReferenceImageCounts()).isEmpty();
+        assertThat(registered.acceptsReferenceImages(1)).isFalse();
     }
 
     /**
@@ -135,17 +183,45 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_anInvalidVariantIsDroppedButTheBaseToolStillRegisters() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
-                row("malformed_variant", "Malformed", VALID_WORKFLOW, "{\"6\": "),
-                row("variant_without_images", "No images", VALID_WORKFLOW, VALID_WORKFLOW),
-                row("variant_with_gap", "Gap", VALID_WORKFLOW, """
+                row("malformed_variant", "Malformed", VALID_WORKFLOW, variant(1, "{\"6\": ")),
+                row("variant_without_images", "No images", VALID_WORKFLOW, variant(1, VALID_WORKFLOW)),
+                row("variant_with_gap", "Gap", VALID_WORKFLOW, variant(1, """
                         {"6": {"inputs": {"text": "__PROMPT__"}},
-                         "8": {"inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""")));
+                         "8": {"inputs": {"image": "__REFERENCE_IMAGE_2__"}}}"""))));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         assertThat(comfyWorkflowRegistry.registeredWorkflows())
                 .hasSize(3)
-                .allSatisfy(registered -> assertThat(registered.referenceVariant()).isEmpty());
+                .allSatisfy(registered -> assertThat(registered.acceptedReferenceImageCounts()).isEmpty());
+    }
+
+    /**
+     * The attached image count picks the graph, so a graph loading a different number of images than
+     * its row says would be handed the wrong number of uploads. Only that variant is dropped.
+     */
+    @Test
+    void loadWorkflows_aVariantWhoseGraphDisagreesWithItsImageCountIsDroppedAndItsSiblingsKept() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
+                row("person_workflow", "Person", VALID_WORKFLOW,
+                        variant(1, ONE_SLOT_VARIANT), variant(2, THREE_SLOT_VARIANT))));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        assertThat(registered.acceptedReferenceImageCounts()).containsExactly(1);
+    }
+
+    @Test
+    void loadWorkflows_aDuplicateImageCountRegistersThatCountOnceWithoutFailingTheRow() {
+        when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
+                row("generate_image", "FLUX", VALID_WORKFLOW,
+                        variant(1, ONE_SLOT_VARIANT), variant(1, ONE_SLOT_VARIANT.replace("0.6", "0.4")))));
+
+        comfyWorkflowRegistry.loadWorkflows();
+
+        RegisteredComfyWorkflow registered = comfyWorkflowRegistry.registeredWorkflows().getFirst();
+        assertThat(registered.acceptedReferenceImageCounts()).containsExactly(1);
     }
 
     /**
@@ -155,27 +231,26 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_skipsARowWhoseBaseWorkflowCarriesReferenceTokens() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("base_needs_images", "Wrong column", ONE_SLOT_VARIANT, null)));
+                .thenReturn(List.of(row("base_needs_images", "Wrong column", ONE_SLOT_VARIANT)));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         assertThat(comfyWorkflowRegistry.registeredWorkflows()).isEmpty();
     }
 
-    private ComfyWorkflow row(String toolName, String name, String workflowJson, String referenceWorkflowJson) {
-        ComfyWorkflow comfyWorkflow = row(toolName, name, workflowJson);
-        comfyWorkflow.setReferenceWorkflowJson(referenceWorkflowJson);
-
-        return comfyWorkflow;
+    private static ComfyWorkflowReferenceVariant variant(int imageCount, String workflowJson) {
+        return new ComfyWorkflowReferenceVariant(imageCount, workflowJson);
     }
 
-    private ComfyWorkflow row(String toolName, String name, String workflowJson) {
+    private ComfyWorkflow row(String toolName, String name, String workflowJson,
+                              ComfyWorkflowReferenceVariant... referenceVariants) {
         ComfyWorkflow comfyWorkflow = new ComfyWorkflow();
         comfyWorkflow.setId(UUID.randomUUID());
         comfyWorkflow.setToolName(toolName);
         comfyWorkflow.setName(name);
         comfyWorkflow.setDescription("Generates an image.");
         comfyWorkflow.setWorkflowJson(workflowJson);
+        comfyWorkflow.setReferenceVariants(List.of(referenceVariants));
         comfyWorkflow.setEnabled(true);
 
         return comfyWorkflow;

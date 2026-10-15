@@ -90,11 +90,11 @@ Categories
 
 - Image Generation Tools
   - generate_image
-    - Description: Generates an image using a self-hosted ComfyUI instance and returns it inline as a PNG. A LangGraph4j router picks the best stored workflow (one per enabled `comfy_workflow` row) from the request, the number of attached images and their optional descriptions (classifying the intent first: new image, restyle the photo, or edit the person in it), and refines the prompt itself — so the caller passes the user's request through as written. Typically 5–15 seconds for a text-only call; calls with reference images can run a slower model and take noticeably longer. Progress notifications are emitted while the job runs.
+    - Description: Generates an image using a self-hosted ComfyUI instance and returns it inline as a PNG. A LangGraph4j router picks the best stored workflow (one per enabled `comfy_workflow` row) from the request, the number of attached images and their optional descriptions (classifying the intent first: new image, restyle the photo, or edit the person in it), and refines the prompt itself — so the caller passes the user's request through as written. How long a call takes depends on the stored workflow it runs. Progress notifications are emitted while the job runs.
     - Auth: ROLE_MCP-GENERATE-IMAGE
     - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional>, "referenceImages": [ { "data": "<base64>", "mimeType": "image/png" | "image/jpeg" | "image/webp", "description": "<what the image shows, optional>" } ] (optional, at most 3) } — `width` and `height` default to 1024 and are ignored by workflows with a fixed or photo-derived size.
     - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`), a text block with the workflow name, size, seed, and elapsed time (and `Reference images: n` when used), and a `Workflow: <tool_name>. Why: <rationale>` block naming the router's choice
-    - Replaces the per-workflow tools (one per `comfy_workflow` row) and their `_meta` `solesonic/kind` tag. Clients find this tool by name. An image `description` is used only to choose the workflow, never added to the prompt.
+    - Stored workflows are not tools of their own: clients find this one tool by name. An image `description` is used only to choose the workflow, never added to the prompt.
   - Details, including routing, the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
 
 - Date and Time Tools

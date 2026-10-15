@@ -2,6 +2,11 @@ package com.solesonic.service.comfyui;
 
 import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ComfyEvent;
+import com.solesonic.model.comfyui.ComfyEvent.Disconnected;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionFailed;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionInterrupted;
+import com.solesonic.model.comfyui.ComfyEvent.NodeExecuting;
 import com.solesonic.model.comfyui.ComfyFreeRequest;
 import com.solesonic.model.comfyui.ComfyHistoryEntry;
 import com.solesonic.model.comfyui.ComfyImageReference;
@@ -32,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -57,8 +63,12 @@ import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.STATUS_ERROR;
 import static com.solesonic.mcp.config.comfyui.ComfyUiConstants.VIEW_ENDPOINT;
 
 /**
- * Drives ComfyUI's three-call protocol: submit a workflow, poll history until the job lands, then
- * download the rendered image.
+ * Drives ComfyUI's three-call protocol: submit a workflow, wait for the job to land in history,
+ * then download the rendered image.
+ *
+ * <p>While the job runs, progress comes from ComfyUI's {@code /ws} event stream — queue position,
+ * the node being run, sampler steps. If the stream cannot be opened or drops, the wait falls back to
+ * polling {@code /history} with no percentage, so a socket problem costs the detail, never the image.
  */
 @Service
 public class ComfyUiService {
@@ -71,29 +81,28 @@ public class ComfyUiService {
     private static final int PROGRESS_UPLOADING = 3;
     private static final int PROGRESS_SUBMITTING = 5;
     private static final int PROGRESS_QUEUED = 15;
-    private static final int PROGRESS_GENERATING_CEILING = 85;
     private static final int PROGRESS_DOWNLOADING = 90;
     private static final int PROGRESS_COMPLETE = 100;
 
     private final WebClient webClient;
+    private final ComfyUiEventStream comfyUiEventStream;
     private final long generationTimeoutSeconds;
     private final long pollIntervalMillis;
-    private final double expectedSeconds;
     private final Duration releaseMemoryDelay;
 
     private Disposable pendingMemoryRelease;
 
     public ComfyUiService(
             @Qualifier(COMFY_UI_WEB_CLIENT) WebClient webClient,
+            ComfyUiEventStream comfyUiEventStream,
             @Value("${comfyui.generation.timeout-seconds}") long generationTimeoutSeconds,
             @Value("${comfyui.generation.poll-interval-millis}") long pollIntervalMillis,
-            @Value("${comfyui.generation.expected-seconds}") double expectedSeconds,
             @Value("${comfyui.generation.release-memory-delay-millis}") long releaseMemoryDelayMillis
     ) {
         this.webClient = webClient;
+        this.comfyUiEventStream = comfyUiEventStream;
         this.generationTimeoutSeconds = generationTimeoutSeconds;
         this.pollIntervalMillis = pollIntervalMillis;
-        this.expectedSeconds = expectedSeconds;
         this.releaseMemoryDelay = Duration.ofMillis(releaseMemoryDelayMillis);
     }
 
@@ -122,15 +131,10 @@ public class ComfyUiService {
 
         List<String> referenceImageValues = uploadReferenceImages(referenceImages, progressReporter);
 
-        progressReporter.emit(PROGRESS_SUBMITTING, "Sending prompt to ComfyUI");
-
         ObjectNode workflow = comfyWorkflowTemplate.build(imageGenerationRequest, referenceImageValues);
+        long deadlineNanos = startNanos + TimeUnit.SECONDS.toNanos(generationTimeoutSeconds);
 
-        String promptId = submit(workflow);
-
-        progressReporter.emit(PROGRESS_QUEUED, "Queued as " + promptId);
-
-        ComfyImageReference imageReference = awaitImage(promptId, startNanos, progressReporter);
+        ComfyImageReference imageReference = submitAndAwaitImage(workflow, deadlineNanos, progressReporter);
 
         progressReporter.emit(PROGRESS_DOWNLOADING, "Downloading image");
 
@@ -147,7 +151,7 @@ public class ComfyUiService {
                         elapsedSeconds,
                         imageGenerationRequest.seed()));
 
-        log.info("ComfyUI generation {} completed in {}s", promptId, elapsedSeconds);
+        log.info("ComfyUI generation of {} completed in {}s", imageReference.filename(), elapsedSeconds);
 
         return GeneratedImage.imageGenerationRequest(imageGenerationRequest)
                 .base64Png(base64Png)
@@ -262,8 +266,8 @@ public class ComfyUiService {
      * ComfyUI answers HTTP 200 with a populated {@code node_errors} object when the workflow is
      * malformed, so trusting the status code alone is the standard way to get a silent no-op.
      */
-    private String submit(ObjectNode workflow) {
-        ComfyPromptRequest promptRequest = new ComfyPromptRequest(workflow, UUID.randomUUID().toString());
+    private String submit(ObjectNode workflow, String clientId) {
+        ComfyPromptRequest promptRequest = new ComfyPromptRequest(workflow, clientId);
 
         ComfyPromptResponse promptResponse = webClient.post()
                 .uri(PROMPT_ENDPOINT)
@@ -288,49 +292,163 @@ public class ComfyUiService {
         return promptResponse.promptId();
     }
 
-    private ComfyImageReference awaitImage(String promptId, long startNanos, ProgressReporter progressReporter) {
-        long deadlineNanos = startNanos + TimeUnit.SECONDS.toNanos(generationTimeoutSeconds);
+    /**
+     * The event stream is opened before the prompt is submitted: ComfyUI only sends a prompt's
+     * events to a socket already registered under its {@code client_id}, so opening it afterwards
+     * could miss a fast job's events entirely.
+     */
+    private ComfyImageReference submitAndAwaitImage(ObjectNode workflow, long deadlineNanos, ProgressReporter progressReporter) {
+        String clientId = UUID.randomUUID().toString();
+        Optional<ComfyEventSubscription> eventSubscription = openEventStream(clientId);
+
+        try {
+            progressReporter.emit(PROGRESS_SUBMITTING, "Sending prompt to ComfyUI");
+
+            String promptId = submit(workflow, clientId);
+
+            progressReporter.emit(PROGRESS_QUEUED, "Queued as " + promptId);
+
+            ComfyImageReference imageReference = eventSubscription.isEmpty()
+                    ? pollForImage(promptId, deadlineNanos, progressReporter)
+                    : awaitImageFromEvents(promptId, workflow, eventSubscription.get(), deadlineNanos, progressReporter);
+
+            log.info("ComfyUI generation {} rendered {}", promptId, imageReference.filename());
+
+            return imageReference;
+        } finally {
+            eventSubscription.ifPresent(ComfyEventSubscription::close);
+        }
+    }
+
+    /**
+     * Any failure to open the stream — unreachable host, a proxy that does not pass WebSocket
+     * upgrades, a timeout — only costs progress detail, so it is logged and the caller polls instead.
+     */
+    private Optional<ComfyEventSubscription> openEventStream(String clientId) {
+        try {
+            return Optional.of(comfyUiEventStream.open(clientId));
+        } catch (RuntimeException runtimeException) {
+            log.warn("ComfyUI event stream unavailable; polling history without step progress", runtimeException);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * {@code executing} with a null node is the completion signal: ComfyUI sends it after writing the
+     * history entry, unlike {@code execution_success}, which comes before. A quiet stream triggers a
+     * {@code /history} check, so a missed frame delays the result by one interval rather than hanging
+     * the call until the deadline.
+     */
+    private ComfyImageReference awaitImageFromEvents(
+            String promptId,
+            ObjectNode workflow,
+            ComfyEventSubscription eventSubscription,
+            long deadlineNanos,
+            ProgressReporter progressReporter
+    ) {
+        ComfyProgressTracker comfyProgressTracker = new ComfyProgressTracker(workflow, promptId);
 
         while (true) {
-            ComfyHistoryEntry historyEntry = fetchHistoryEntry(promptId);
+            long remainingMillis = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
 
-            if (historyEntry != null) {
-                if (historyEntry.status() != null && STATUS_ERROR.equals(historyEntry.status().statusStr())) {
-                    throw new ComfyUiException("ComfyUI generation " + promptId + " failed during execution");
+            if (remainingMillis <= 0) {
+                throw timedOut(promptId);
+            }
+
+            Optional<ComfyEvent> nextEvent = eventSubscription.next(Duration.ofMillis(Math.min(pollIntervalMillis, remainingMillis)));
+
+            if (nextEvent.isEmpty()) {
+                Optional<ComfyImageReference> imageReference = imageFromHistory(promptId);
+
+                if (imageReference.isPresent()) {
+                    return imageReference.get();
                 }
 
-                ComfyImageReference imageReference = firstImage(historyEntry);
+                continue;
+            }
 
-                if (imageReference != null) {
-                    return imageReference;
+            switch (nextEvent.get()) {
+                case Disconnected disconnected -> {
+                    log.warn("ComfyUI event stream closed during generation {} ({}); polling history instead",
+                            promptId, disconnected.reason());
+                    return pollForImage(promptId, deadlineNanos, progressReporter);
                 }
+                case NodeExecuting nodeExecuting when promptId.equals(nodeExecuting.promptId()) && nodeExecuting.nodeId() == null -> {
+                    return pollForImage(promptId, deadlineNanos, progressReporter);
+                }
+                case ExecutionFailed executionFailed when promptId.equals(executionFailed.promptId()) ->
+                        throw new ComfyUiException("ComfyUI generation %s failed in %s: %s".formatted(
+                                promptId,
+                                describeNode(executionFailed.nodeType(), executionFailed.nodeId()),
+                                executionFailed.exceptionMessage()));
+                case ExecutionInterrupted executionInterrupted when promptId.equals(executionInterrupted.promptId()) ->
+                        throw new ComfyUiException("ComfyUI generation %s was interrupted in %s".formatted(
+                                promptId,
+                                describeNode(executionInterrupted.nodeType(), executionInterrupted.nodeId())));
+                case ComfyEvent comfyEvent -> comfyProgressTracker.apply(comfyEvent)
+                        .ifPresent(progressUpdate -> progressReporter.emit(progressUpdate.percent(), progressUpdate.message()));
+            }
+        }
+    }
 
-                if (historyEntry.status() != null && Boolean.TRUE.equals(historyEntry.status().completed())) {
-                    throw new ComfyUiException("ComfyUI generation " + promptId + " completed without producing an image");
-                }
+    /**
+     * The fallback when there is no event stream: a fixed message, and the percentage held where it
+     * is, because there is nothing real to report.
+     */
+    private ComfyImageReference pollForImage(String promptId, long deadlineNanos, ProgressReporter progressReporter) {
+        while (true) {
+            Optional<ComfyImageReference> imageReference = imageFromHistory(promptId);
+
+            if (imageReference.isPresent()) {
+                return imageReference.get();
             }
 
             if (System.nanoTime() >= deadlineNanos) {
-                throw new ComfyUiException("ComfyUI generation " + promptId + " did not finish within "
-                        + generationTimeoutSeconds + "s");
+                throw timedOut(promptId);
             }
 
-            progressReporter.emit(generatingPercent(startNanos), "Generating…");
+            progressReporter.emit(PROGRESS_QUEUED, "Generating…");
 
             sleepUntilNextPoll();
         }
     }
 
     /**
-     * A time-based estimate rather than real progress, capped below completion so it never claims
-     * the image is ready early. {@code ProgressReporter} clamps to the previous maximum, so a ramp
-     * that stalls is safe.
+     * Empty while the job is pending or running; {@code /history} answers {@code {}} until it lands.
      */
-    private int generatingPercent(long startNanos) {
-        double ratio = expectedSeconds <= 0 ? 1.0 : elapsedSeconds(startNanos) / expectedSeconds;
-        int ramped = PROGRESS_QUEUED + (int) (70.0 * ratio);
+    private Optional<ComfyImageReference> imageFromHistory(String promptId) {
+        ComfyHistoryEntry historyEntry = fetchHistoryEntry(promptId);
 
-        return Math.min(ramped, PROGRESS_GENERATING_CEILING);
+        if (historyEntry == null) {
+            return Optional.empty();
+        }
+
+        if (historyEntry.status() != null && STATUS_ERROR.equals(historyEntry.status().statusStr())) {
+            throw new ComfyUiException("ComfyUI generation " + promptId + " failed during execution");
+        }
+
+        ComfyImageReference imageReference = firstImage(historyEntry);
+
+        if (imageReference != null) {
+            return Optional.of(imageReference);
+        }
+
+        if (historyEntry.status() != null && Boolean.TRUE.equals(historyEntry.status().completed())) {
+            throw new ComfyUiException("ComfyUI generation " + promptId + " completed without producing an image");
+        }
+
+        return Optional.empty();
+    }
+
+    private ComfyUiException timedOut(String promptId) {
+        return new ComfyUiException("ComfyUI generation " + promptId + " did not finish within "
+                + generationTimeoutSeconds + "s");
+    }
+
+    private static String describeNode(String nodeType, String nodeId) {
+        String type = nodeType == null ? "an unknown node" : nodeType;
+
+        return nodeId == null ? type : "%s (node %s)".formatted(type, nodeId);
     }
 
     private void sleepUntilNextPoll() {

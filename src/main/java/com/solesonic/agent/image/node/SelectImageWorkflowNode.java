@@ -3,7 +3,6 @@ package com.solesonic.agent.image.node;
 import com.solesonic.agent.image.ImageIntent;
 import com.solesonic.agent.image.ImageIntentClassification;
 import com.solesonic.agent.image.ImageRequestMessage;
-import com.solesonic.agent.image.ImageRoutingProperties;
 import com.solesonic.agent.image.ImageWorkflowSelection;
 import com.solesonic.agent.image.ImageWorkflowState;
 import com.solesonic.agent.image.WorkflowCandidate;
@@ -35,13 +34,13 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 /**
- * Chooses the workflow. Candidates are the workflows that accept exactly the attached number of
- * images, narrowed to those configured for the classified intent. One candidate is chosen without
- * a model call; several are put to the routing model, which picks by each workflow's description.
+ * Chooses the workflow. Candidates are the workflows with a graph for the attached number of
+ * images, narrowed to those that serve the classified intent. One candidate is chosen without a
+ * model call; several are put to the routing model, which picks by each workflow's description.
  *
  * <p>This step only chooses: the prompt is written afterwards by {@link WriteImagePromptNode}, which
  * knows the chosen workflow. A failing model does not fail the call: the selection is left empty
- * and {@link ResolveImageWorkflowNode} falls back to the default workflow.
+ * and {@link ResolveImageWorkflowNode} falls back to the first candidate.
  */
 @Component
 public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowState> {
@@ -74,18 +73,15 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
 
     private final ChatClient chatClient;
     private final ComfyWorkflowRegistry comfyWorkflowRegistry;
-    private final ImageRoutingProperties imageRoutingProperties;
 
     // A constructor parameter rather than a @Value field so tests can supply their own template.
     private final Resource selectImageWorkflowPrompt;
 
     public SelectImageWorkflowNode(@Qualifier(IMAGE_CHAT_CLIENT) ChatClient chatClient,
                                    ComfyWorkflowRegistry comfyWorkflowRegistry,
-                                   ImageRoutingProperties imageRoutingProperties,
                                    @Value("classpath:/prompt/image/select_image_workflow.st") Resource selectImageWorkflowPrompt) {
         this.chatClient = chatClient;
         this.comfyWorkflowRegistry = comfyWorkflowRegistry;
-        this.imageRoutingProperties = imageRoutingProperties;
         this.selectImageWorkflowPrompt = selectImageWorkflowPrompt;
     }
 
@@ -137,34 +133,28 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
     }
 
     /**
-     * Workflows that accept exactly the attached number of images, narrowed to the intent's
-     * configured workflows. When the intent is undecided, unmapped, or none of its workflows can take
-     * the images, every workflow that can is offered rather than none.
+     * Workflows with a graph for exactly the attached number of images, narrowed to those serving the
+     * intent. When the intent is undecided or no such workflow serves it, every workflow that can take
+     * the images is offered rather than none.
      */
     private List<WorkflowCandidate> candidates(int referenceImageCount, ImageIntent imageIntent) {
-        List<WorkflowCandidate> acceptingImages = comfyWorkflowRegistry.registeredWorkflows().stream()
+        List<RegisteredComfyWorkflow> acceptingImages = comfyWorkflowRegistry.registeredWorkflows().stream()
                 .filter(registeredComfyWorkflow -> referenceImageCount == 0
-                        || registeredComfyWorkflow.referenceImageSlots() == referenceImageCount)
-                .map(SelectImageWorkflowNode::candidate)
+                        || registeredComfyWorkflow.acceptsReferenceImages(referenceImageCount))
                 .toList();
 
-        List<String> intentWorkflows = imageRoutingProperties.workflowsFor(imageIntent);
-
-        if (intentWorkflows.isEmpty()) {
-            return acceptingImages;
-        }
-
-        List<WorkflowCandidate> forIntent = acceptingImages.stream()
-                .filter(workflowCandidate -> intentWorkflows.contains(workflowCandidate.toolName()))
+        List<RegisteredComfyWorkflow> forIntent = acceptingImages.stream()
+                .filter(registeredComfyWorkflow -> registeredComfyWorkflow.servesIntent(imageIntent))
                 .toList();
 
         if (forIntent.isEmpty()) {
-            log.info("None of the workflows configured for intent {} ({}) accepts {} reference image(s); offering all that do",
-                    imageIntent, intentWorkflows, referenceImageCount);
-            return acceptingImages;
+            log.info("No workflow that accepts {} reference image(s) serves intent {}; offering all that accept them",
+                    referenceImageCount, imageIntent);
+
+            return acceptingImages.stream().map(SelectImageWorkflowNode::candidate).toList();
         }
 
-        return forIntent;
+        return forIntent.stream().map(SelectImageWorkflowNode::candidate).toList();
     }
 
     private static WorkflowCandidate candidate(RegisteredComfyWorkflow registeredComfyWorkflow) {
@@ -209,7 +199,7 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
 
             return workflowChoice;
         } catch (Exception exception) {
-            log.warn("The image routing model failed after {} ms; falling back to the default workflow",
+            log.warn("The image routing model failed after {} ms; falling back to the first candidate",
                     elapsedMillis(startedAt), exception);
             return new WorkflowChoice(null, MODEL_FAILED_RATIONALE);
         }

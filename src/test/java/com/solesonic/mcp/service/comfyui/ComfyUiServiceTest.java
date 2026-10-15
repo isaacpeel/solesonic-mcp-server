@@ -2,14 +2,25 @@ package com.solesonic.mcp.service.comfyui;
 
 import com.solesonic.a2a.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
+import com.solesonic.model.comfyui.ComfyEvent;
+import com.solesonic.model.comfyui.ComfyEvent.Disconnected;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionFailed;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionInterrupted;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionStarted;
+import com.solesonic.model.comfyui.ComfyEvent.ExecutionSucceeded;
+import com.solesonic.model.comfyui.ComfyEvent.NodeExecuted;
+import com.solesonic.model.comfyui.ComfyEvent.NodeExecuting;
+import com.solesonic.model.comfyui.ComfyEvent.NodeProgress;
+import com.solesonic.model.comfyui.ComfyEvent.QueueStatus;
 import com.solesonic.model.comfyui.GeneratedImage;
 import com.solesonic.model.comfyui.ImageGenerationRequest;
 import com.solesonic.model.comfyui.ReferenceImage;
+import com.solesonic.service.comfyui.ComfyEventSubscription;
+import com.solesonic.service.comfyui.ComfyUiEventStream;
 import com.solesonic.service.comfyui.ComfyUiService;
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,9 +34,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -67,6 +75,13 @@ class ComfyUiServiceTest {
     private static final String UPLOAD_ACCEPTED_SECOND = """
             {"name":"mcp-second.png","subfolder":"mcp-server","type":"input"}""";
 
+    private static final String TEXT_TO_IMAGE_WORKFLOW = """
+            {"4": {"class_type": "CheckpointLoaderSimple", "inputs": {}, "_meta": {"title": "Load Checkpoint"}},
+             "6": {"class_type": "CLIPTextEncode", "inputs": {"text": "__PROMPT__"}},
+             "3": {"class_type": "KSampler", "inputs": {"seed": "__SEED__"}},
+             "8": {"class_type": "VAEDecode", "inputs": {}},
+             "9": {"class_type": "SaveImage", "inputs": {}}}""";
+
     private static final String TWO_SLOT_VARIANT = """
             {"6": {"inputs": {"text": "__PROMPT__"}},
              "31": {"inputs": {"seed": "__SEED__"}},
@@ -88,14 +103,22 @@ class ComfyUiServiceTest {
     private final List<Integer> capturedPercents = new ArrayList<>();
     private final List<String> capturedMessages = new ArrayList<>();
 
+    private final List<String> openedClientIds = new ArrayList<>();
+    private final AtomicInteger closedSubscriptionCount = new AtomicInteger();
+
     private ComfyWorkflowTemplate comfyWorkflowTemplate;
     private WebClient webClient;
     private ProgressReporter progressReporter;
 
+    /**
+     * Unavailable unless a test scripts events, so the polling tests exercise the fallback path.
+     */
+    private ComfyUiEventStream comfyUiEventStream;
+
     @BeforeEach
     void setUp() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
-        comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(readFixture(), jsonMapper);
+        comfyWorkflowTemplate = ComfyWorkflowTemplate.parse(TEXT_TO_IMAGE_WORKFLOW, jsonMapper);
 
         webClient = WebClient.builder()
                 .baseUrl("http://comfy.test")
@@ -106,6 +129,10 @@ class ComfyUiServiceTest {
             capturedPercents.add(percent);
             capturedMessages.add(message);
         });
+
+        comfyUiEventStream = _ -> {
+            throw new ComfyUiException("event stream unavailable in this test");
+        };
     }
 
     @Test
@@ -154,6 +181,22 @@ class ComfyUiServiceTest {
         assertThat(capturedMessages).contains("Generating…");
     }
 
+    /**
+     * Without the event stream there is nothing real to report, so polling never moves the
+     * percentage past the queued step.
+     */
+    @Test
+    void generate_eventStreamUnavailable_pollsWithoutRampingThePercentage() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_PENDING);
+        historyResponses.add(HISTORY_PENDING);
+        historyResponses.add(HISTORY_COMPLETE);
+
+        service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(percentsFor("Generating…")).isNotEmpty().allMatch(percent -> percent == 15);
+    }
+
     @Test
     void generate_deadlineExceeded_throwsNamingThePromptId() {
         promptResponses.add(PROMPT_ACCEPTED);
@@ -175,6 +218,157 @@ class ComfyUiServiceTest {
                 .hasMessageContaining("failed during execution");
     }
 
+    /**
+     * The prompt must carry the client id the event stream was opened under, or ComfyUI sends its
+     * events to nobody.
+     */
+    @Test
+    void generate_eventStream_submitsWithTheStreamsClientId() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        comfyUiEventStream = scriptedEventStream(new NodeExecuting(PROMPT_ID, null));
+
+        service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(openedClientIds).hasSize(1);
+        assertThat(promptBodies.getFirst()).contains("\"client_id\":\"" + openedClientIds.getFirst() + "\"");
+    }
+
+    @Test
+    void generate_eventStream_reportsQueueNodesAndStepsFromComfyUi() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        comfyUiEventStream = scriptedEventStream(
+                new QueueStatus(2),
+                new ExecutionStarted(PROMPT_ID),
+                new NodeExecuting(PROMPT_ID, "4"),
+                new NodeExecuted(PROMPT_ID, "4"),
+                new NodeExecuting(PROMPT_ID, "6"),
+                new NodeExecuted(PROMPT_ID, "6"),
+                new NodeExecuting(PROMPT_ID, "3"),
+                new NodeProgress(PROMPT_ID, "3", 15, 30),
+                new NodeProgress(PROMPT_ID, "3", 30, 30),
+                new NodeExecuted(PROMPT_ID, "3"),
+                new NodeExecuting(PROMPT_ID, "8"),
+                new NodeExecuted(PROMPT_ID, "8"),
+                new NodeExecuting(PROMPT_ID, "9"),
+                new NodeExecuted(PROMPT_ID, "9"),
+                new ExecutionSucceeded(PROMPT_ID),
+                new NodeExecuting(PROMPT_ID, null));
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        assertThat(capturedMessages).contains(
+                "Waiting in queue (1 ahead)",
+                "Running Load Checkpoint",
+                "Running KSampler",
+                "KSampler: step 15/30",
+                "Finishing",
+                "Downloading image");
+        assertThat(capturedMessages).doesNotContain("Generating…");
+        assertThat(percentsFor("KSampler: step 15/30")).containsExactly(50);
+        assertThat(percentsFor("Finishing")).containsExactly(85);
+        assertThat(capturedPercents).isSorted();
+        assertThat(historyCallCount).hasValue(1);
+    }
+
+    @Test
+    void generate_executionError_throwsNamingTheNodeAndMessageWithoutReadingHistory() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        comfyUiEventStream = scriptedEventStream(
+                new ExecutionStarted(PROMPT_ID),
+                new NodeExecuting(PROMPT_ID, "3"),
+                new ExecutionFailed(PROMPT_ID, "3", "KSampler", "Allocation on device failed"));
+
+        assertThatThrownBy(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining(PROMPT_ID)
+                .hasMessageContaining("KSampler (node 3)")
+                .hasMessageContaining("Allocation on device failed");
+
+        assertThat(historyCallCount).hasValue(0);
+        assertThat(closedSubscriptionCount).hasValue(1);
+    }
+
+    @Test
+    void generate_interrupted_throws() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        comfyUiEventStream = scriptedEventStream(
+                new NodeExecuting(PROMPT_ID, "3"),
+                new ExecutionInterrupted(PROMPT_ID, "3", "KSampler"));
+
+        assertThatThrownBy(() -> service(180).generate(comfyWorkflowTemplate, request(), progressReporter))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("interrupted")
+                .hasMessageContaining("KSampler");
+    }
+
+    /**
+     * Another prompt's end-of-run signal must not end this one: the call keeps waiting until its own
+     * job lands in history.
+     */
+    @Test
+    void generate_otherPromptsEvents_areIgnored() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_PENDING);
+        historyResponses.add(HISTORY_COMPLETE);
+        comfyUiEventStream = scriptedEventStream(
+                new NodeExecuting("other-prompt", null),
+                new ExecutionFailed("other-prompt", "3", "KSampler", "not ours"));
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        assertThat(historyCallCount).hasValue(2);
+    }
+
+    @Test
+    void generate_streamDisconnectsMidRun_fallsBackToPollingHistory() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_PENDING);
+        historyResponses.add(HISTORY_COMPLETE);
+        comfyUiEventStream = scriptedEventStream(
+                new NodeExecuting(PROMPT_ID, "3"),
+                new NodeProgress(PROMPT_ID, "3", 10, 30),
+                new Disconnected("connection reset"));
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        assertThat(capturedMessages).contains("KSampler: step 10/30", "Generating…");
+        assertThat(capturedPercents).isSorted();
+        assertThat(closedSubscriptionCount).hasValue(1);
+    }
+
+    /**
+     * A missed completion frame must not hang the call: a quiet stream triggers a history check.
+     */
+    @Test
+    void generate_quietEventStream_findsTheImageInHistory() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_COMPLETE);
+        comfyUiEventStream = scriptedEventStream();
+
+        GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
+
+        assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
+        assertThat(historyCallCount).hasValue(1);
+    }
+
+    @Test
+    void generate_quietEventStreamPastTheDeadline_throws() {
+        promptResponses.add(PROMPT_ACCEPTED);
+        historyResponses.add(HISTORY_PENDING);
+        comfyUiEventStream = scriptedEventStream();
+
+        assertThatThrownBy(() -> service(0).generate(comfyWorkflowTemplate, request(), progressReporter))
+                .isInstanceOf(ComfyUiException.class)
+                .hasMessageContaining("did not finish");
+
+        assertThat(closedSubscriptionCount).hasValue(1);
+    }
+
     @Test
     void generate_happyPath_releasesMemoryAfterDownload() {
         promptResponses.add(PROMPT_ACCEPTED);
@@ -182,7 +376,7 @@ class ComfyUiServiceTest {
 
         service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
-        awaitFreeCallCount(1);
+        awaitOneFreeCall();
     }
 
     /**
@@ -198,7 +392,7 @@ class ComfyUiServiceTest {
         GeneratedImage generatedImage = service(180).generate(comfyWorkflowTemplate, request(), progressReporter);
 
         assertThat(generatedImage.base64Png()).isEqualTo(Base64.getEncoder().encodeToString(PNG_BYTES));
-        awaitFreeCallCount(1);
+        awaitOneFreeCall();
     }
 
     /**
@@ -216,7 +410,7 @@ class ComfyUiServiceTest {
         comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
         comfyUiService.generate(comfyWorkflowTemplate, request(), progressReporter);
 
-        awaitFreeCallCount(1);
+        awaitOneFreeCall();
     }
 
     @Test
@@ -286,6 +480,35 @@ class ComfyUiServiceTest {
         assertThat(requestPaths).isEmpty();
     }
 
+    /**
+     * Every event is queued before the prompt is submitted, which the service then reads in order —
+     * the same order a live stream would deliver them.
+     */
+    private ComfyUiEventStream scriptedEventStream(ComfyEvent... comfyEvents) {
+        return clientId -> {
+            openedClientIds.add(clientId);
+            ComfyEventSubscription comfyEventSubscription = new ComfyEventSubscription(closedSubscriptionCount::incrementAndGet);
+
+            for (ComfyEvent comfyEvent : comfyEvents) {
+                comfyEventSubscription.publish(comfyEvent);
+            }
+
+            return comfyEventSubscription;
+        };
+    }
+
+    private List<Integer> percentsFor(String message) {
+        List<Integer> percents = new ArrayList<>();
+
+        for (int index = 0; index < capturedMessages.size(); index++) {
+            if (capturedMessages.get(index).equals(message)) {
+                percents.add(capturedPercents.get(index));
+            }
+        }
+
+        return percents;
+    }
+
     private ImageGenerationRequest referenceRequest(int imageCount) {
         List<ReferenceImage> referenceImages = new ArrayList<>();
 
@@ -304,34 +527,25 @@ class ComfyUiServiceTest {
     }
 
     private ComfyUiService service(long generationTimeoutSeconds) {
-        return new ComfyUiService(webClient, generationTimeoutSeconds, 1L, 12.0, 50L);
+        return new ComfyUiService(webClient, comfyUiEventStream, generationTimeoutSeconds, 1L, 50L);
     }
 
     /**
      * The release delay is real (50ms in tests, per {@code application-test.properties}), so
      * asserting on it requires polling rather than a synchronous check.
      */
-    @SuppressWarnings("all")
-    private void awaitFreeCallCount(int expected) {
+    private void awaitOneFreeCall() {
         long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
 
-        while (freeCallCount.get() != expected && System.nanoTime() < deadlineNanos) {
+        while (freeCallCount.get() != 1 && System.nanoTime() < deadlineNanos) {
             Thread.onSpinWait();
         }
 
-        assertThat(freeCallCount).hasValue(expected);
+        assertThat(freeCallCount).hasValue(1);
     }
 
     private ImageGenerationRequest request() {
         return new ImageGenerationRequest("a lighthouse in a storm", 1024, 1024, 42L);
-    }
-
-    private String readFixture() {
-        try (InputStream inputStream = new ClassPathResource("comfyui/flux1-schnell-test.json").getInputStream()) {
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ioException) {
-            throw new IllegalStateException("Unable to read the ComfyUI workflow fixture", ioException);
-        }
     }
 
     /**

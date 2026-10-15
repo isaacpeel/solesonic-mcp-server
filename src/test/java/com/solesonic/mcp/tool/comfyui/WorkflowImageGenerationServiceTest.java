@@ -36,6 +36,10 @@ class WorkflowImageGenerationServiceTest {
     private static final String BASE_WORKFLOW = """
             {"6": {"inputs": {"text": "__PROMPT__"}}}""";
 
+    private static final String ONE_SLOT_VARIANT = """
+            {"6": {"inputs": {"text": "__PROMPT__"}},
+             "40": {"inputs": {"image": "__REFERENCE_IMAGE_1__"}}}""";
+
     private static final String TWO_SLOT_VARIANT = """
             {"6": {"inputs": {"text": "__PROMPT__"}},
              "40": {"inputs": {"image": "__REFERENCE_IMAGE_1__"}},
@@ -52,12 +56,14 @@ class WorkflowImageGenerationServiceTest {
     private WorkflowImageGenerationService workflowImageGenerationService;
     private ComfyWorkflowTemplate baseTemplate;
     private ComfyWorkflowTemplate variantTemplate;
+    private ComfyWorkflowTemplate oneSlotTemplate;
 
     @BeforeEach
     void setUp() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
         baseTemplate = ComfyWorkflowTemplate.parse(BASE_WORKFLOW, jsonMapper);
         variantTemplate = ComfyWorkflowTemplate.parse(TWO_SLOT_VARIANT, jsonMapper);
+        oneSlotTemplate = ComfyWorkflowTemplate.parse(ONE_SLOT_VARIANT, jsonMapper);
         workflowImageGenerationService = new WorkflowImageGenerationService(comfyUiService,
                 new ReferenceImageArguments(DataSize.ofMegabytes(1)));
     }
@@ -114,7 +120,39 @@ class WorkflowImageGenerationServiceTest {
                 withVariant(), request(List.of(PNG)), progressReporter);
 
         assertThat(callToolResult.isError()).isTrue();
-        assertThat(text(callToolResult)).contains("exactly 2 reference images; 1 supplied");
+        assertThat(text(callToolResult)).contains("takes 2 reference images; 1 supplied");
+        verifyNoInteractions(comfyUiService);
+    }
+
+    /**
+     * One tool, one graph per image count: the attached count picks the graph.
+     */
+    @Test
+    void generate_onAWorkflowWithSeveralVariants_usesTheVariantForTheSuppliedCount() {
+        RegisteredComfyWorkflow multiVariant = new RegisteredComfyWorkflow("person_workflow", "Person", "desc",
+                baseTemplate, Map.of(1, oneSlotTemplate, 2, variantTemplate));
+        ImageGenerationRequest oneImage = request(List.of(PNG));
+        ImageGenerationRequest twoImages = request(List.of(PNG, PNG));
+        when(comfyUiService.generate(same(oneSlotTemplate), eq(oneImage), any())).thenReturn(generatedImage(oneImage));
+        when(comfyUiService.generate(same(variantTemplate), eq(twoImages), any())).thenReturn(generatedImage(twoImages));
+
+        workflowImageGenerationService.generate(multiVariant, oneImage, progressReporter);
+        workflowImageGenerationService.generate(multiVariant, twoImages, progressReporter);
+
+        verify(comfyUiService).generate(same(oneSlotTemplate), eq(oneImage), any());
+        verify(comfyUiService).generate(same(variantTemplate), eq(twoImages), any());
+    }
+
+    @Test
+    void generate_withACountNoVariantTakes_listsTheAcceptedCounts() {
+        RegisteredComfyWorkflow multiVariant = new RegisteredComfyWorkflow("person_workflow", "Person", "desc",
+                baseTemplate, Map.of(1, oneSlotTemplate, 2, variantTemplate));
+
+        CallToolResult callToolResult = workflowImageGenerationService.generate(
+                multiVariant, request(List.of(PNG, PNG, PNG)), progressReporter);
+
+        assertThat(callToolResult.isError()).isTrue();
+        assertThat(text(callToolResult)).contains("takes 1 or 2 reference images; 3 supplied");
         verifyNoInteractions(comfyUiService);
     }
 
@@ -131,7 +169,7 @@ class WorkflowImageGenerationServiceTest {
     }
 
     private RegisteredComfyWorkflow withVariant() {
-        return new RegisteredComfyWorkflow("generate_image", "FLUX", "desc", baseTemplate, variantTemplate);
+        return new RegisteredComfyWorkflow("generate_image", "FLUX", "desc", baseTemplate, Map.of(2, variantTemplate));
     }
 
     private ImageGenerationRequest request(List<ReferenceImage> referenceImages) {

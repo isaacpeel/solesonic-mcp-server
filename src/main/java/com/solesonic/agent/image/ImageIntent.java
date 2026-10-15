@@ -1,9 +1,9 @@
 package com.solesonic.agent.image;
 
 /**
- * What the user wants done, decided before any workflow is chosen. Each intent maps to the
- * workflows that serve it through {@link ImageRoutingProperties#intentWorkflows()}, so the routing
- * model answers one narrow question instead of comparing every workflow's prose description.
+ * What the user wants done, decided before any workflow is chosen. Each stored workflow lists the
+ * intents it serves in {@code comfy_workflow_intent}, so the routing model answers one narrow
+ * question instead of comparing every workflow's prose description.
  */
 public enum ImageIntent {
 

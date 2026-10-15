@@ -1,11 +1,21 @@
 package com.solesonic.model.comfyui;
 
+import com.solesonic.agent.image.ImageIntent;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -41,11 +51,24 @@ public class ComfyWorkflow {
     private String workflowJson;
 
     /**
-     * The image-guided variant of the same preset, used only when a caller supplies reference
-     * images. Null means the row's tool does not accept them.
+     * The image-guided variants of the same preset, at most one per number of reference images,
+     * used only when a caller supplies that many. Empty means the row's tool does not accept them.
      */
-    @Column(name = "reference_workflow_json")
-    private String referenceWorkflowJson;
+    @ElementCollection
+    @CollectionTable(name = "comfy_workflow_reference_variant",
+            joinColumns = @JoinColumn(name = "comfy_workflow_id", nullable = false))
+    private List<ComfyWorkflowReferenceVariant> referenceVariants = new ArrayList<>();
+
+    /**
+     * The classified intents this workflow serves. The image router narrows its candidates to the
+     * workflows serving the request's intent; empty means it serves none explicitly.
+     */
+    @ElementCollection
+    @CollectionTable(name = "comfy_workflow_intent",
+            joinColumns = @JoinColumn(name = "comfy_workflow_id", nullable = false))
+    @Column(name = "intent", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Set<ImageIntent> intents = new HashSet<>();
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
@@ -90,12 +113,20 @@ public class ComfyWorkflow {
         this.workflowJson = workflowJson;
     }
 
-    public String getReferenceWorkflowJson() {
-        return referenceWorkflowJson;
+    public List<ComfyWorkflowReferenceVariant> getReferenceVariants() {
+        return referenceVariants;
     }
 
-    public void setReferenceWorkflowJson(String referenceWorkflowJson) {
-        this.referenceWorkflowJson = referenceWorkflowJson;
+    public void setReferenceVariants(List<ComfyWorkflowReferenceVariant> referenceVariants) {
+        this.referenceVariants = new ArrayList<>(referenceVariants);
+    }
+
+    public Set<ImageIntent> getIntents() {
+        return intents;
+    }
+
+    public void setIntents(Set<ImageIntent> intents) {
+        this.intents = new HashSet<>(intents);
     }
 
     public boolean isEnabled() {

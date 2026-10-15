@@ -43,7 +43,7 @@ class ImageWorkflowGraphTest {
                 ImageWorkflowState.IMAGE_INTENT, new ImageIntentClassification(ImageIntent.NEW_IMAGE, "No photo."))));
 
         when(selectImageWorkflowNode.apply(any(ImageWorkflowState.class))).thenReturn(completedFuture(Map.of(
-                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(new WorkflowCandidate("generate_image", "FLUX", "General.")),
+                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(new WorkflowCandidate("my_workflow", "My workflow", "General.")),
                 ImageWorkflowState.WORKFLOW_SELECTION, new ImageWorkflowSelection("made_up", null, "Guess."))));
 
         when(writeImagePromptNode.apply(any(ImageWorkflowState.class))).thenAnswer(invocation -> {
@@ -60,7 +60,7 @@ class ImageWorkflowGraphTest {
         CompiledGraph<ImageWorkflowState> graph = new ImageWorkflowGraph().imageRouterGraph(
                 classifyImageIntentNode,
                 selectImageWorkflowNode,
-                new ResolveImageWorkflowNode(new ImageRoutingProperties("generate_image", Map.of())),
+                new ResolveImageWorkflowNode(),
                 writeImagePromptNode,
                 CompileConfig.builder().build());
 
@@ -73,8 +73,8 @@ class ImageWorkflowGraphTest {
 
         ImageWorkflowSelection selection = finalState.workflowSelection().orElseThrow();
 
-        assertThat(selection.toolName()).isEqualTo("generate_image");
-        assertThat(selection.enhancedPrompt()).isEqualTo("an enhanced prompt for generate_image");
+        assertThat(selection.toolName()).isEqualTo("my_workflow");
+        assertThat(selection.enhancedPrompt()).isEqualTo("an enhanced prompt for my_workflow");
         assertThat(selection.rationale()).contains("made_up");
     }
 }

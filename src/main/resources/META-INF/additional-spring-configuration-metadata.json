@@ -59,12 +59,12 @@
     {
       "name": "comfyui.generation.poll-interval-millis",
       "type": "java.lang.Long",
-      "description": "Delay between ComfyUI history polls while a generation is running."
+      "description": "How long a generation waits with no ComfyUI event before checking /history, and the delay between history polls when the event stream is unavailable."
     },
     {
-      "name": "comfyui.generation.expected-seconds",
-      "type": "java.lang.Double",
-      "description": "Expected generation duration used to ramp the progress estimate."
+      "name": "comfyui.events.connect-timeout-millis",
+      "type": "java.lang.Long",
+      "description": "How long to wait for ComfyUI's /ws event stream to register before falling back to polling /history without step progress."
     },
     {
       "name": "comfyui.generation.release-memory-delay-millis",

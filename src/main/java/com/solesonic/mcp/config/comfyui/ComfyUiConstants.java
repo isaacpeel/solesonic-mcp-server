@@ -11,7 +11,9 @@ public final class ComfyUiConstants {
     public static final String VIEW_ENDPOINT = "/view";
     public static final String FREE_ENDPOINT = "/free";
     public static final String UPLOAD_ENDPOINT = "/upload/image";
+    public static final String WEBSOCKET_ENDPOINT = "/ws";
 
+    public static final String QUERY_PARAM_CLIENT_ID = "clientId";
     public static final String QUERY_PARAM_FILENAME = "filename";
     public static final String QUERY_PARAM_SUBFOLDER = "subfolder";
     public static final String QUERY_PARAM_TYPE = "type";
