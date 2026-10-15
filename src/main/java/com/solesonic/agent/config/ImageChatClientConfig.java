@@ -4,14 +4,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import static com.solesonic.agent.config.AgileChatClientConfig.AGILE_MODEL;
-
 /**
- * The image workflow router's own client. It deliberately runs on the agile model, so changing that
- * model stays a one-line change.
+ * The image workflow's own client, used for intent classification, workflow selection and prompt
+ * rewriting. It runs on an uncensored model so image prompts are not sanitized during the rewrite.
  */
 @Configuration
 public class ImageChatClientConfig {
@@ -25,9 +24,9 @@ public class ImageChatClientConfig {
 
     @Bean
     @Qualifier(IMAGE_CHAT_CLIENT)
-    public ChatClient imageChatClient() {
+    public ChatClient imageChatClient(@Value("${solesonic.image.model}") String imageModel) {
         OpenAiChatOptions.Builder openAiChatOptions = OpenAiChatOptions.builder()
-                .model(AGILE_MODEL);
+                .model(imageModel);
 
         return ChatClient.builder(openAiChatModel)
                 .defaultOptions(openAiChatOptions)
