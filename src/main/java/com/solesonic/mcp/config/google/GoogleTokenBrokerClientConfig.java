@@ -7,8 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.json.JacksonJsonDecoder;
 import org.springframework.http.codec.json.JacksonJsonEncoder;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.web.reactive.function.client.ServerOAuth2AuthorizedClientExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -27,7 +27,7 @@ import static com.solesonic.mcp.config.google.GoogleConstants.GOOGLE_TOKEN_BROKE
  *       the identity provider, and it fronts both broker endpoints; splitting it would mean a second
  *       client plus a second pair of credentials for no isolation that matters here. The service
  *       account needs the {@code token-mint-gmail} role in addition to {@code token-mint-jira}.</li>
- *   <li>{@link OAuth2AuthorizedClientManager} arrives as a bean-method parameter. That bean is
+ *   <li>{@link ReactiveOAuth2AuthorizedClientManager} arrives as a bean-method parameter. That bean is
  *       declared, unqualified, by {@code AtlassianTokenBrokerClientConfig}; declaring a second one
  *       here would leave Spring with two candidates and no way to choose.</li>
  * </ul>
@@ -41,9 +41,9 @@ public class GoogleTokenBrokerClientConfig {
     @Bean
     @Qualifier(GOOGLE_TOKEN_BROKER_WEB_CLIENT)
     public WebClient googleTokenBrokerWebClient(JsonMapper jsonMapper,
-                                                OAuth2AuthorizedClientManager authorizedClientManager) {
-        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
-                new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+                                                ReactiveOAuth2AuthorizedClientManager authorizedClientManager) {
+        ServerOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
+                new ServerOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
         oauth2Client.setDefaultClientRegistrationId(ATLASSIAN_TOKEN_BROKER);
 
         return WebClient.builder()

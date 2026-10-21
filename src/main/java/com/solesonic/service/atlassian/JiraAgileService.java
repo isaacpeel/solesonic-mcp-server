@@ -82,15 +82,15 @@ public class JiraAgileService {
     @Value("${jira.url.template}")
     private String jiraUrlTemplate;
 
-    private final WebClient webClient;
+    private final WebClient atlassianWebClient;
     private final JiraIssueService jiraIssueService;
     private final ChatClient chatClient;
 
     public JiraAgileService(
-            @Qualifier(ATLASSIAN_API_WEB_CLIENT) WebClient webClient,
+            @Qualifier(ATLASSIAN_API_WEB_CLIENT) WebClient atlassianWebClient,
             JiraIssueService jiraIssueService,
             @Qualifier(AGILE_CHAT_CLIENT) ChatClient chatClient) {
-        this.webClient = webClient;
+        this.atlassianWebClient = atlassianWebClient;
         this.jiraIssueService = jiraIssueService;
         this.chatClient = chatClient;
     }
@@ -100,7 +100,7 @@ public class JiraAgileService {
 
         String[] baseUri = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH};
 
-        Boards boards = webClient.get()
+        Boards boards = atlassianWebClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(baseUri);
                     uriBuilder.queryParamIfPresent(START_AT, Optional.ofNullable(listBoardsRequest.startAt()));
@@ -122,7 +122,7 @@ public class JiraAgileService {
     public Boards listBoards(CallerIdentity callerIdentity) {
         String[] baseUri = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH};
 
-        Boards boards = webClient.get()
+        Boards boards = atlassianWebClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(baseUri);
 
@@ -141,7 +141,7 @@ public class JiraAgileService {
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId};
 
-        return webClient.get()
+        return atlassianWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(base)
                         .build())
@@ -155,7 +155,7 @@ public class JiraAgileService {
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, CONFIGURATION_PATH};
 
-        return webClient.get()
+        return atlassianWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .pathSegment(base)
                         .build())
@@ -192,7 +192,7 @@ public class JiraAgileService {
 
         String[] base = {EX, JIRA, cloudIdPath, REST_PATH, AGILE_PATH, AGILE_VERSION_PATH, BOARD_PATH, boardId, ISSUE_PATH};
 
-        BoardIssues boardIssues = webClient.get()
+        BoardIssues boardIssues = atlassianWebClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.pathSegment(base);
 
