@@ -158,7 +158,7 @@ class WorkflowImageGenerationServiceTest {
 
     @Test
     void generate_withImagesOnARowWithoutAVariant_isRejected() {
-        RegisteredComfyWorkflow textOnly = new RegisteredComfyWorkflow("generate_image", "FLUX", "desc", baseTemplate);
+        RegisteredComfyWorkflow textOnly = new RegisteredComfyWorkflow("generate_image", "Example", "desc", baseTemplate);
 
         CallToolResult callToolResult = workflowImageGenerationService.generate(
                 textOnly, request(List.of(PNG)), progressReporter);
@@ -169,7 +169,7 @@ class WorkflowImageGenerationServiceTest {
     }
 
     private RegisteredComfyWorkflow withVariant() {
-        return new RegisteredComfyWorkflow("generate_image", "FLUX", "desc", baseTemplate, Map.of(2, variantTemplate));
+        return new RegisteredComfyWorkflow("generate_image", "Example", "desc", baseTemplate, Map.of(2, variantTemplate));
     }
 
     private ImageGenerationRequest request(List<ReferenceImage> referenceImages) {

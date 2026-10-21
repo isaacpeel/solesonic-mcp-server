@@ -55,7 +55,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <spring-ai.version>2.0.1</spring-ai.version>
+        <spring-ai.version>2.1.0-M1</spring-ai.version>
         <a2a-java-sdk.version>1.4.0.Final</a2a-java-sdk.version>
         <langgraph4j.version>1.9.5</langgraph4j.version>
         <redisson.version>4.8.0</redisson.version>

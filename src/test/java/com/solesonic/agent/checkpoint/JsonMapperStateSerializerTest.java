@@ -64,7 +64,7 @@ class JsonMapperStateSerializerTest {
                 ImageWorkflowState.REFERENCE_IMAGE_COUNT, 1,
                 ImageWorkflowState.REFERENCE_IMAGE_DESCRIPTIONS, List.of("a man with glasses"),
                 ImageWorkflowState.IMAGE_INTENT, new ImageIntentClassification(ImageIntent.EDIT_PERSON_IN_PHOTO, "Moves him."),
-                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(new WorkflowCandidate("generate_image", "FLUX", "General.")),
+                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(new WorkflowCandidate("generate_image", "Example", "General.")),
                 ImageWorkflowState.WORKFLOW_SELECTION, new ImageWorkflowSelection("generate_image", "a lit lighthouse", "General."));
 
         Map<String, Object> restored = roundTrip(data);

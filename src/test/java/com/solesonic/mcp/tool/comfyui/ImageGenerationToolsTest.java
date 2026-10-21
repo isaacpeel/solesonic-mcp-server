@@ -85,7 +85,7 @@ class ImageGenerationToolsTest {
         SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
 
         ComfyWorkflowTemplate baseTemplate = ComfyWorkflowTemplate.parse(BASE_WORKFLOW, JsonMapper.builder().build());
-        generateImage = new RegisteredComfyWorkflow("generate_image", "FLUX", "General.", baseTemplate);
+        generateImage = new RegisteredComfyWorkflow("generate_image", "Example", "General.", baseTemplate);
 
         imageGenerationTools = new ImageGenerationTools(
                 imageWorkflowGraph, graphRunner, comfyWorkflowRegistry, workflowImageGenerationService);
@@ -110,7 +110,7 @@ class ImageGenerationToolsTest {
         when(comfyWorkflowRegistry.registeredWorkflows()).thenReturn(List.of(generateImage));
         when(workflowImageGenerationService.generate(same(generateImage), any(ImageGenerationRequest.class),
                 same(rawReferenceImages), any()))
-                .thenReturn(CallToolResult.builder().addTextContent("Generated with FLUX.").build());
+                .thenReturn(CallToolResult.builder().addTextContent("Generated with Example.").build());
 
         CallToolResult callToolResult = imageGenerationTools.generateImageAgent(mcpSyncRequestContext, "a watercolor",
                 null, 768, List.of(new ReferenceImageInput("not*base64!", "image/png", "  a mountain lake at sunrise  ")));
@@ -134,7 +134,7 @@ class ImageGenerationToolsTest {
 
         assertThat(callToolResult.isError()).isNotEqualTo(Boolean.TRUE);
         assertThat(texts(callToolResult)).containsExactly(
-                "Generated with FLUX.",
+                "Generated with Example.",
                 "Workflow: generate_image. Why: General purpose.");
     }
 

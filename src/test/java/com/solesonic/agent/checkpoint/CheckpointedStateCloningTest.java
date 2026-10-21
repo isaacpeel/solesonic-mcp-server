@@ -70,7 +70,7 @@ class CheckpointedStateCloningTest {
 
     @Test
     void imageWorkflowStateClonesItsRoutingValuesWithTheDefaultSerializer() throws Exception {
-        WorkflowCandidate workflowCandidate = new WorkflowCandidate("generate_image", "FLUX", "General.");
+        WorkflowCandidate workflowCandidate = new WorkflowCandidate("generate_image", "Example", "General.");
         ImageWorkflowSelection imageWorkflowSelection = new ImageWorkflowSelection("generate_image", "a lighthouse", "General.");
 
         ImageIntentClassification imageIntentClassification =

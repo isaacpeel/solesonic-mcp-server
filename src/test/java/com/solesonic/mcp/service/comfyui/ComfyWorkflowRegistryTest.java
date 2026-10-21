@@ -64,13 +64,13 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_parsesEnabledRowsAndCarriesRowIdentityThrough() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("generate_image_flux_schnell", "FLUX.1-schnell", VALID_WORKFLOW)));
+                .thenReturn(List.of(row("generate_image_example", "Example Workflow", VALID_WORKFLOW)));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         assertThat(comfyWorkflowRegistry.registeredWorkflows()).singleElement().satisfies(registered -> {
-            assertThat(registered.toolName()).isEqualTo("generate_image_flux_schnell");
-            assertThat(registered.name()).isEqualTo("FLUX.1-schnell");
+            assertThat(registered.toolName()).isEqualTo("generate_image_example");
+            assertThat(registered.name()).isEqualTo("Example Workflow");
             assertThat(registered.template().hasToken(TOKEN_SEED)).isTrue();
         });
     }
@@ -101,13 +101,13 @@ class ComfyWorkflowRegistryTest {
                 row("malformed_json", "Broken", "{\"6\": "),
                 row("no_prompt_token", "Promptless", "{\"6\": {\"inputs\": {\"text\": \"hardcoded\"}}}"),
                 row("illegal tool name", "Bad name", VALID_WORKFLOW),
-                row("generate_image_flux_schnell", "FLUX.1-schnell", VALID_WORKFLOW)));
+                row("generate_image_example", "Example Workflow", VALID_WORKFLOW)));
 
         comfyWorkflowRegistry.loadWorkflows();
 
         assertThat(comfyWorkflowRegistry.registeredWorkflows())
                 .extracting(RegisteredComfyWorkflow::toolName)
-                .containsExactly("generate_image_flux_schnell");
+                .containsExactly("generate_image_example");
     }
 
     @Test
@@ -122,7 +122,7 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_registersAValidReferenceVariantUnderItsImageCount() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW, variant(1, ONE_SLOT_VARIANT))));
+                .thenReturn(List.of(row("generate_image", "Example", VALID_WORKFLOW, variant(1, ONE_SLOT_VARIANT))));
 
         comfyWorkflowRegistry.loadWorkflows();
 
@@ -168,7 +168,7 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_aRowWithoutAVariantAcceptsNoReferenceImages() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc())
-                .thenReturn(List.of(row("generate_image", "FLUX", VALID_WORKFLOW)));
+                .thenReturn(List.of(row("generate_image", "Example", VALID_WORKFLOW)));
 
         comfyWorkflowRegistry.loadWorkflows();
 
@@ -215,7 +215,7 @@ class ComfyWorkflowRegistryTest {
     @Test
     void loadWorkflows_aDuplicateImageCountRegistersThatCountOnceWithoutFailingTheRow() {
         when(comfyWorkflowRepository.findAllByEnabledTrueOrderByToolNameAsc()).thenReturn(List.of(
-                row("generate_image", "FLUX", VALID_WORKFLOW,
+                row("generate_image", "Example", VALID_WORKFLOW,
                         variant(1, ONE_SLOT_VARIANT), variant(1, ONE_SLOT_VARIANT.replace("0.6", "0.4")))));
 
         comfyWorkflowRegistry.loadWorkflows();

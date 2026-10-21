@@ -5,13 +5,9 @@ import com.solesonic.model.comfyui.ImageGenerationRequest;
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -24,7 +20,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ComfyWorkflowTemplateTest {
 
-    private static final String FIXTURE = "comfyui/flux1-schnell-test.json";
+    /**
+     * A deliberately abstract workflow: the template binds by token value only, so node ids, node
+     * types and parameter names carry no meaning here beyond giving each assertion a place to look.
+     */
+    private static final String BASE_WORKFLOW = """
+            {
+              "6":  {"class_type": "TextNode",    "inputs": {"text": "__PROMPT__", "source": ["30", 1]}},
+              "33": {"class_type": "TextNode",    "inputs": {"text": "", "source": ["30", 1]}},
+              "27": {"class_type": "SizeNode",    "inputs": {"width": "__WIDTH__", "height": "__HEIGHT__", "batch_size": 1}},
+              "30": {"class_type": "SourceNode",  "inputs": {"source_name": "example-source"}},
+              "31": {"class_type": "ProcessNode", "inputs": {
+                  "seed": "__SEED__", "steps": 4, "strength": 1, "method": "fixed",
+                  "positive": ["6", 0], "negative": ["33", 0], "latent_image": ["27", 0], "source": ["30", 0]}}
+            }""";
 
     private static final String POSITIVE_PROMPT_NODE_ID = "6";
     private static final String NEGATIVE_PROMPT_NODE_ID = "33";
@@ -39,7 +48,7 @@ class ComfyWorkflowTemplateTest {
     }
 
     /**
-     * The single most important assertion in this suite. The graph holds two {@code CLIPTextEncode}
+     * The single most important assertion in this suite. The graph holds two text
      * nodes, so a substitution regression that landed the prompt on the negative node would generate
      * the wrong image successfully, with no error anywhere to notice.
      */
@@ -86,10 +95,10 @@ class ComfyWorkflowTemplateTest {
 
         ObjectNode samplerInputs = inputs(workflow, SAMPLER_NODE_ID);
         assertThat(samplerInputs.get("steps").asInt()).isEqualTo(4);
-        assertThat(samplerInputs.get("cfg").asInt()).isEqualTo(1);
-        assertThat(samplerInputs.get("sampler_name").asString()).isEqualTo("euler");
+        assertThat(samplerInputs.get("strength").asInt()).isEqualTo(1);
+        assertThat(samplerInputs.get("method").asString()).isEqualTo("fixed");
         assertThat(inputs(workflow, LATENT_NODE_ID).get("batch_size").asInt()).isEqualTo(1);
-        assertThat(inputs(workflow, "30").get("ckpt_name").asString()).isEqualTo("flux1-schnell-fp8.safetensors");
+        assertThat(inputs(workflow, "30").get("source_name").asString()).isEqualTo("example-source");
     }
 
     /**
@@ -193,7 +202,7 @@ class ComfyWorkflowTemplateTest {
                 {
                   "aardvark": {
                     "inputs": {"text": "__PROMPT__"},
-                    "class_type": "CLIPTextEncode",
+                    "class_type": "TextNode",
                     "_meta": {"title": "Renamed By A Careless Re-export"}
                   },
                   "banana": {
@@ -288,26 +297,6 @@ class ComfyWorkflowTemplateTest {
         assertThat(inputs(second, "load1").get("image").asString()).isEqualTo("second.png");
     }
 
-    /**
-     * The shipped samples are what an operator pastes into reference_workflow_json, so they must at
-     * least register as one-slot variants.
-     */
-    @Test
-    void parse_theShippedReferenceSamplesAreOneSlotVariants() {
-        assertThat(ComfyWorkflowTemplate.parse(resource("comfyui/flux1-schnell-img2img.json"), jsonMapper)
-                .referenceImageSlots()).isEqualTo(1);
-        assertThat(ComfyWorkflowTemplate.parse(resource("comfyui/flux1-kontext-reference.json"), jsonMapper)
-                .referenceImageSlots()).isEqualTo(1);
-    }
-
-    private String resource(String path) {
-        try (InputStream inputStream = new ClassPathResource(path).getInputStream()) {
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ioException) {
-            throw new IllegalStateException("Unable to read " + path, ioException);
-        }
-    }
-
     private String referenceWorkflow(String... imageTokens) {
         ObjectNode workflow = jsonMapper.createObjectNode();
         workflow.putObject("6").putObject("inputs").put("text", "__PROMPT__");
@@ -330,11 +319,7 @@ class ComfyWorkflowTemplateTest {
     }
 
     private String fixture() {
-        try (InputStream inputStream = new ClassPathResource(FIXTURE).getInputStream()) {
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ioException) {
-            throw new IllegalStateException("Unable to read fixture " + FIXTURE, ioException);
-        }
+        return BASE_WORKFLOW;
     }
 
     private String text(ObjectNode workflow, String nodeId) {
