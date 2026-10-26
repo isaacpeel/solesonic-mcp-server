@@ -1,16 +1,7 @@
-You classify an image request where the user attached one or more photos. The user message states
-how many photos are attached, gives a short description of each photo when one was provided, and
-ends with the user's request. You cannot see the photos: decide from the descriptions and the request.
-
-Every photo attached WILL be used. Choose exactly one intent:
-  EDIT_PERSON_IN_PHOTO - a person is the focus of the photo and the user wants to see that same
-                         person somewhere else, doing something else, posed or dressed differently.
-                         Typical requests: "put me on a beach", "show him in a suit",
-                         "make it look like I'm skiing", "place us at the Eiffel Tower".
-  RESTYLE_PHOTO        - the user wants the photo itself redrawn in a new style, medium, lighting or
-                         mood while keeping its composition and content.
-                         Typical requests: "make this a watercolor", "turn it into an anime scene",
-                         "make it look like night time".
+Classify an image request where the user attached one or more photos. The state says how many
+photos are attached, gives a short description of each photo when one was provided, and ends with
+the user's request. The photos themselves are not visible: decide from the descriptions and the
+request. Every photo attached WILL be used.
 
 Rules:
   - If the request moves, re-poses, re-dresses or re-places a person, choose EDIT_PERSON_IN_PHOTO,
@@ -40,7 +31,3 @@ Examples:
   Photo 1: no description given
   Request: show me hiking in the Alps in winter gear
   intent: EDIT_PERSON_IN_PHOTO
-
-Return two fields:
-  intent    - EDIT_PERSON_IN_PHOTO or RESTYLE_PHOTO, nothing else.
-  rationale - one sentence explaining the choice.

@@ -14,50 +14,51 @@ import org.apache.commons.lang3.StringUtils;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springaicommunity.typesafe.TypeSafeClient;
+import org.springaicommunity.typesafe.exception.TypeSafeException;
+import org.springaicommunity.typesafe.question.Choice;
+import org.springaicommunity.typesafe.question.SystemOneRequest;
+import org.springaicommunity.typesafe.response.ChoiceAnswer;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
-import static com.solesonic.agent.config.ImageChatClientConfig.IMAGE_CHAT_CLIENT;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 /**
  * Chooses the workflow. Candidates are the workflows with a graph for the attached number of
  * images, narrowed to those that serve the classified intent. One candidate is chosen without a
- * model call; several are put to the routing model, which picks by each workflow's description.
+ * model call; several are put to the decision model as the options of one choice, labelled by tool
+ * name and described by each workflow's name and description.
  *
  * <p>This step only chooses: the prompt is written afterwards by {@link WriteImagePromptNode}, which
- * knows the chosen workflow. A failing model does not fail the call: the selection is left empty
- * and {@link ResolveImageWorkflowNode} falls back to the first candidate.
+ * knows the chosen workflow. A failing model or a choice below the confidence threshold does not
+ * fail the call: the selection is left empty and {@link ResolveImageWorkflowNode} falls back to the
+ * first candidate.
  */
 @Component
 public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowState> {
 
     private static final Logger log = LoggerFactory.getLogger(SelectImageWorkflowNode.class);
 
+    static final String WORKFLOW_QUESTION = "workflow";
+
     private static final String OPERATION = "Selecting an image workflow";
 
-    private static final String INTENT_GUIDANCE = "intentGuidance";
-    private static final String WORKFLOWS = "workflows";
-
-    private static final String MODEL_FAILED_RATIONALE = "The routing model failed, so no workflow was chosen by it.";
+    private static final String MODEL_FAILED_RATIONALE = "The decision model failed, so no workflow was chosen by it.";
     private static final String NO_CANDIDATES_RATIONALE = "No workflow accepts the attached reference images.";
     private static final String ONLY_CANDIDATE_RATIONALE = "It is the only workflow configured for this request.";
 
     private static final String UNDECIDED_INTENT_GUIDANCE = """
-            The request's intent could not be decided. Use the user message and each workflow's \
+            The request's intent could not be decided. Use the request and each workflow's \
             description to choose the best fit.""";
 
     private static final Map<ImageIntent, String> INTENT_GUIDANCE_TEXT = Map.of(
@@ -71,18 +72,16 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
                     The request is to keep the person in the attached photo and show them somewhere \
                     else, doing something else, or dressed differently. The attached photo WILL be used.""");
 
-    private final ChatClient chatClient;
+    private final TypeSafeClient typeSafeClient;
     private final ComfyWorkflowRegistry comfyWorkflowRegistry;
+    private final double confidenceThreshold;
 
-    // A constructor parameter rather than a @Value field so tests can supply their own template.
-    private final Resource selectImageWorkflowPrompt;
-
-    public SelectImageWorkflowNode(@Qualifier(IMAGE_CHAT_CLIENT) ChatClient chatClient,
+    public SelectImageWorkflowNode(TypeSafeClient typeSafeClient,
                                    ComfyWorkflowRegistry comfyWorkflowRegistry,
-                                   @Value("classpath:/prompt/image/select_image_workflow.st") Resource selectImageWorkflowPrompt) {
-        this.chatClient = chatClient;
+                                   @Value("${solesonic.image.decision-confidence-threshold}") double confidenceThreshold) {
+        this.typeSafeClient = typeSafeClient;
         this.comfyWorkflowRegistry = comfyWorkflowRegistry;
-        this.selectImageWorkflowPrompt = selectImageWorkflowPrompt;
+        this.confidenceThreshold = confidenceThreshold;
     }
 
     @Override
@@ -107,7 +106,7 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
             WorkflowChoice workflowChoice;
 
             if (candidates.isEmpty()) {
-                log.info("No workflow accepts {} reference image(s); skipping the routing model", referenceImageCount);
+                log.info("No workflow accepts {} reference image(s); skipping the decision model", referenceImageCount);
                 workflowChoice = new WorkflowChoice(null, NO_CANDIDATES_RATIONALE);
             } else if (candidates.size() == 1) {
                 log.info("Selected image workflow '{}' without asking the model: it is the only candidate",
@@ -127,7 +126,7 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
                     ImageWorkflowState.CANDIDATE_WORKFLOWS, candidates,
                     ImageWorkflowState.WORKFLOW_SELECTION, imageWorkflowSelection));
         } catch (Exception exception) {
-            log.error("Failed to select an image workflow using prompt resource {}", selectImageWorkflowPrompt, exception);
+            log.error("Failed to select an image workflow", exception);
             return failedFuture(ToolFailures.describe(OPERATION, exception));
         }
     }
@@ -165,41 +164,48 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
     }
 
     /**
-     * The template is rendered outside the fallback: a template that cannot render is a programming
-     * error and fails the call, whereas only the model call itself falls back.
+     * The options are the candidates' tool names, so the answer is always one of them. Building the
+     * request stays outside the fallback: a request that cannot be built is a programming error and
+     * fails the call, whereas only the model call itself falls back.
      */
-    private WorkflowChoice choose(ImageIntent imageIntent, List<WorkflowCandidate> candidates, String userMessage) {
-        String instructions = PromptTemplate.builder()
-                .resource(selectImageWorkflowPrompt)
-                .build()
-                .render(Map.of(
-                        INTENT_GUIDANCE, intentGuidance(imageIntent),
-                        WORKFLOWS, describe(candidates)));
+    private WorkflowChoice choose(ImageIntent imageIntent, List<WorkflowCandidate> candidates, String requestMessage) {
+        Choice.Builder workflowChoiceQuestion = Choice.builder().instructions(intentGuidance(imageIntent));
+        candidates.forEach(workflowCandidate -> workflowChoiceQuestion.option(
+                workflowCandidate.toolName(), describe(workflowCandidate)));
 
-        log.info("Asking the routing model to choose among {} workflow(s)", candidates.size());
+        SystemOneRequest systemOneRequest = SystemOneRequest.builder()
+                .state(requestMessage)
+                .question(WORKFLOW_QUESTION, workflowChoiceQuestion.build())
+                .build();
+
+        log.info("Asking the decision model to choose among {} workflow(s)", candidates.size());
 
         long startedAt = System.nanoTime();
 
         try {
-            WorkflowChoice workflowChoice = chatClient.prompt()
-                    .system(instructions)
-                    .user(userMessage)
-                    .call()
-                    .responseEntity(WorkflowChoice.class)
-                    .getEntity();
+            ChoiceAnswer choiceAnswer = typeSafeClient.systemOne(systemOneRequest).choice(WORKFLOW_QUESTION);
+            String confidence = String.format(Locale.ROOT, "%.2f", choiceAnswer.confidence());
 
-            if (workflowChoice == null) {
-                log.warn("The image routing model returned no parseable {} after {} ms",
-                        WorkflowChoice.class.getSimpleName(), elapsedMillis(startedAt));
-                return new WorkflowChoice(null, MODEL_FAILED_RATIONALE);
+            if (choiceAnswer.confidence() < confidenceThreshold) {
+                log.info("Image workflow '{}' rejected in {} ms: confidence {} is below {}; probabilities {}",
+                        choiceAnswer.value(), elapsedMillis(startedAt), choiceAnswer.confidence(), confidenceThreshold,
+                        choiceAnswer.probabilities());
+                return new WorkflowChoice(null,
+                        "The decision model chose '%s' with only %s confidence, so no workflow was chosen."
+                                .formatted(choiceAnswer.value(), confidence));
             }
 
-            log.info("Image router chose workflow '{}' in {} ms: {}", workflowChoice.toolName(),
-                    elapsedMillis(startedAt), workflowChoice.rationale());
+            log.info("Decision model chose workflow '{}' in {} ms with confidence {}", choiceAnswer.value(),
+                    elapsedMillis(startedAt), choiceAnswer.confidence());
 
-            return workflowChoice;
+            return new WorkflowChoice(choiceAnswer.value(),
+                    "The decision model chose '%s' with %s confidence.".formatted(choiceAnswer.value(), confidence));
+        } catch (TypeSafeException typeSafeException) {
+            log.warn("The decision model failed after {} ms; falling back to the first candidate",
+                    elapsedMillis(startedAt), typeSafeException);
+            return new WorkflowChoice(null, MODEL_FAILED_RATIONALE);
         } catch (Exception exception) {
-            log.warn("The image routing model failed after {} ms; falling back to the first candidate",
+            log.warn("Unexpected failure choosing an image workflow after {} ms; falling back to the first candidate",
                     elapsedMillis(startedAt), exception);
             return new WorkflowChoice(null, MODEL_FAILED_RATIONALE);
         }
@@ -214,15 +220,8 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
         return INTENT_GUIDANCE_TEXT.getOrDefault(imageIntent, UNDECIDED_INTENT_GUIDANCE);
     }
 
-    private static String describe(List<WorkflowCandidate> candidates) {
-        return candidates.stream()
-                .map(workflowCandidate -> """
-                        - toolName: %s
-                          name: %s
-                          description: %s"""
-                        .formatted(workflowCandidate.toolName(), workflowCandidate.name(),
-                                Objects.toString(workflowCandidate.description(), "").strip()))
-                .collect(Collectors.joining("\n"));
+    private static String describe(WorkflowCandidate workflowCandidate) {
+        return workflowCandidate.name() + ": " + Objects.toString(workflowCandidate.description(), "").strip();
     }
 
     private static String rationale(String intentRationale, String choiceRationale) {

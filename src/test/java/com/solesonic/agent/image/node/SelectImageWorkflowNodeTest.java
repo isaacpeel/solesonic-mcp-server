@@ -5,7 +5,6 @@ import com.solesonic.agent.image.ImageIntentClassification;
 import com.solesonic.agent.image.ImageWorkflowSelection;
 import com.solesonic.agent.image.ImageWorkflowState;
 import com.solesonic.agent.image.WorkflowCandidate;
-import com.solesonic.agent.image.WorkflowChoice;
 import com.solesonic.model.comfyui.RegisteredComfyWorkflow;
 import com.solesonic.service.comfyui.ComfyWorkflowRegistry;
 import com.solesonic.service.comfyui.ComfyWorkflowTemplate;
@@ -15,14 +14,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ResponseEntity;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
+import org.springaicommunity.typesafe.TypeSafeClient;
+import org.springaicommunity.typesafe.exception.TypeSafeException;
+import org.springaicommunity.typesafe.question.Choice;
+import org.springaicommunity.typesafe.question.SystemOneRequest;
+import org.springaicommunity.typesafe.response.Answer;
+import org.springaicommunity.typesafe.response.ChoiceAnswer;
+import org.springaicommunity.typesafe.response.SystemOneResponse;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -43,6 +43,7 @@ class SelectImageWorkflowNodeTest {
     private static final String USER_PROMPT = "put me on a sunny beach";
     private static final String DESCRIPTION = "a man with glasses and a beard";
     private static final String INTENT_RATIONALE = "Intent decided.";
+    private static final double THRESHOLD = 0.5;
 
     private static final String BASE_WORKFLOW = """
             {"6": {"inputs": {"text": "__PROMPT__"}}}""";
@@ -56,21 +57,10 @@ class SelectImageWorkflowNodeTest {
              "40": {"inputs": {"image": "__REFERENCE_IMAGE_1__"}},
              "41": {"inputs": {"image": "__REFERENCE_IMAGE_2__"}}}""";
 
-    private static final Resource TEMPLATE = new ByteArrayResource("""
-            {intentGuidance}
-            Workflows:
-            {workflows}""".getBytes(StandardCharsets.UTF_8));
-
     private static final Set<ImageIntent> NEW_OR_RESTYLE = Set.of(ImageIntent.NEW_IMAGE, ImageIntent.RESTYLE_PHOTO);
 
     @Mock
-    private ChatClient chatClient;
-
-    @Mock
-    private ChatClient.ChatClientRequestSpec chatClientRequestSpec;
-
-    @Mock
-    private ChatClient.CallResponseSpec callResponseSpec;
+    private TypeSafeClient typeSafeClient;
 
     @Mock
     private ComfyWorkflowRegistry comfyWorkflowRegistry;
@@ -96,7 +86,7 @@ class SelectImageWorkflowNodeTest {
                         Map.of(1, oneSlotTemplate, 2, twoSlotTemplate), Set.of(ImageIntent.EDIT_PERSON_IN_PHOTO)),
                 new RegisteredComfyWorkflow("text_only", "Text only", "No reference images.", baseTemplate)));
 
-        selectImageWorkflowNode = new SelectImageWorkflowNode(chatClient, comfyWorkflowRegistry, TEMPLATE);
+        selectImageWorkflowNode = new SelectImageWorkflowNode(typeSafeClient, comfyWorkflowRegistry, THRESHOLD);
     }
 
     /**
@@ -112,33 +102,39 @@ class SelectImageWorkflowNodeTest {
         assertThat(selection(result).toolName()).isEqualTo("person_workflow");
         assertThat(selection(result).enhancedPrompt()).isNull();
         assertThat(selection(result).rationale()).contains(INTENT_RATIONALE);
-        verifyNoInteractions(chatClient);
+        verifyNoInteractions(typeSafeClient);
     }
 
+    /**
+     * The options are exactly the candidates' tool names, so the model cannot answer with a
+     * workflow that was not offered, and each carries the workflow's name and description.
+     */
     @Test
     void apply_restyleIntent_asksTheModelToChooseAmongTheWorkflowsServingItWithTheDescriptions() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("photoreal_workflow", "Photoreal."));
+        stubDecisionModelReturning("photoreal_workflow", 0.9);
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO)).get();
 
         assertThat(candidateToolNames(result)).containsExactly("general_workflow", "photoreal_workflow");
         assertThat(selection(result).toolName()).isEqualTo("photoreal_workflow");
-        assertThat(selection(result).rationale()).isEqualTo(INTENT_RATIONALE + " Photoreal.");
+        assertThat(selection(result).rationale())
+                .startsWith(INTENT_RATIONALE + " ")
+                .contains("photoreal_workflow", "0.90");
 
-        ArgumentCaptor<String> systemCaptor = ArgumentCaptor.forClass(String.class);
-        verify(chatClientRequestSpec).system(systemCaptor.capture());
-        assertThat(systemCaptor.getValue())
-                .contains("restyle the attached photo", "general_workflow", "photoreal_workflow")
-                .doesNotContain("person_workflow");
+        SystemOneRequest systemOneRequest = capturedRequest();
+        Choice workflowChoice = (Choice) systemOneRequest.questions().get(SelectImageWorkflowNode.WORKFLOW_QUESTION);
 
-        ArgumentCaptor<String> userCaptor = ArgumentCaptor.forClass(String.class);
-        verify(chatClientRequestSpec).user(userCaptor.capture());
-        assertThat(userCaptor.getValue()).contains("[1 photo attached]", "Photo 1: " + DESCRIPTION, USER_PROMPT);
+        assertThat(workflowChoice.criteria().keySet()).containsExactly("general_workflow", "photoreal_workflow");
+        assertThat(workflowChoice.criteria().get("photoreal_workflow").asText()).isEqualTo("Photoreal: Photoreal people.");
+        assertThat(workflowChoice.instructions()).isNotNull();
+        assertThat(workflowChoice.instructions().asText()).contains("restyle the attached photo");
+        assertThat(systemOneRequest.state().asText())
+                .contains("[1 photo attached]", "Photo 1: " + DESCRIPTION, USER_PROMPT);
     }
 
     @Test
     void apply_newImageWithoutPhotos_offersOnlyTheWorkflowsServingIt() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("general_workflow", "General."));
+        stubDecisionModelReturning("general_workflow", 0.9);
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(0, ImageIntent.NEW_IMAGE)).get();
 
@@ -147,7 +143,7 @@ class SelectImageWorkflowNodeTest {
 
     @Test
     void apply_undecidedIntent_offersEveryWorkflowThatAcceptsTheImages() throws Exception {
-        stubChatClientReturning(new WorkflowChoice("person_workflow", "Person."));
+        stubDecisionModelReturning("person_workflow", 0.9);
 
         Map<String, Object> result = selectImageWorkflowNode.apply(state(1, null)).get();
 
@@ -181,7 +177,7 @@ class SelectImageWorkflowNodeTest {
 
         assertThat(candidateToolNames(result)).containsExactly("person_workflow");
         assertThat(selection(result).toolName()).isEqualTo("person_workflow");
-        verifyNoInteractions(chatClient);
+        verifyNoInteractions(typeSafeClient);
     }
 
     @Test
@@ -190,21 +186,53 @@ class SelectImageWorkflowNodeTest {
 
         assertThat(candidateToolNames(result)).isEmpty();
         assertThat(selection(result).toolName()).isNull();
-        verifyNoInteractions(chatClient);
+        verifyNoInteractions(typeSafeClient);
     }
 
     @Test
-    void apply_modelThrows_leavesTheWorkflowUnchosenInsteadOfFailing() throws Exception {
-        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.system(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.call()).thenThrow(new IllegalStateException("model offline"));
+    void apply_confidenceExactlyAtTheThreshold_acceptsTheChoice() throws Exception {
+        stubDecisionModelReturning("photoreal_workflow", THRESHOLD);
+
+        Map<String, Object> result = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO)).get();
+
+        assertThat(selection(result).toolName()).isEqualTo("photoreal_workflow");
+    }
+
+    /**
+     * A low-confidence choice leaves the workflow unchosen, so the resolver falls back to the
+     * first candidate.
+     */
+    @Test
+    void apply_confidenceBelowTheThreshold_leavesTheWorkflowUnchosen() throws Exception {
+        stubDecisionModelReturning("photoreal_workflow", 0.49);
+
+        Map<String, Object> result = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO)).get();
+
+        assertThat(selection(result).toolName()).isNull();
+        assertThat(selection(result).rationale()).contains("photoreal_workflow", "0.49");
+    }
+
+    @Test
+    void apply_answerMissing_leavesTheWorkflowUnchosenInsteadOfFailing() throws Exception {
+        when(typeSafeClient.systemOne(any(SystemOneRequest.class)))
+                .thenReturn(new SystemOneResponse("test-decision-model", Map.of(), null));
 
         CompletableFuture<Map<String, Object>> future = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO));
 
         assertThat(future).isCompleted();
         assertThat(selection(future.get()).toolName()).isNull();
-        assertThat(selection(future.get()).rationale()).contains("routing model failed");
+        assertThat(selection(future.get()).rationale()).contains("decision model failed");
+    }
+
+    @Test
+    void apply_modelThrows_leavesTheWorkflowUnchosenInsteadOfFailing() throws Exception {
+        when(typeSafeClient.systemOne(any(SystemOneRequest.class))).thenThrow(new TypeSafeException("model offline"));
+
+        CompletableFuture<Map<String, Object>> future = selectImageWorkflowNode.apply(state(1, ImageIntent.RESTYLE_PHOTO));
+
+        assertThat(future).isCompleted();
+        assertThat(selection(future.get()).toolName()).isNull();
+        assertThat(selection(future.get()).rationale()).contains("decision model failed");
     }
 
     @Test
@@ -219,14 +247,18 @@ class SelectImageWorkflowNodeTest {
                 .hasMessageContaining("carries no prompt");
     }
 
-    private void stubChatClientReturning(WorkflowChoice workflowChoice) {
-        ResponseEntity<ChatResponse, WorkflowChoice> responseEntity = new ResponseEntity<>(null, workflowChoice);
+    private void stubDecisionModelReturning(String toolName, double confidence) {
+        Map<String, Answer> answers = Map.of(SelectImageWorkflowNode.WORKFLOW_QUESTION,
+                new ChoiceAnswer(toolName, Map.of(toolName, confidence), confidence));
 
-        when(chatClient.prompt()).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.system(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.user(anyString())).thenReturn(chatClientRequestSpec);
-        when(chatClientRequestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.responseEntity(WorkflowChoice.class)).thenReturn(responseEntity);
+        when(typeSafeClient.systemOne(any(SystemOneRequest.class)))
+                .thenReturn(new SystemOneResponse("test-decision-model", answers, null));
+    }
+
+    private SystemOneRequest capturedRequest() {
+        ArgumentCaptor<SystemOneRequest> requestCaptor = ArgumentCaptor.forClass(SystemOneRequest.class);
+        verify(typeSafeClient).systemOne(requestCaptor.capture());
+        return requestCaptor.getValue();
     }
 
     private static ImageWorkflowState state(int referenceImageCount, ImageIntent imageIntent) {

@@ -44,6 +44,12 @@ Key properties (environment variables in parentheses)
   - comfyui.generation.release-memory-delay-millis=300000
   - comfyui.reference-image.max-bytes=10MB   # largest decoded reference image accepted
   - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
+- Image routing decision model (System One protocol, served by the LiteLLM proxy)
+  - spring.ai.typesafe.base-url=(${CHAT_OPENAI_HOST})   # the same proxy and /v1 base URL as the chat clients, e.g. http://litellm-host:4000/v1; /systemone is appended
+  - spring.ai.typesafe.api-key=(${OPENAI_API_KEY})   # the same LiteLLM key the chat clients use; a blank key fails startup
+  - spring.ai.typesafe.model=(${IMAGE_DECISION_MODEL})   # must be a decision model in the proxy's model list, not a chat model
+  - spring.ai.typesafe.timeout=10s
+  - solesonic.image.decision-confidence-threshold=0.5 — a choice below this confidence counts as undecided and falls back to the default. See Image Generation: ./image-generation.md
 - Database (PostgreSQL)
   - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server
   - spring.datasource.username=(${DATABASE_USERNAME})

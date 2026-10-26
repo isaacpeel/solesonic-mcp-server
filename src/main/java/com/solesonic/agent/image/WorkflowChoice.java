@@ -1,16 +1,9 @@
 package com.solesonic.agent.image;
 
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-
 /**
- * The structured output of the workflow selection step: which workflow, and why. The prompt is
- * written later, by a separate step that knows the chosen workflow.
+ * The workflow selection step's answer: which workflow, and why. A null {@code toolName} means no
+ * workflow was chosen and the first candidate is used. The prompt is written later, by a separate
+ * step that knows the chosen workflow.
  */
-public record WorkflowChoice(
-        @JsonPropertyDescription("The toolName of exactly one workflow from the list offered.")
-        String toolName,
-
-        @JsonPropertyDescription("One sentence explaining why this workflow fits the request.")
-        String rationale
-) {
+public record WorkflowChoice(String toolName, String rationale) {
 }

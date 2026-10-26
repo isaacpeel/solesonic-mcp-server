@@ -9,8 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The image workflow's own client, used for intent classification, workflow selection and prompt
- * rewriting. It runs on an uncensored model so image prompts are not sanitized during the rewrite.
+ * The image workflow's own client, used to write the image prompt. It runs on an uncensored model so
+ * image prompts are not sanitized during the rewrite. Intent classification and workflow selection
+ * use the decision model instead.
  */
 @Configuration
 public class ImageChatClientConfig {

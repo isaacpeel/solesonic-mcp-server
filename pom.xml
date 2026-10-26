@@ -58,6 +58,7 @@
         <spring-ai.version>2.1.0-M1</spring-ai.version>
         <a2a-java-sdk.version>1.4.0.Final</a2a-java-sdk.version>
         <langgraph4j.version>1.9.5</langgraph4j.version>
+        <typesafe.version>0.4.0</typesafe.version>
         <redisson.version>4.8.0</redisson.version>
         <jackson-bom.version>3.2.3</jackson-bom.version>
         <netty.version>4.2.19.Final</netty.version>
@@ -84,6 +85,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!--
+        Request correlation: a trace id per request, in the MDC (so ECS logs carry it) and on outbound calls
+        (traceparent), so solesonic-log-agent can follow one request across llm-api and mcp-server. No exporter.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-micrometer-tracing-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
         </dependency>
 
         <!-- Spring Security Crypto -->
@@ -140,6 +153,12 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springaicommunity</groupId>
+            <artifactId>spring-ai-starter-typesafe</artifactId>
+            <version>${typesafe.version}</version>
         </dependency>
 
         <dependency>

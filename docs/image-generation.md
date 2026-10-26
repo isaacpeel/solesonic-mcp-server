@@ -32,9 +32,11 @@ How routing works
 START → classifyImageIntent → selectImageWorkflow → resolveImageWorkflow → writeImagePrompt → END
 ```
 
-Choosing a workflow and writing its prompt are separate steps, and the choice itself is split into a narrow intent question followed by a lookup. A small routing model answers "is this an edit of the person in the photo?" far more reliably than it compares several prose descriptions.
+Choosing a workflow and writing its prompt are separate steps, and the choice itself is split into a narrow intent question followed by a lookup. A decision model answers "is this an edit of the person in the photo?" far more reliably than it compares several prose descriptions.
 
-Every routing call's user message leads with the photo facts, for example:
+The two choices — intent and workflow — go to a **decision model** (System One protocol, through the LiteLLM proxy; see ./configuration.md). Each is one `choice` question whose options are the only allowed answers, so the model cannot invent a label. The answer carries a confidence: one below `solesonic.image.decision-confidence-threshold` counts as undecided. Only the prompt is written by a chat model.
+
+Every routing call's state leads with the photo facts, for example:
 
 ```
 [1 photo attached]
@@ -42,15 +44,15 @@ Photo 1: a man with glasses and a beard, head and shoulders
 Request: put me on a sunny beach holding a cocktail
 ```
 
-1. **Classify intent (LLM, only when photos are attached).** Without a photo the intent is `NEW_IMAGE` and no model is asked. With a photo, the model chooses `EDIT_PERSON_IN_PHOTO` (keep the person, change where they are or what they are doing) or `RESTYLE_PHOTO` (keep the composition, change the look), using the request and each image's `description`; `prompt/image/classify_image_intent.st` carries the rules and worked examples. An unusable answer — a failure, nothing parseable, or `NEW_IMAGE` despite a photo — leaves the intent undecided.
-2. **Select workflow.** Candidates are the workflows with a graph for the attached number of images, narrowed to those that serve the intent (their `comfy_workflow_intent` rows). An undecided intent, or one no such workflow serves, keeps every workflow that can take the images. **One candidate is chosen without a model call**; several are put to the model (`prompt/image/select_image_workflow.st`), which picks by description.
+1. **Classify intent (decision model, only when photos are attached).** Without a photo the intent is `NEW_IMAGE` and no model is asked. With a photo, the model is offered exactly two options, `EDIT_PERSON_IN_PHOTO` (keep the person, change where they are or what they are doing) and `RESTYLE_PHOTO` (keep the composition, change the look), and decides from the request and each image's `description`; `prompt/image/classify_image_intent.st` carries the rules and worked examples as the question's instructions. A failure, a missing answer or a confidence below the threshold leaves the intent undecided.
+2. **Select workflow (decision model).** Candidates are the workflows with a graph for the attached number of images, narrowed to those that serve the intent (their `comfy_workflow_intent` rows). An undecided intent, or one no such workflow serves, keeps every workflow that can take the images. **One candidate is chosen without a model call**; several are put to the model as options labelled by tool name and described by each row's name and `description`, with guidance for the intent as the instructions. A failure or a confidence below the threshold leaves the workflow unchosen.
 3. **Resolve (deterministic).** A missing or unknown pick falls back to the first candidate, so a request that any workflow can take always gets one. No candidates at all fails the call: `No image workflow accepts N reference image(s).`
 4. **Write the prompt (LLM).** Given the chosen workflow's name and description, the intent, and the request — **never the image descriptions** — the model writes the final prompt (`prompt/image/write_image_prompt.st`): a full scene for a new image, the new look for a restyle, a short edit instruction that does not describe the person for a person edit. This is the **only** place the prompt is refined. If it fails, the caller's prompt is used as written.
 5. **Generate.** The tool runs the chosen workflow with the final prompt. Generation happens after the graph ends, because graph state is checkpointed to Redis and a request's images can be tens of megabytes; the graph sees only their count and descriptions.
 
 Model failures never fail the call: each step falls back as described, and every fallback is appended to the rationale in the result's last text block. A request therefore costs up to three model calls — intent (photos only), selection (several candidates only) and prompt writing — before generation starts.
 
-The router runs on the agile model (`AgileChatClientConfig.AGILE_MODEL`) through its own `ChatClient`. Each step logs at INFO: the photo count, candidates, the intent and choice with timings, the final prompt, and any fallback.
+Intent and workflow selection run on the decision model (`spring.ai.typesafe.model`); prompt writing runs on the image chat model (`solesonic.image.model`) through its own `ChatClient`. Each step logs at INFO: the photo count, candidates, the intent and choice with their confidence and timings, the full probabilities of any choice rejected for low confidence, the final prompt, and any fallback.
 
 Because selection and prompt writing read the workflow descriptions, a description should say **when** its workflow is the right choice, and should not carry instructions about refining the prompt — that guidance lives in the templates.
 
@@ -299,7 +301,7 @@ Troubleshooting
 | Symptom | Cause | Fix |
 |---|---|---|
 | Every call fails with "No image workflow accepts 0 reference image(s)" | Table empty, or every row was skipped | Check the startup log for `Skipping ComfyUI workflow` warnings |
-| Result says the first candidate was used | The routing model failed or chose an unknown workflow | Check the log for `The image routing model failed`; check the agile model is reachable |
+| Result says the first candidate was used | The decision model failed, or its choice fell below the confidence threshold | Check the log for `The decision model failed` or `rejected ... confidence ... is below`; check the decision model is reachable at `CHAT_OPENAI_HOST`, and rewrite the rows' `description` text if choices are consistently low-confidence |
 | A photo edit of a person runs the restyle workflow | The intent was classified as `RESTYLE_PHOTO`, often because the client put its own description of the photo into `prompt` instead of `description` | Check the `Image intent classified as` log line; have the client pass the user's words in `prompt` and the photo description in `description` |
 | The router keeps picking the wrong workflow | The rows' intents or descriptions do not say clearly when each one applies | Check each row's `comfy_workflow_intent` entries, rewrite the rows' `description` text, then restart |
 | Log: "workflow has no `__PROMPT__` token" | The export was pasted without tokenising the positive prompt | Set the positive prompt node's text to `__PROMPT__` |
@@ -320,7 +322,7 @@ Operational notes
 - After each generation, the service schedules a call to `/free` (unloading the model and releasing VRAM) `comfyui.generation.release-memory-delay-millis` later. A generation that lands before that delay elapses cancels and reschedules it, so `/free` fires at most once — always that delay after the *last* generation — instead of forcing a reload between back-to-back requests.
 - The ComfyUI origin's proxy must pass WebSocket upgrades on `/ws` (`Upgrade` and `Connection` headers) for step progress; without them generation still works, with the `Generating…` fallback and a warning in the log for each generation.
 - The wait blocks a request thread for the duration of the generation, bounded by `comfyui.generation.timeout-seconds`. Slow workflows hold the thread for longer; if they become frequent or slow enough to approach the timeout, this is the constraint that pushes toward async task handoff.
-- Routing adds up to three calls to the agile model before generation starts.
+- Routing adds up to two decision-model calls and one chat-model call before generation starts.
 - A 1024×1024 PNG is roughly 2MB once base64-encoded. The ComfyUI WebClient raises its in-memory codec limit to 32MB so there is headroom for larger sizes.
 - Workflows are read from the database **once at startup**. Editing a row or variant has no effect until the server restarts.
 - Authorization is checked twice: `@PreAuthorize` on the `generate_image` method, and again on `WorkflowImageGenerationService`, which is also where reference images are decoded. Calling `ComfyUiService` directly would bypass the role check.
