@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool.comfyui;
 
-import com.solesonic.a2a.progress.ProgressReporter;
+import com.solesonic.mcp.progress.ProgressReporter;
 import com.solesonic.model.comfyui.GeneratedImage;
 import com.solesonic.model.comfyui.ImageGenerationRequest;
 import com.solesonic.model.comfyui.ReferenceImage;

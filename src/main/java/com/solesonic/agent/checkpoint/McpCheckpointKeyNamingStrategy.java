@@ -4,7 +4,7 @@ import org.bsc.langgraph4j.checkpoint.KeyNamingStrategy;
 
 /**
  * Keeps every graph checkpoint key under one {@code mcp:checkpoint:} keyspace, visually distinct
- * from the A2A task store's {@code a2a:} keys and chat memory's {@code solesonic:chat:memory:} keys.
+ * from chat memory's {@code solesonic:chat:memory:} keys.
  */
 public class McpCheckpointKeyNamingStrategy implements KeyNamingStrategy {
 

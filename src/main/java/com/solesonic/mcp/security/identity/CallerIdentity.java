@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * Outbound calls to per-user APIs (Atlassian, Google) must not read {@link SecurityContextHolder}
  * at the point of use: graph nodes and fan-out work run on pooled threads (LangGraph4j runs graph
  * walks on {@code ForkJoinPool.commonPool()}) that never inherit the request's security context.
- * Instead, entry points ({@code @McpTool} methods, A2A executors) capture the caller once with
+ * Instead, entry points ({@code @McpTool} methods) capture the caller once with
  * {@link #requireCurrent()}, pass it explicitly through graph state and service calls, and each
  * outbound request carries it as a {@link ClientRequest} attribute via {@link #requestAttributes()}.
  * <p>

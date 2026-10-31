@@ -11,10 +11,6 @@ import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.model.AssigneeCandidate;
 import com.solesonic.agent.model.AssigneeLookupResult;
 import com.solesonic.agent.model.JiraIssueCreatePayload;
-import com.solesonic.agent.nba.SportsState;
-import com.solesonic.agent.nba.model.EspnTeamProfile;
-import com.solesonic.agent.nba.model.SportsQueryIntent;
-import com.solesonic.agent.nba.model.SportsQuestionType;
 import com.solesonic.mcp.security.identity.CallerIdentity;
 import com.solesonic.model.atlassian.agile.Board;
 import org.junit.jupiter.api.Test;
@@ -90,20 +86,6 @@ class JsonMapperStateSerializerTest {
 
         assertThat(restored).isEqualTo(data);
         assertThat(new JiraState(restored).assigneeCandidates().orElseThrow().getFirst()).isInstanceOf(AssigneeCandidate.class);
-    }
-
-    @Test
-    void sportsState_roundTripsDomainTypes() throws IOException {
-        Map<String, Object> data = Map.of(
-                SportsState.CALLER_IDENTITY, CALLER,
-                SportsState.SPORTS_QUERY_INTENT, new SportsQueryIntent(List.of(SportsQuestionType.STANDINGS), List.of("Celtics"), List.of(), "tonight"),
-                SportsState.RESOLVED_TEAMS, List.of(new EspnTeamProfile("Boston Celtics", "bos", "boston-celtics", "s", "r", "t")),
-                SportsState.SUB_GRAPH_RESULTS, Map.of("standings", "East leaders"));
-
-        Map<String, Object> restored = roundTrip(data);
-
-        assertThat(restored).isEqualTo(data);
-        assertThat(new SportsState(restored).resolvedTeams().orElseThrow().getFirst()).isInstanceOf(EspnTeamProfile.class);
     }
 
     @Test

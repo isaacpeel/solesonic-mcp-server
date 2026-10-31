@@ -9,16 +9,17 @@ If a run configuration doesn't exist, create one.
 
 JDK 25 + Netty requires `--enable-native-access=ALL-UNNAMED`. Surefire already sets it in `pom.xml`; add it as a VM option in IntelliJ run configurations and when running the jar directly.
 
-Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.1, A2A Java SDK 1.0.0.Final, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + A2A task store) and the OpenAI API (`OPENAI_API_KEY`; models selected per chat client in `agent/config/*ChatClientConfig`).
+Stack: Java 25, Spring Boot 4.0.6, Spring AI 2.0.1, LangGraph4j 1.8.17. Runtime dependencies: Redis (chat memory + graph checkpoints) and the OpenAI API (`OPENAI_API_KEY`; models selected per chat client in `agent/config/*ChatClientConfig`).
 
 ## Architecture
 
-Four top-level packages under `com.solesonic`, layered rather than parallel:
+Three top-level packages under `com.solesonic`, layered rather than parallel:
 
 - **`mcp/`** — the MCP protocol surface: tools, prompts, security, and typed HTTP clients for external APIs.
-- **`agent/`** — LangGraph4j state graphs that implement multi-step workflows. MCP tools and A2A executors both invoke these.
-- **`a2a/`** — the Agent2Agent server: agent cards, JSON-RPC/SSE endpoints, Redis-backed task store, agent executors.
-- **`service/` + `model/`** — external integrations (Atlassian, ESPN, Tavily) and their record models, shared by both `mcp` and `agent`.
+- **`agent/`** — LangGraph4j state graphs that implement multi-step workflows, invoked by MCP tools.
+- **`service/` + `model/`** — external integrations (Atlassian, Tavily, ComfyUI, Gmail) and their record models, shared by both `mcp` and `agent`.
+
+The NBA agent and the A2A server it was served by moved to `solesonic-agents` (`agents/nba-agent`, Python). This server has no A2A endpoints.
 
 ### MCP tools and prompts
 
@@ -26,28 +27,21 @@ Tools are plain `@Service` beans with `@McpTool`-annotated methods (`mcp/tool/**
 
 Prompts are `@McpPrompt` methods in `mcp/prompt/PromptProvider`, rendered from StringTemplate `.st` files under `src/main/resources/prompt/**` via `PromptUtil.buildPromptResult`. Graph nodes render the same `.st` files directly with Spring AI `PromptTemplate`.
 
-Destructive tools elicit confirmation through `McpConfirmations.confirm(...)` and branch on the `ElicitResult.Action` (ACCEPT/DECLINE/CANCEL). Long-running tools stream progress via `ProgressReporter` over `McpSyncRequestContext`.
+Destructive tools elicit confirmation through `McpConfirmations.confirm(...)` and branch on the `ElicitResult.Action` (ACCEPT/DECLINE/CANCEL). Long-running tools stream progress via `ProgressReporter` (`mcp/progress`) over `McpSyncRequestContext`.
 
 ### LangGraph4j graph conventions
 
 Every workflow follows the same shape:
 
-- **State** (`SportsState`, `JiraState`, `AgileState`) extends `AgentState`: `public static final String` key constants plus `Optional<T>` accessor methods. Never read state by string literal.
+- **State** (`JiraState`, `AgileState`, `ImageWorkflowState`) extends `AgentState`: `public static final String` key constants plus `Optional<T>` accessor methods. Never read state by string literal.
 - **Nodes** are `@Component`s implementing `AsyncNodeAction<State>`, returning a `CompletableFuture<Map<String, Object>>` containing only the keys they changed.
-- **Graphs** are `@Bean CompiledGraph<State>` in `@Configuration` classes, with node names as `public static final String` constants so callers can map node output to progress percentages. Multiple graphs of the same type coexist, so injection sites use `@Qualifier("nbaScheduleGraph")` etc.
-- `NbaOrchestratorGraphConfig` composes the six NBA sub-graphs: `ParseSportsIntentNode` classifies the question, a conditional edge routes single-intent queries straight to one sub-graph (each of which synthesizes its own answer), and multi-intent queries fan out and then meta-synthesize.
-
-### A2A server
-
-Agent cards are declarative: `src/main/resources/agents/*.json` is loaded by `AgentCardService`, which builds each `AgentCard` URL from the *current request's* base URI so cards work behind proxies. An agent's executor is an `AgentExecutor` `@Component` whose **bean name is the agent id** (`@Component("nba")`); `AgentRequestHandlerRegistry` maps bean name → `DefaultRequestHandler`, and `/a2a/{agentName}` resolves handlers by that name. Adding an agent means: a card JSON + an executor bean whose name matches the card `id`.
-
-Both endpoints on `/a2a/{agentName}` are POST; content negotiation on `produces` picks JSON-RPC vs. SSE streaming. Task state, event queues, and push-notification configs are all Redis-backed (`a2a/redis/**`), so restarts don't lose tasks. `a2aExecutor` uses virtual threads.
+- **Graphs** are `@Bean CompiledGraph<State>` in `@Configuration` classes, with node names as `public static final String` constants so callers can map node output to progress percentages. Multiple graphs of the same type coexist, so injection sites use `@Qualifier(...)`.
 
 ### Security
 
-OAuth2 Resource Server (JWT). `AuthoritiesService` maps the `groups` claim to `GROUP_<NAME>` and the `roles` claim to `ROLE_<NAME>` (uppercased); scopes become `SCOPE_*`. `/.well-known/oauth-protected-resource` and `/a2a/**/.well-known/agent-card.json` are public; everything else authenticates. The whole `MpcSecurityConfig` is gated on `solesonic.agent.security.enabled` (`MpcSecurityDisabledConfig` is the alternative).
+OAuth2 Resource Server (JWT). `AuthoritiesService` maps the `groups` claim to `GROUP_<NAME>` and the `roles` claim to `ROLE_<NAME>` (uppercased); scopes become `SCOPE_*`. `/.well-known/oauth-protected-resource` is public; everything else authenticates. The whole `MpcSecurityConfig` is gated on `solesonic.agent.security.enabled` (`MpcSecurityDisabledConfig` is the alternative).
 
-Outbound per-user calls never read `SecurityContextHolder` — graph walks run on `ForkJoinPool` threads that don't inherit it. Entry points (`@McpTool` methods, A2A executors) capture `CallerIdentity.requireCurrent()` once; graphs carry it as `IdentifiedAgentState.CALLER_IDENTITY` (every state extends that base); every Atlassian/Gmail service method takes it as its first parameter and sets `.attributes(callerIdentity.requestAttributes())`. `AtlassianRequestAuthorizationFilter` / `GoogleRequestAuthorizationFilter` read it from the request attribute, broker a fresh token, and fail loudly if it's missing. `AtlassianErrorResponseFilter` turns non-2xx Atlassian responses into `JiraException`s (services use `exchangeToMono`, which bypasses default status handlers).
+Outbound per-user calls never read `SecurityContextHolder` — graph walks run on `ForkJoinPool` threads that don't inherit it. Entry points (`@McpTool` methods) capture `CallerIdentity.requireCurrent()` once; graphs carry it as `IdentifiedAgentState.CALLER_IDENTITY` (every state extends that base); every Atlassian/Gmail service method takes it as its first parameter and sets `.attributes(callerIdentity.requestAttributes())`. `AtlassianRequestAuthorizationFilter` / `GoogleRequestAuthorizationFilter` read it from the request attribute, broker a fresh token, and fail loudly if it's missing. `AtlassianErrorResponseFilter` turns non-2xx Atlassian responses into `JiraException`s (services use `exchangeToMono`, which bypasses default status handlers).
 
 ### Graph checkpoints
 

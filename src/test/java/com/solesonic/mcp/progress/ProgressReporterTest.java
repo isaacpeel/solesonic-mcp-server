@@ -1,4 +1,4 @@
-package com.solesonic.a2a.progress;
+package com.solesonic.mcp.progress;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

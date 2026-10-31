@@ -1,6 +1,6 @@
 package com.solesonic.service.comfyui;
 
-import com.solesonic.a2a.progress.ProgressReporter;
+import com.solesonic.mcp.progress.ProgressReporter;
 import com.solesonic.mcp.exception.comfyui.ComfyUiException;
 import com.solesonic.model.comfyui.ComfyEvent;
 import com.solesonic.model.comfyui.ComfyEvent.Disconnected;

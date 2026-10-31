@@ -1,4 +1,4 @@
-package com.solesonic.a2a.progress;
+package com.solesonic.mcp.progress;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
