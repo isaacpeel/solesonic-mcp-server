@@ -184,6 +184,7 @@ public class SelectImageWorkflowNode implements AsyncNodeAction<ImageWorkflowSta
 
         try {
             ChoiceAnswer choiceAnswer = typeSafeClient.systemOne(systemOneRequest).choice(WORKFLOW_QUESTION);
+
             String confidence = String.format(Locale.ROOT, "%.2f", choiceAnswer.confidence());
 
             if (choiceAnswer.confidence() < confidenceThreshold) {
