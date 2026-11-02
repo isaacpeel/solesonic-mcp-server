@@ -71,7 +71,7 @@ public class WebSearchTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The search query. Be specific and include relevant keywords for best results.")
             String query,
-            @McpToolParam(description = "Maximum number of results to return (1-10, default 5)")
+            @McpToolParam(description = "Maximum number of results to return (1-10, default 5)", required = false)
             Integer maxResults
     ) {
         log.info("Executing basic web search for: {}", query);
@@ -102,15 +102,15 @@ public class WebSearchTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The search query. Be specific and include relevant keywords.")
             String query,
-            @McpToolParam(description = "Maximum number of results to return (1-20, default 10)")
+            @McpToolParam(description = "Maximum number of results to return (1-20, default 10)", required = false)
             Integer maxResults,
-            @McpToolParam(description = "List of domains to include (e.g., ['github.com', 'stackoverflow.com']). Optional.")
+            @McpToolParam(description = "List of domains to include (e.g., ['github.com', 'stackoverflow.com']). Optional.", required = false)
             List<String> includeDomains,
-            @McpToolParam(description = "List of domains to exclude. Optional.")
+            @McpToolParam(description = "List of domains to exclude. Optional.", required = false)
             List<String> excludeDomains,
-            @McpToolParam(description = "Time range filter: 'day', 'week', 'month', or 'year'. Optional.")
+            @McpToolParam(description = "Time range filter: 'day', 'week', 'month', or 'year'. Optional.", required = false)
             String timeRange,
-            @McpToolParam(description = "Whether to include raw page content (increases response size). Default false.")
+            @McpToolParam(description = "Whether to include raw page content (increases response size). Default false.", required = false)
             Boolean includeRawContent
     ) {
         log.info("Executing advanced web search for: {}", query);
@@ -145,9 +145,9 @@ public class WebSearchTools {
             McpSyncRequestContext mcpSyncRequestContext,
             @McpToolParam(description = "The news search query. Include topic, keywords, or entities.")
             String query,
-            @McpToolParam(description = "Maximum number of results (1-10, default 5)")
+            @McpToolParam(description = "Maximum number of results (1-10, default 5)", required = false)
             Integer maxResults,
-            @McpToolParam(description = "Time range: 'day' (24h), 'week', 'month', or 'year'. Default is 'week'.")
+            @McpToolParam(description = "Time range: 'day' (24h), 'week', 'month', or 'year'. Default is 'week'.", required = false)
             String timeRange
     ) {
         log.info("Executing news search for: {}", query);

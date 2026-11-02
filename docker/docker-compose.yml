@@ -63,7 +63,7 @@ services:
       - SERVER_PORT=8181
       - REDIS_HOST=solesonic-mcp-redis
     volumes:
-      - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
+      - /mnt/izzybot/logs/solesonic-mcp-server:/var/log/solesonic-mcp-server
     depends_on:
       solesonic-mcp-redis:
         condition: service_healthy
