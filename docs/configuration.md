@@ -44,6 +44,10 @@ Key properties (environment variables in parentheses)
 - Gmail
   - google.api.uri=https://gmail.googleapis.com
 
+- Redis
+  - Chat memory and graph checkpoints use the server set by `REDIS_HOST`/`REDIS_PORT`. Inside the Docker network that is `solesonic-mcp-redis:6379`.
+  - The `local` profile overrides the port to 6380, the host port `docker/docker-compose.yml` publishes for `solesonic-mcp-redis`. Start it with `docker compose -f docker/docker-compose.yml up -d solesonic-mcp-redis`.
+
 - Graph checkpoints (Redis)
   - Every LangGraph4j graph checkpoints to the same Redis server as `spring.data.redis.*`, through a separate Redisson client that connects lazily on the first checkpoint.
   - All keys live under `mcp:checkpoint:`. A run's keys are deleted when it finishes; only a run paused for user input (the `create_jira_story` assignee picker) keeps its checkpoint until the user answers.
