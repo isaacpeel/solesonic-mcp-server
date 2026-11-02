@@ -1,11 +1,6 @@
 package com.solesonic.agent.checkpoint;
 
 import com.solesonic.agent.agile.AgileState;
-import com.solesonic.agent.image.ImageIntent;
-import com.solesonic.agent.image.ImageIntentClassification;
-import com.solesonic.agent.image.ImageWorkflowSelection;
-import com.solesonic.agent.image.ImageWorkflowState;
-import com.solesonic.agent.image.WorkflowCandidate;
 import com.solesonic.agent.jira.JiraState;
 import com.solesonic.agent.state.IdentifiedAgentState;
 import com.solesonic.mcp.security.identity.CallerIdentity;
@@ -19,7 +14,6 @@ import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.bsc.langgraph4j.serializer.std.ObjectStreamStateSerializer;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -63,26 +57,5 @@ class CheckpointedStateCloningTest {
 
         assertThat(new ObjectStreamStateSerializer<>(AgileState::new).cloneObject(data).callerIdentity()).contains(CALLER);
         assertThat(new ObjectStreamStateSerializer<>(JiraState::new).cloneObject(data).callerIdentity()).contains(CALLER);
-        assertThat(new ObjectStreamStateSerializer<>(ImageWorkflowState::new).cloneObject(data).callerIdentity()).contains(CALLER);
-    }
-
-    @Test
-    void imageWorkflowStateClonesItsRoutingValuesWithTheDefaultSerializer() throws Exception {
-        WorkflowCandidate workflowCandidate = new WorkflowCandidate("generate_image", "Example", "General.");
-        ImageWorkflowSelection imageWorkflowSelection = new ImageWorkflowSelection("generate_image", "a lighthouse", "General.");
-
-        ImageIntentClassification imageIntentClassification =
-                new ImageIntentClassification(ImageIntent.RESTYLE_PHOTO, "Restyle.");
-
-        ImageWorkflowState cloned = new ObjectStreamStateSerializer<>(ImageWorkflowState::new).cloneObject(Map.of(
-                ImageWorkflowState.REFERENCE_IMAGE_DESCRIPTIONS, List.of("a mountain lake"),
-                ImageWorkflowState.IMAGE_INTENT, imageIntentClassification,
-                ImageWorkflowState.CANDIDATE_WORKFLOWS, List.of(workflowCandidate),
-                ImageWorkflowState.WORKFLOW_SELECTION, imageWorkflowSelection));
-
-        assertThat(cloned.referenceImageDescriptions()).contains(List.of("a mountain lake"));
-        assertThat(cloned.imageIntent()).contains(imageIntentClassification);
-        assertThat(cloned.candidateWorkflows()).contains(List.of(workflowCandidate));
-        assertThat(cloned.workflowSelection()).contains(imageWorkflowSelection);
     }
 }

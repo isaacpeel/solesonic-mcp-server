@@ -173,7 +173,7 @@ This allows fine-grained access control in addition to scope checks. Ensure your
 
 Tool roles currently enforced: `ROLE_MCP-JIRA-CREATE`, `ROLE_MCP-JIRA-GET`, `ROLE_MCP-JIRA-DELETE`,
 `ROLE_MCP-JIRA-AGILE-LIST`, `ROLE_MCP-GMAIL-LIST`, `ROLE_MCP-XERO`,
-`ROLE_MCP-WEB-SEARCH`, `ROLE_MCP-GENERATE-IMAGE`, `ROLE_MCP-TIME`, `ROLE_MCP-GET-WEATHER`. A `roles`
+`ROLE_MCP-WEB-SEARCH`, `ROLE_MCP-TIME`, `ROLE_MCP-GET-WEATHER`. A `roles`
 claim entry of `mcp-gmail-list` becomes `ROLE_MCP-GMAIL-LIST`, so roles are defined in the identity
 provider, not here.
 

@@ -17,7 +17,7 @@ Three top-level packages under `com.solesonic`, layered rather than parallel:
 
 - **`mcp/`** — the MCP protocol surface: tools, prompts, security, and typed HTTP clients for external APIs.
 - **`agent/`** — LangGraph4j state graphs that implement multi-step workflows, invoked by MCP tools.
-- **`service/` + `model/`** — external integrations (Atlassian, Tavily, ComfyUI, Gmail) and their record models, shared by both `mcp` and `agent`.
+- **`service/` + `model/`** — external integrations (Atlassian, Tavily, Gmail) and their record models, shared by both `mcp` and `agent`.
 
 The NBA agent and the A2A server it was served by moved to `solesonic-agents` (`agents/nba-agent`, Python). This server has no A2A endpoints.
 
@@ -33,7 +33,7 @@ Destructive tools elicit confirmation through `McpConfirmations.confirm(...)` an
 
 Every workflow follows the same shape:
 
-- **State** (`JiraState`, `AgileState`, `ImageWorkflowState`) extends `AgentState`: `public static final String` key constants plus `Optional<T>` accessor methods. Never read state by string literal.
+- **State** (`JiraState`, `AgileState`) extends `AgentState`: `public static final String` key constants plus `Optional<T>` accessor methods. Never read state by string literal.
 - **Nodes** are `@Component`s implementing `AsyncNodeAction<State>`, returning a `CompletableFuture<Map<String, Object>>` containing only the keys they changed.
 - **Graphs** are `@Bean CompiledGraph<State>` in `@Configuration` classes, with node names as `public static final String` constants so callers can map node output to progress percentages. Multiple graphs of the same type coexist, so injection sites use `@Qualifier(...)`.
 

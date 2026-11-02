@@ -88,15 +88,6 @@ Categories
     - Output: WebExtractResponse
   - Details: See Web Search docs: ./web-search.md
 
-- Image Generation Tools
-  - generate_image
-    - Description: Generates an image using a self-hosted ComfyUI instance and returns it inline as a PNG. A LangGraph4j router picks the best stored workflow (one per enabled `comfy_workflow` row) from the request, the number of attached images and their optional descriptions (classifying the intent first: new image, restyle the photo, or edit the person in it), and refines the prompt itself — so the caller passes the user's request through as written. How long a call takes depends on the stored workflow it runs. Progress notifications are emitted while the job runs.
-    - Auth: ROLE_MCP-GENERATE-IMAGE
-    - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional>, "referenceImages": [ { "data": "<base64>", "mimeType": "image/png" | "image/jpeg" | "image/webp", "description": "<what the image shows, optional>" } ] (optional, at most 3) } — `width` and `height` default to 1024 and are ignored by workflows with a fixed or photo-derived size.
-    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`), a text block with the workflow name, size, seed, and elapsed time (and `Reference images: n` when used), and a `Workflow: <tool_name>. Why: <rationale>` block naming the router's choice
-    - Stored workflows are not tools of their own: clients find this one tool by name. An image `description` is used only to choose the workflow, never added to the prompt.
-  - Details, including routing, the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
-
 - Date and Time Tools
   - get_current_date
     - Description: Returns the current date in ISO format (YYYY-MM-DD). Defaults to UTC if no timezone is provided.
@@ -154,12 +145,10 @@ Operational guidance
   - Agile: ROLE_MCP-JIRA-AGILE-LIST
   - Gmail: ROLE_MCP-GMAIL-LIST (covers message bodies as well as listing)
   - Web Search: ROLE_MCP-WEB-SEARCH
-  - Image Generation: ROLE_MCP-GENERATE-IMAGE
   - Date/Time: ROLE_MCP-TIME
   - Weather (demo): ROLE_MCP-GET-WEATHER
 - Error handling: Jira-related errors surface as descriptive messages; verify role membership and Token Broker configuration if failures persist
 
 See also
 - Web Search: ./web-search.md
-- Image Generation: ./image-generation.md
 - Prompts: ./prompts.md
