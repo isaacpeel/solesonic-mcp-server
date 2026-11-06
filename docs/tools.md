@@ -88,15 +88,6 @@ Categories
     - Output: WebExtractResponse
   - Details: See Web Search docs: ./web-search.md
 
-- Image Generation Tools
-  - These tools are **defined by data, not by code**. Each enabled row in the `comfy_workflow` table is registered as one MCP tool at startup, named by its `tool_name` column, so the tool list depends on the database and the set below is not fixed. If the table is empty, no image tools are registered.
-  - One tool per stored ComfyUI workflow
-    - Description: Generates an image from a text prompt using a self-hosted ComfyUI instance and returns it inline as a PNG. Typically 5–15 seconds; progress notifications are emitted while the job runs. Each tool carries its row's `description`, which is what a model reads when choosing between workflows.
-    - Auth: ROLE_MCP-GENERATE-IMAGE (all workflow tools)
-    - Input: { "prompt": "<string>", "width": <int, optional>, "height": <int, optional> } — `width` and `height` appear only if the stored workflow tokenises them, and default to 1024. Steps, cfg, sampler, and the checkpoint are baked into the stored workflow, so choosing a tool is how you choose them.
-    - Output: CallToolResult carrying an ImageContent (base64 PNG, `image/png`) plus a text block with the workflow name, size, seed, and elapsed time
-  - Details, including the substitution tokens and how to add a workflow: See Image Generation docs: ./image-generation.md
-
 - Date and Time Tools
   - get_current_date
     - Description: Returns the current date in ISO format (YYYY-MM-DD). Defaults to UTC if no timezone is provided.
@@ -154,12 +145,10 @@ Operational guidance
   - Agile: ROLE_MCP-JIRA-AGILE-LIST
   - Gmail: ROLE_MCP-GMAIL-LIST (covers message bodies as well as listing)
   - Web Search: ROLE_MCP-WEB-SEARCH
-  - Image Generation: ROLE_MCP-GENERATE-IMAGE
   - Date/Time: ROLE_MCP-TIME
   - Weather (demo): ROLE_MCP-GET-WEATHER
 - Error handling: Jira-related errors surface as descriptive messages; verify role membership and Token Broker configuration if failures persist
 
 See also
 - Web Search: ./web-search.md
-- Image Generation: ./image-generation.md
 - Prompts: ./prompts.md

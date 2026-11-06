@@ -13,6 +13,9 @@ Key properties (environment variables in parentheses)
 - Security (OAuth2 Resource Server - JWT)
   - spring.security.oauth2.resourceserver.jwt.issuer-uri=(${ISSUER_URI})
   - spring.security.oauth2.resourceserver.jwt.jwk-set-uri=(${JWK_SET_URI})
+  - solesonic.mcp.resource=(${MCP_REGISTRATION_ENDPOINT})   # base URL used in the 401 WWW-Authenticate challenge
+  - solesonic.mcp.scopes=openid,profile,email,roles,solesonic-mcp-audience,mcp-roles
+    - Advertised as `scopes_supported` in /.well-known/oauth-protected-resource and as `scope` in the 401 challenge. MCP clients that register dynamically request exactly these. See ./authorization.md.
 - MCP server identity (informational)
   - spring.ai.mcp.server.name=solesonic-mcp-server
   - spring.ai.mcp.server.version=1.0.0
@@ -32,20 +35,6 @@ Key properties (environment variables in parentheses)
   - websearch.news.max-results=20
   - websearch.extract.max-urls=5
   - websearch.default.depth=basic   # basic|advanced (provider-specific)
-- Image Generation (ComfyUI)
-  - comfyui.api.uri=(${COMFYUI_API_URI})   # e.g. https://comfy.izzy-bot.com
-  - comfyui.api.response-timeout-seconds=30
-  - comfyui.generation.timeout-seconds=180
-  - comfyui.generation.poll-interval-millis=1000
-  - comfyui.generation.expected-seconds=12
-  - comfyui.generation.release-memory-delay-millis=300000
-  - Workflows themselves live in the `comfy_workflow` database table, not in configuration. See Image Generation: ./image-generation.md
-- Database (PostgreSQL)
-  - spring.datasource.url=(${DATABASE_URL})   # e.g. jdbc:postgresql://localhost:5433/solesonic-mcp-server
-  - spring.datasource.username=(${DATABASE_USERNAME})
-  - spring.datasource.password=(${DATABASE_PASSWORD})
-  - spring.jpa.hibernate.ddl-auto=validate   # Flyway owns the schema
-  - spring.flyway.enabled=true
 - Jira tools
   - jira.api.uri=https://api.atlassian.com
   - jira.url.template=(${JIRA_URL_TEMPLATE})
@@ -54,6 +43,10 @@ Key properties (environment variables in parentheses)
     - Assignable users requested per page. A name search reads one page. The `create_jira_story` assignee picker pages through every assignable user, so this sets the request size, not a limit on the list. See ./elicitation.md.
 - Gmail
   - google.api.uri=https://gmail.googleapis.com
+
+- Redis
+  - Chat memory and graph checkpoints use the server set by `REDIS_HOST`/`REDIS_PORT`. Inside the Docker network that is `solesonic-mcp-redis:6379`.
+  - The `local` profile overrides the port to 6380, the host port `docker/docker-compose.yml` publishes for `solesonic-mcp-redis`. Start it with `docker compose -f docker/docker-compose.yml up -d solesonic-mcp-redis`.
 
 - Graph checkpoints (Redis)
   - Every LangGraph4j graph checkpoints to the same Redis server as `spring.data.redis.*`, through a separate Redisson client that connects lazily on the first checkpoint.
@@ -84,10 +77,6 @@ Examples
   - export JWK_SET_URI=https://<your-domain>/.well-known/jwks.json
   - export TAVILY_API_KEY=<your-tavily-api-key>
   - export TAVILY_API_ENDPOINT=https://api.tavily.com/search
-  - export COMFYUI_API_URI=https://comfy.izzy-bot.com
-  - export DATABASE_URL=jdbc:postgresql://localhost:5433/solesonic-mcp-server
-  - export DATABASE_USERNAME=solesonic-mcp
-  - export DATABASE_PASSWORD=<change-me>
   - export SPRING_PROFILES_ACTIVE=prod,ssl
   - export SSL_CERT_LOCATION=/absolute/path/to/server.p12
   - export KEYSTORE_PASSWORD=<change-me>
@@ -100,6 +89,4 @@ Notes
 - Keep secrets out of source control; use OS env vars or Docker secrets/volumes.
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
 - Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
-- `comfyui.api.uri` is required at startup — an unresolved `COMFYUI_API_URI` fails context initialization.
-- A reachable database is required at startup: Flyway runs the migrations and the workflow table is read once during initialization. Individual **rows**, however, are tolerant — a malformed workflow row is logged and skipped rather than failing the context, because rows are inserted by hand and one bad paste should not take every unrelated tool down. See Image Generation: ./image-generation.md
 - Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.

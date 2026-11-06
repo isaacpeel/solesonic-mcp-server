@@ -2,7 +2,6 @@ package com.solesonic.agent.state;
 
 import com.solesonic.agent.agile.AgileState;
 import com.solesonic.agent.jira.JiraState;
-import com.solesonic.agent.nba.SportsState;
 import com.solesonic.mcp.security.identity.CallerIdentity;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +21,6 @@ class IdentifiedAgentStateTest {
 
         assertThat(new AgileState(input).requireCallerIdentity()).isEqualTo(CALLER);
         assertThat(new JiraState(input).requireCallerIdentity()).isEqualTo(CALLER);
-        assertThat(new SportsState(input).requireCallerIdentity()).isEqualTo(CALLER);
     }
 
     @Test

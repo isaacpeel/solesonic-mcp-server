@@ -5,16 +5,13 @@ import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.checkpoint.BaseCheckpointSaver;
 import org.bsc.langgraph4j.checkpoint.KeyNamingStrategy;
 import org.bsc.langgraph4j.checkpoint.RedisSaver;
-import org.bsc.langgraph4j.state.AgentState;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
-import org.redisson.config.SingleServerConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -42,14 +39,14 @@ public class CheckpointConfig {
         String scheme = sslEnabled ? "rediss://" : "redis://";
 
         Config config = new Config();
-        SingleServerConfig singleServerConfig = config.useSingleServer().setAddress(scheme + host + ":" + port);
+        config.useSingleServer().setAddress(scheme + host + ":" + port);
 
         if (StringUtils.isNotBlank(username)) {
-            singleServerConfig.setUsername(username);
+            config.setUsername(username);
         }
 
         if (StringUtils.isNotBlank(password)) {
-            singleServerConfig.setPassword(password);
+            config.setPassword(password);
         }
 
         return Redisson.create(config);
@@ -57,14 +54,14 @@ public class CheckpointConfig {
 
     @Bean
     public BaseCheckpointSaver graphCheckpointSaver(@Lazy RedissonClient checkpointRedissonClient,
-                                                    JsonMapper jsonMapper,
+                                                    JsonMapperStateSerializer jsonMapperStateSerializer,
                                                     @Value("${solesonic.checkpoint.ttl:24h}") Duration checkpointTimeToLive) {
         KeyNamingStrategy keyNamingStrategy = new McpCheckpointKeyNamingStrategy();
 
         RedisSaver redisSaver = RedisSaver.builder()
                 .redissonClient(checkpointRedissonClient)
                 .keyNamingStrategy(keyNamingStrategy)
-                .stateSerializer(new JsonMapperStateSerializer<>(AgentState::new, jsonMapper))
+                .stateSerializer(jsonMapperStateSerializer)
                 .ttl(checkpointTimeToLive.toMillis(), TimeUnit.MILLISECONDS)
                 .build();
 

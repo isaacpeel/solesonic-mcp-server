@@ -11,7 +11,7 @@ import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;
 // ParallelNode is an internal langgraph4j class. The public edge-based parallel API
 // (addParallelNodeExecutor) does not support conditional edges on the parallel node,
 // which this graph requires. There is no public equivalent for this pattern.
-import org.bsc.langgraph4j.internal.node.ParallelNode;
+import org.bsc.langgraph4j.node.ParallelNode;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

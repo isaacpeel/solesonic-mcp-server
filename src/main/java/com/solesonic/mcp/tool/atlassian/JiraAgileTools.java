@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.a2a.progress.ProgressReporter;
+import com.solesonic.mcp.progress.ProgressReporter;
 import com.solesonic.agent.agile.AgileGraph;
 import com.solesonic.agent.agile.AgileQueryIntent;
 import com.solesonic.agent.agile.AgileState;

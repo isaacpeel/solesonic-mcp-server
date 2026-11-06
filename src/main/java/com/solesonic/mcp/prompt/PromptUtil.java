@@ -25,9 +25,14 @@ public class PromptUtil {
         UserMessage promptUserMessage = prompt.getUserMessage();
         String promptText = promptUserMessage.getText();
 
-        McpSchema.TextContent textContent = new McpSchema.TextContent(promptText);
+        assert promptText != null;
+        McpSchema.TextContent textContent = McpSchema.TextContent.builder(promptText)
+                .build();
+
         McpSchema.PromptMessage promptMessage = new McpSchema.PromptMessage(McpSchema.Role.USER, textContent);
 
-        return new McpSchema.GetPromptResult(promptName, List.of(promptMessage));
+        return McpSchema.GetPromptResult.builder(List.of(promptMessage))
+                .description(promptName)
+                .build();
     }
 }

@@ -2,7 +2,6 @@ package com.solesonic.agent.checkpoint;
 
 import com.solesonic.agent.agile.AgileState;
 import com.solesonic.agent.jira.JiraState;
-import com.solesonic.agent.nba.SportsState;
 import com.solesonic.agent.state.IdentifiedAgentState;
 import com.solesonic.mcp.security.identity.CallerIdentity;
 import org.bsc.langgraph4j.CompileConfig;
@@ -58,6 +57,5 @@ class CheckpointedStateCloningTest {
 
         assertThat(new ObjectStreamStateSerializer<>(AgileState::new).cloneObject(data).callerIdentity()).contains(CALLER);
         assertThat(new ObjectStreamStateSerializer<>(JiraState::new).cloneObject(data).callerIdentity()).contains(CALLER);
-        assertThat(new ObjectStreamStateSerializer<>(SportsState::new).cloneObject(data).callerIdentity()).contains(CALLER);
     }
 }

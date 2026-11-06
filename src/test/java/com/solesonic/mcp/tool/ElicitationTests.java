@@ -352,7 +352,7 @@ public class ElicitationTests {
         when(exchange.getClientCapabilities()).thenReturn(capabilities);
 
         ElicitResult expectedResult = mock(ElicitResult.class);
-        ElicitRequest elicitRequest = ElicitRequest.builder("Test message", Map.of("type", "string"))
+        ElicitRequest elicitRequest = ElicitFormRequest.builder("Test message", Map.of("type", "string"))
                 .build();
 
         when(exchange.createElicitation(elicitRequest)).thenReturn(expectedResult);

@@ -1,26 +1,24 @@
 <configuration>
+    <!--
+    Two streams with two jobs, the same as solesonic-llm-api.
+
+    The application log is ECS JSON, configured by `logging.structured.*` and `logging.file.name` in
+    application-prod*.properties, through Boot's structured appenders (base.xml would ignore
+    logging.structured.format.*). solesonic-log-agent reads it; files written before this switch were plain text
+    and it reads those too.
+
+    The security log is plain text with a fixed grammar, parsed by fail2ban. Its format is an API, not a log
+    message: treat a change to the pattern below the way you would treat a change to an endpoint contract.
+    -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
     <springProfile name="prod,prod-nginx">
-        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>/var/log/solesonic-mcp-server/solesonic-mcp-server.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>/var/log/solesonic-mcp-server/solesonic-mcp-server-%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>7</maxHistory>
-            </rollingPolicy>
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %logger{10} %msg%n</pattern>
-            </encoder>
-        </appender>
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %logger{10} %msg%n</pattern>
-            </encoder>
-        </appender>
+        <include resource="org/springframework/boot/logging/logback/structured-console-appender.xml"/>
+        <include resource="org/springframework/boot/logging/logback/structured-file-appender.xml"/>
 
         <!--
-        The security log is plain text with a fixed grammar, parsed by fail2ban. Its format is an
-        API, not a log message — treat a change to the pattern below the way you would treat a
-        change to an endpoint contract. additivity=false so a security event is exactly one line
-        in exactly one file and a jail can never double-count.
+        additivity=false so a security event is exactly one line in exactly one file and a jail can never
+        double-count.
         -->
         <appender name="SECURITY" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>/var/log/solesonic-mcp-server/security.log</file>
@@ -37,31 +35,9 @@
             <appender-ref ref="SECURITY"/>
         </logger>
 
-        <root level="info">
-            <appender-ref ref="FILE"/>
+        <root level="INFO">
             <appender-ref ref="CONSOLE"/>
-        </root>
-    </springProfile>
-    <springProfile name="prod">
-        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>/var/log/solesonic-mcp-server/solesonic-mcp-server.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>/var/log/solesonic-mcp-server/solesonic-mcp-server-%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>7</maxHistory>
-            </rollingPolicy>
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %logger{10} %msg%n</pattern>
-            </encoder>
-        </appender>
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %logger{10} %msg%n</pattern>
-            </encoder>
-        </appender>
-
-        <root level="info">
             <appender-ref ref="FILE"/>
-            <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
     <springProfile name="local">

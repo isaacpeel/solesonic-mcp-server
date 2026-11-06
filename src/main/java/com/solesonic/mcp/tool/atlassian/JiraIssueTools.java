@@ -1,6 +1,6 @@
 package com.solesonic.mcp.tool.atlassian;
 
-import com.solesonic.a2a.progress.ProgressReporter;
+import com.solesonic.mcp.progress.ProgressReporter;
 import com.solesonic.agent.checkpoint.GraphRunner;
 import com.solesonic.agent.checkpoint.GraphThread;
 import com.solesonic.agent.jira.JiraGraphConfig;

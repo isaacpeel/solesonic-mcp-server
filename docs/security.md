@@ -20,7 +20,6 @@ Authorization
   - Weather tool requires ROLE_MCP-GET-WEATHER
   - Jira tools require ROLE_MCP-CREATE-JIRA
   - Web Search tools require ROLE_MCP-WEB-SEARCH
-  - Image generation requires ROLE_MCP-GENERATE-IMAGE
   - Gmail tools require ROLE_MCP-GMAIL-LIST, which covers get_gmail_message_body and therefore full message bodies
 - There is no hard-coded required scope for /mcp in this repository; use group/role/scope-based method constraints to control access to individual tools.
 
@@ -42,7 +41,7 @@ Token acquisition (example - placeholder)
 Abuse detection (fail2ban)
 - Every 401/403 the security filter chain produces is also written as a fixed-grammar line to /var/log/solesonic-mcp-server/security.log (logger `security.audit`, additivity=false — this is the only writer of that file)
 - Format: `<UTC timestamp> SECURITY event=<authn.failure|authz.denied> ip=<addr> method=<verb> path="<path>" status=<401|403> reason=<reason> route=<known|unknown>`
-- `route=known` means the path falls under /a2a, /mcp, or /.well-known (see SecurityEventLogger.KNOWN_ROUTE_PREFIXES); anything else is `route=unknown` — a scanner, since the filter chain authenticates every request and there is no unauthenticated 404 to probe for
+- `route=known` means the path falls under /a2a, /mcp, or /.well-known (/a2a no longer serves anything, since the NBA agent moved to solesonic-agents, but stays known so a LiteLLM still pointed at it isn't banned as a scanner) (see SecurityEventLogger.KNOWN_ROUTE_PREFIXES); anything else is `route=unknown` — a scanner, since the filter chain authenticates every request and there is no unauthenticated 404 to probe for
 - fail2ban jails `solesonic-mcp-auth` (tolerant: 3 failures/hour on a known route) and `solesonic-mcp-probe` (one strike on an unknown route) parse this file; see /etc/fail2ban/filter.d/solesonic-mcp-{auth,probe}.conf and /etc/fail2ban/jail.d/solesonic-mcp.local on the deployment host
 - This depends on `server.forward-headers-strategy=native` in the prod-nginx profile so `request.getRemoteAddr()` reflects the real client (via Tomcat's RemoteIpValve) rather than nginx's own address — and on nginx overwriting `X-Forwarded-For` rather than appending to it. Get either wrong and the log fills with the proxy's address instead of the attacker's.
 
@@ -54,9 +53,9 @@ Atlassian Token Broker (high-level)
 - The returned accessToken is then used for Atlassian API calls
 
 Caller identity on outbound calls
-- The user a request acts for travels as data, not ambient thread state: each tool (or A2A executor) captures the JWT subject once as a `CallerIdentity`, puts it in graph state, and passes it to every Atlassian and Gmail service call, which attaches it to the outgoing request
+- The user a request acts for travels as data, not ambient thread state: each tool captures the JWT subject once as a `CallerIdentity`, puts it in graph state, and passes it to every Atlassian and Gmail service call, which attaches it to the outgoing request
 - `AtlassianRequestAuthorizationFilter` and `GoogleRequestAuthorizationFilter` read the caller only from that request attribute, so graph nodes and fan-out work on pooled threads (which carry no security context) still act as the right user
-- A request without a caller fails with a clear error instead of going out unauthenticated. With `solesonic.agent.security.enabled=false` there is no caller, so Jira, Confluence and Gmail tools fail; the NBA agent, which calls no per-user APIs, still runs
+- A request without a caller fails with a clear error instead of going out unauthenticated. With `solesonic.agent.security.enabled=false` there is no caller, so Jira, Confluence and Gmail tools fail
 - Only the user id is stored in graph checkpoints — never an access token; tokens are brokered fresh for every call
 - Checkpoint threads for resumable runs are scoped to caller and conversation, so one user can never resume another user's paused run
 - Non-2xx Atlassian responses surface as errors carrying the HTTP status and Atlassian's message, rather than as JSON decoding failures
@@ -69,4 +68,3 @@ Troubleshooting
 
 External API considerations
 - Web Search uses an external provider (Tavily). Consider rate limiting and retries with backoff for robustness.
-- Image generation calls a self-hosted ComfyUI instance. ComfyUI has no authentication of its own, so `ROLE_MCP-GENERATE-IMAGE` protects this server's surface only — the ComfyUI origin must be restricted independently. See Deployment: ./deployment.md
