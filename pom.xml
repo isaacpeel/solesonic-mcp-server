@@ -85,16 +85,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <!--
-        Request correlation: a trace id per request, in the MDC (so ECS logs carry it) and on outbound calls
-        (traceparent), so solesonic-log-agent can follow one request across llm-api and mcp-server. No exporter.
+        Request correlation and telemetry: a trace id per request, in the MDC (so ECS logs carry it) and on outbound
+        calls (traceparent); traces and metrics exported to HyperDX over OTLP where a profile enables it.
         -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-micrometer-tracing-brave</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
         </dependency>
 
         <!-- Spring Security Crypto -->

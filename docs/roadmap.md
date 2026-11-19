@@ -12,7 +12,7 @@ Mid-term
 - Rate limiting and backoff strategies for external APIs
 - Standardized tool schemas and validation helpers
 - Expanded Atlassian support (Confluence, transitions, comments)
-- Metrics/tracing via Micrometer/OTel with dashboards
+- Dashboards over the OpenTelemetry traces and metrics (exported to HyperDX since 1.4.0)
 - Additional specialized prompts (e.g., incident analysis, release notes synthesis)
 
 Completed (this release)

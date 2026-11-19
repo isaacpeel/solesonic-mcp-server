@@ -90,3 +90,12 @@ Notes
 - If both issuer-uri and jwk-set-uri are configured, this server uses the configured JWKS endpoint for validation.
 - Web Search is optional; without `tavily.api.key` the Web Search tools will not function.
 - Prompt behavior may include dynamic tool injection; no specific configuration is required, but tool feature flags affect what is injected.
+
+## Telemetry (prod-nginx)
+
+| Variable | Purpose |
+|---|---|
+| `HYPERDX_INGESTION_KEY` | HyperDX team ingestion key, sent as `authorization` with OTLP traces and metrics |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | optional; default `http://otel-collector:4318` (the `solesonic-hyperdx` network) |
+
+See [observability](./observability.md).

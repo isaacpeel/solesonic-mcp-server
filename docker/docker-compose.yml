@@ -63,17 +63,20 @@ services:
       - SERVER_PORT=8181
       - REDIS_HOST=solesonic-mcp-redis
     volumes:
-      - /mnt/izzybot/logs/solesonic-mcp-server:/var/log/solesonic-mcp-server
+      - /var/log/solesonic-mcp-server:/var/log/solesonic-mcp-server
     depends_on:
       solesonic-mcp-redis:
         condition: service_healthy
     networks:
       - solesonic-network
+      - solesonic-hyperdx   # HyperDX's OTLP collector (otel-collector:4318)
 
 networks:
   solesonic-network:
     driver: bridge
     name: solesonic-network
+    external: true
+  solesonic-hyperdx:
     external: true
 
 volumes:
